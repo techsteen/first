@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>30 Grundlæggende Programmeringsopgaver</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link
+    rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='2' ry='2' fill='%23005fcc'/%3E%3Ctext x='8' y='11' font-size='9' text-anchor='middle' fill='white' font-family='Arial, sans-serif'%3EIT%3C/text%3E%3C/svg%3E"
+  />
+</head>
+<body>
+  <header>
+    <h1>30 Grundlæggende Programmeringsopgaver</h1>
+    <p>
+      Opgaverne er designet til at blive omskrevet til enten PowerShell eller C# uden brug af eksterne biblioteker.
+      Hver opgave består af en kort beskrivelse og komplet pseudokode, der fokuserer på variable, betingelser,
+      løkker, arrays og funktioner.
+    </p>
+    <section class="instructions">
+      <h2>Sådan bruger du siden</h2>
+      <ol>
+        <li>Læs opgavebeskrivelsen og pseudokoden.</li>
+        <li>Skriv din løsning i PowerShell eller C# i editoren.</li>
+        <li>Tryk på <strong>Vurder løsning</strong> for at sende din kode til ChatGPT for en vurdering.</li>
+      </ol>
+      <p class="disclaimer">
+        Vurderingen kører via serveren med en skjult API-nøgle og giver feedback på struktur,
+        korrekthed og idéer til forbedringer, men leverer ikke færdige løsninger i kode.
+      </p>
+    </section>
+  </header>
+
+  <main id="taskContainer" aria-live="polite"></main>
+
+  <template id="taskTemplate">
+    <article class="task">
+      <h3></h3>
+      <p class="description"></p>
+      <details>
+        <summary>Pseudokode</summary>
+        <pre class="pseudocode"></pre>
+      </details>
+      <label>
+        Vælg sprog
+        <select class="language">
+          <option value="PowerShell">PowerShell</option>
+          <option value="C#">C#</option>
+        </select>
+      </label>
+      <label>
+        Din løsning
+        <div
+          class="solution-editor"
+          data-placeholder="Skriv din kode her..."
+        ></div>
+      </label>
+      <button class="evaluate">Vurder løsning</button>
+      <div class="feedback" role="status" aria-live="polite"></div>
+    </article>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
