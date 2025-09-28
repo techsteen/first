@@ -23,6 +23,8 @@ function sync_shared_config_files(): void
         '.gitignore' => ['.gitignore', 'gitignore', '.gitignore.txt'],
     ];
 
+    $localSources = resolve_local_source_directories();
+
     $metadataFile = __DIR__ . '/.central-sync.json';
     $metadata = load_sync_metadata($metadataFile);
     $now = time();
@@ -39,6 +41,40 @@ function sync_shared_config_files(): void
         $variantList = $remoteVariants[$remoteName] ?? [$remoteName];
         $attempts = [];
         $synced = false;
+
+        foreach ($localSources as $sourceDir) {
+            $localVariant = locate_local_source($sourceDir, $variantList);
+            if ($localVariant === null) {
+                $attempts[] = sprintf('%s (missing)', format_local_source_label($sourceDir));
+                continue;
+            }
+
+            if (!is_readable($localVariant)) {
+                $attempts[] = sprintf('%s (not readable)', $localVariant);
+                continue;
+            }
+
+            $contents = file_get_contents($localVariant);
+            if ($contents === false) {
+                $attempts[] = sprintf('%s (read failed)', $localVariant);
+                continue;
+            }
+
+            if (ensure_directory(dirname($localPath)) && file_put_contents($localPath, $contents) !== false) {
+                $metadata[$remoteName] = [
+                    'synced_at' => $now,
+                    'source' => format_local_source_label($localVariant),
+                ];
+                $synced = true;
+                break;
+            }
+
+            $attempts[] = sprintf('%s (write failed)', $localVariant);
+        }
+
+        if ($synced) {
+            continue;
+        }
 
         foreach ($baseUrls as $baseUrl) {
             foreach ($variantList as $remoteFile) {
@@ -218,6 +254,52 @@ function ensure_directory(string $directory): bool
 /**
  * @return list<string>
  */
+function resolve_local_source_directories(): array
+{
+    $candidates = [];
+
+    $envOverride = getenv('CENTRAL_CONFIG_LOCAL_DIR');
+    if (is_string($envOverride) && trim($envOverride) !== '') {
+        $candidates[] = rtrim($envOverride, "\\/");
+    }
+
+    $listFile = __DIR__ . '/central_local_source.txt';
+    if (is_readable($listFile)) {
+        $lines = file($listFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if ($lines !== false) {
+            foreach ($lines as $line) {
+                $candidates[] = rtrim($line, "\\/");
+            }
+        }
+    }
+
+    $defaults = [
+        dirname(__DIR__) . '/Config',
+        dirname(__DIR__) . '/config',
+        dirname(__DIR__, 2) . '/Config',
+        dirname(__DIR__, 2) . '/config',
+    ];
+
+    foreach ($defaults as $default) {
+        $candidates[] = rtrim($default, "\\/");
+    }
+
+    $normalised = [];
+    foreach ($candidates as $candidate) {
+        $candidate = trim($candidate);
+        if ($candidate === '' || !is_dir($candidate)) {
+            continue;
+        }
+
+        $normalised[$candidate] = true;
+    }
+
+    return array_keys($normalised);
+}
+
+/**
+ * @return list<string>
+ */
 function resolve_remote_base_urls(): array
 {
     $candidates = [];
@@ -268,6 +350,26 @@ function resolve_remote_base_urls(): array
 function concatenate_remote_url(string $baseUrl, string $remoteFile): string
 {
     return $baseUrl . ltrim($remoteFile, '/');
+}
+
+/**
+ * @param list<string> $variants
+ */
+function locate_local_source(string $directory, array $variants): ?string
+{
+    foreach ($variants as $variant) {
+        $path = rtrim($directory, "\\/") . '/' . ltrim($variant, '/');
+        if (file_exists($path)) {
+            return $path;
+        }
+    }
+
+    return null;
+}
+
+function format_local_source_label(string $path): string
+{
+    return 'local:' . $path;
 }
 
 function locate_local_ca_bundle(): ?string

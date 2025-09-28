@@ -6,8 +6,9 @@ Denne miniwebapp indeholder 30 procentopgaver med AI-baserede hints, tutorials o
 
 1. Upload hele projektmappen til din PHP-server.
 2. Første gang en side indlæses, hentes `config.php`, `web.config`, `cacert-2025-08-12.pem` og `.gitignore` automatisk fra Tech Colleges delte konfigurationsmappe på `http://stha2.web.techcollege.dk/Config/` (med en ekstra fallback til den gamle `.../config/`-sti). Du kan supplere eller overstyre adresserne i `config/central_source.txt`.
+   - Hvis du ikke kan nå webserveren (fx fordi den returnerer HTTP 500), kan du lægge filerne via FTP i en fælles mappe som `../Config` eller `../../Config`. Synkroniseringen leder automatisk efter disse lokale kopier (og kan udvides via `config/central_local_source.txt` eller miljøvariablen `CENTRAL_CONFIG_LOCAL_DIR`).
    - Hvis din server blokerer bestemte filnavne (fx `web.config` eller `.gitignore`), kan du lægge en kopi i samme mappe med et tilgængeligt navn som `web.config.txt` eller `gitignore`. Synkroniseringen vil automatisk hente og omdøbe filen.
-3. Læg din OpenAI API-nøgle i den centrale konfiguration (`config.php`), så alle dine projekter deler den samme nøgle.
+3. Læg din OpenAI API-nøgle i den centrale konfiguration (`config.php`), så alle dine projekter deler den samme nøgle. Hvis du kun har FTP-adgang, kan du genbruge den samme `Config`-mappe på tværs af dine øvelser.
 4. (Valgfrit) Hvis du tester lokalt, kan du stadig kopiere `config/openai.key.example` til `config/openai.key` – den bruges kun som fallback.
 5. Sørg for at serveren har cURL aktiveret, så forespørgsler til OpenAI kan sendes.
 6. Besøg `index.php` i din browser.
