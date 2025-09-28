@@ -104,20 +104,59 @@ function download_remote_contents(string $url): array
         return ['success' => false, 'status' => null, 'error' => 'Unable to initialise cURL'];
     }
 
-    curl_setopt_array($ch, [
+    $curlOptions = [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_CONNECTTIMEOUT => 5,
         CURLOPT_TIMEOUT => 15,
         CURLOPT_USERAGENT => 'central-sync/1.1',
-        CURLOPT_SSL_VERIFYPEER => true,
-    ]);
+    ];
+
+    if (stripos($url, 'https://') === 0) {
+        $curlOptions[CURLOPT_SSL_VERIFYPEER] = true;
+        $curlOptions[CURLOPT_SSL_VERIFYHOST] = 2;
+
+        $caBundle = locate_local_ca_bundle();
+        if ($caBundle !== null) {
+            $curlOptions[CURLOPT_CAINFO] = $caBundle;
+        }
+
+        if (defined('CURLSSLOPT_NO_REVOKE')) {
+            $curlOptions[CURLOPT_SSL_OPTIONS] = (int) CURLSSLOPT_NO_REVOKE;
+        }
+    }
+
+    curl_setopt_array($ch, $curlOptions);
 
     $response = curl_exec($ch);
     $status = curl_getinfo($ch, CURLINFO_HTTP_CODE) ?: null;
 
     if ($response === false) {
+        $errorCode = curl_errno($ch);
         $errorMessage = curl_error($ch) ?: 'Unknown cURL error';
+
+        if (stripos($url, 'https://') === 0 && should_retry_without_tls_validation($errorCode)) {
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+            $response = curl_exec($ch);
+            $status = curl_getinfo($ch, CURLINFO_HTTP_CODE) ?: null;
+
+            if ($response !== false) {
+                curl_close($ch);
+
+                if ($status !== null && $status >= 200 && $status < 300) {
+                    return ['success' => true, 'contents' => $response, 'status' => $status];
+                }
+
+                return ['success' => false, 'status' => $status, 'error' => null];
+            }
+
+            $fallbackMessage = curl_error($ch) ?: $errorMessage;
+            curl_close($ch);
+
+            return ['success' => false, 'status' => $status, 'error' => $errorMessage . ' | retry without verify failed: ' . $fallbackMessage];
+        }
+
         curl_close($ch);
 
         return ['success' => false, 'status' => $status, 'error' => $errorMessage];
@@ -198,8 +237,13 @@ function resolve_remote_base_urls(): array
         }
     }
 
-    $candidates[] = 'https://stha2.web.techcollege.dk/config/';
+    $hostCandidates = build_host_specific_candidates();
+    foreach ($hostCandidates as $candidate) {
+        $candidates[] = $candidate;
+    }
+
     $candidates[] = 'http://stha2.web.techcollege.dk/config/';
+    $candidates[] = 'https://stha2.web.techcollege.dk/config/';
 
     $normalised = [];
     foreach ($candidates as $candidate) {
@@ -221,6 +265,86 @@ function resolve_remote_base_urls(): array
 function concatenate_remote_url(string $baseUrl, string $remoteFile): string
 {
     return $baseUrl . ltrim($remoteFile, '/');
+}
+
+function locate_local_ca_bundle(): ?string
+{
+    static $cached = false;
+    static $path = null;
+
+    if ($cached) {
+        return $path;
+    }
+
+    $cached = true;
+
+    $candidates = [
+        __DIR__ . '/cacert-2025-08-12.pem',
+        __DIR__ . '/cacert.pem',
+        dirname(__DIR__) . '/config/cacert-2025-08-12.pem',
+        dirname(__DIR__) . '/config/cacert.pem',
+    ];
+
+    foreach ($candidates as $candidate) {
+        if (is_readable($candidate)) {
+            $path = $candidate;
+            return $path;
+        }
+    }
+
+    return null;
+}
+
+function should_retry_without_tls_validation(int $curlError): bool
+{
+    $retryable = [];
+    if (defined('CURLE_SSL_CONNECT_ERROR')) {
+        $retryable[] = (int) CURLE_SSL_CONNECT_ERROR;
+    }
+    if (defined('CURLE_SSL_CACERT')) {
+        $retryable[] = (int) CURLE_SSL_CACERT;
+    }
+    if (defined('CURLE_PEER_FAILED_VERIFICATION')) {
+        $retryable[] = (int) CURLE_PEER_FAILED_VERIFICATION;
+    }
+
+    return in_array($curlError, $retryable, true);
+}
+
+/**
+ * @return list<string>
+ */
+function build_host_specific_candidates(): array
+{
+    $results = [];
+
+    if (empty($_SERVER['HTTP_HOST'])) {
+        return $results;
+    }
+
+    $host = $_SERVER['HTTP_HOST'];
+
+    $path = '';
+    if (!empty($_SERVER['SCRIPT_NAME'])) {
+        $path = dirname($_SERVER['SCRIPT_NAME']);
+    }
+
+    $segments = array_values(array_filter(explode('/', trim($path, '/'))));
+
+    for ($i = count($segments); $i >= 1; $i--) {
+        $prefix = implode('/', array_slice($segments, 0, $i));
+        if ($prefix === '') {
+            continue;
+        }
+
+        $results[] = 'http://' . $host . '/' . $prefix . '/config/';
+        $results[] = 'https://' . $host . '/' . $prefix . '/config/';
+    }
+
+    $results[] = 'http://' . $host . '/config/';
+    $results[] = 'https://' . $host . '/config/';
+
+    return $results;
 }
 
 /**
