@@ -237,15 +237,16 @@ function resolve_remote_base_urls(): array
         }
     }
 
-    $hostCandidates = build_host_specific_candidates();
-    foreach ($hostCandidates as $candidate) {
-        $candidates[] = $candidate;
-    }
+    $defaultBases = [
+        'http://stha2.web.techcollege.dk/Config/',
+        'https://stha2.web.techcollege.dk/Config/',
+        'http://stha2.web.techcollege.dk/config/',
+        'https://stha2.web.techcollege.dk/config/',
+    ];
 
-    $candidates[] = 'http://stha2.web.techcollege.dk/Config/';
-    $candidates[] = 'https://stha2.web.techcollege.dk/Config/';
-    $candidates[] = 'http://stha2.web.techcollege.dk/config/';
-    $candidates[] = 'https://stha2.web.techcollege.dk/config/';
+    foreach ($defaultBases as $base) {
+        $candidates[] = $base;
+    }
 
     $normalised = [];
     foreach ($candidates as $candidate) {
@@ -311,46 +312,6 @@ function should_retry_without_tls_validation(int $curlError): bool
     }
 
     return in_array($curlError, $retryable, true);
-}
-
-/**
- * @return list<string>
- */
-function build_host_specific_candidates(): array
-{
-    $results = [];
-
-    if (empty($_SERVER['HTTP_HOST'])) {
-        return $results;
-    }
-
-    $host = $_SERVER['HTTP_HOST'];
-
-    $path = '';
-    if (!empty($_SERVER['SCRIPT_NAME'])) {
-        $path = dirname($_SERVER['SCRIPT_NAME']);
-    }
-
-    $segments = array_values(array_filter(explode('/', trim($path, '/'))));
-
-    for ($i = count($segments); $i >= 1; $i--) {
-        $prefix = implode('/', array_slice($segments, 0, $i));
-        if ($prefix === '') {
-            continue;
-        }
-
-        $results[] = 'http://' . $host . '/' . $prefix . '/Config/';
-        $results[] = 'https://' . $host . '/' . $prefix . '/Config/';
-        $results[] = 'http://' . $host . '/' . $prefix . '/config/';
-        $results[] = 'https://' . $host . '/' . $prefix . '/config/';
-    }
-
-    $results[] = 'http://' . $host . '/Config/';
-    $results[] = 'https://' . $host . '/Config/';
-    $results[] = 'http://' . $host . '/config/';
-    $results[] = 'https://' . $host . '/config/';
-
-    return $results;
 }
 
 /**
