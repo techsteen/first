@@ -242,6 +242,8 @@ function resolve_remote_base_urls(): array
         $candidates[] = $candidate;
     }
 
+    $candidates[] = 'http://stha2.web.techcollege.dk/Config/';
+    $candidates[] = 'https://stha2.web.techcollege.dk/Config/';
     $candidates[] = 'http://stha2.web.techcollege.dk/config/';
     $candidates[] = 'https://stha2.web.techcollege.dk/config/';
 
@@ -337,10 +339,14 @@ function build_host_specific_candidates(): array
             continue;
         }
 
+        $results[] = 'http://' . $host . '/' . $prefix . '/Config/';
+        $results[] = 'https://' . $host . '/' . $prefix . '/Config/';
         $results[] = 'http://' . $host . '/' . $prefix . '/config/';
         $results[] = 'https://' . $host . '/' . $prefix . '/config/';
     }
 
+    $results[] = 'http://' . $host . '/Config/';
+    $results[] = 'https://' . $host . '/Config/';
     $results[] = 'http://' . $host . '/config/';
     $results[] = 'https://' . $host . '/config/';
 
