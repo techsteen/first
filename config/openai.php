@@ -13,7 +13,7 @@ function getSharedConfigContext(): array
         return $context;
     }
 
-    $path = __DIR__ . '/../../Config/config.php';
+    $path = __DIR__ . '/../../../Config/config.php';
     if (!is_file($path)) {
         throw new RuntimeException('Den centrale config-fil blev ikke fundet: ' . $path);
     }
