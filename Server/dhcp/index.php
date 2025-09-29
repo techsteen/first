@@ -1,21 +1,21 @@
 <?php
-require_once __DIR__ . '/../../Config/config.php';
+$config = require_once __DIR__ . '/../../Config/config.php';
 
-$audience = 'DHCP-teamet';
-$greeting = config_greeting($audience);
-$supportEmail = config_value('supportEmail', 'kontakt@eksempel.dk');
+$apiBase = $config['OPENAI_BASE'] ?? '';
+$model = $config['OPENAI_MODEL'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="da">
 <head>
     <meta charset="UTF-8">
-    <title><?php echo htmlspecialchars(APP_NAME . ' - DHCP', ENT_QUOTES, 'UTF-8'); ?></title>
+    <title>ChatGPT DHCP-integration</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <main>
-        <h1><?php echo htmlspecialchars($greeting, ENT_QUOTES, 'UTF-8'); ?></h1>
-        <p>Support: <a href="mailto:<?php echo htmlspecialchars($supportEmail, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($supportEmail, ENT_QUOTES, 'UTF-8'); ?></a></p>
+        <h1>DHCP &amp; ChatGPT</h1>
+        <p>Aktiv model: <strong><?php echo htmlspecialchars($model, ENT_QUOTES, 'UTF-8'); ?></strong></p>
+        <p>API-endpoint: <code><?php echo htmlspecialchars($apiBase, ENT_QUOTES, 'UTF-8'); ?></code></p>
     </main>
     <script src="script.js"></script>
 </body>

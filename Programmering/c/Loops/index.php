@@ -1,24 +1,27 @@
 <?php
-require_once __DIR__ . '/../../../Config/config.php';
+$config = require_once __DIR__ . '/../../../Config/config.php';
 
-$audience = 'C-udviklere';
-$greeting = config_greeting($audience);
-$timezone = config_value('timezone', 'UTC');
+$apiKey = $config['OPENAI_API_KEY'] ?? '';
+$timeout = $config['TIMEOUT'] ?? 0;
 ?>
 <!DOCTYPE html>
 <html lang="da">
 <head>
     <meta charset="UTF-8">
-    <title><?php echo htmlspecialchars(APP_NAME . ' - C Loops', ENT_QUOTES, 'UTF-8'); ?></title>
+    <title>ChatGPT i C-loops</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
-        <h1><?php echo htmlspecialchars($greeting, ENT_QUOTES, 'UTF-8'); ?></h1>
+        <h1>ChatGPT fra C-loops</h1>
     </header>
     <section>
-        <p>Konfigurationen angiver tidszonen som <strong><?php echo htmlspecialchars($timezone, ENT_QUOTES, 'UTF-8'); ?></strong>.</p>
-        <p>Denne side blev gengivet: <time datetime="<?php echo date('c'); ?>"><?php echo date('d-m-Y H:i'); ?></time>.</p>
+        <p>Denne side bruger en fælles ChatGPT-konfiguration.</p>
+        <p>API-nøglen er sat (skjult) og timeout er <strong><?php echo htmlspecialchars((string) $timeout, ENT_QUOTES, 'UTF-8'); ?></strong> sekunder.</p>
+        <details>
+            <summary>Debug</summary>
+            <p>CA-bundle: <code><?php echo htmlspecialchars($config['CA_BUNDLE'] ?? '', ENT_QUOTES, 'UTF-8'); ?></code></p>
+        </details>
     </section>
     <script src="loops.js"></script>
 </body>
