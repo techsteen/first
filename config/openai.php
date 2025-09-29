@@ -3,241 +3,115 @@
 declare(strict_types=1);
 
 /**
- * @return array{api_key:string, ca_bundle:?string}
+ * @return array{config: array<string, mixed>, dir: string}
  */
-function getOpenAiCredentials(): array
+function getSharedConfigContext(): array
 {
-    static $cache = null;
+    static $context = null;
 
-    if ($cache !== null) {
-        return $cache;
+    if ($context !== null) {
+        return $context;
     }
 
-    $configDir = resolveSharedConfigDirectory();
-    [$apiKey, $caBundle] = loadSharedCredentials($configDir);
-
-    if ($apiKey === '') {
-        $apiKey = readKeyFromFile($configDir . '/openai.key');
+    $path = __DIR__ . '/../../Config/config.php';
+    if (!is_file($path)) {
+        throw new RuntimeException('Den centrale config-fil blev ikke fundet: ' . $path);
     }
 
-    if ($apiKey === '') {
-        $fromEnv = getenv('OPENAI_API_KEY');
-        if ($fromEnv !== false && trim($fromEnv) !== '') {
-            $apiKey = trim($fromEnv);
-        }
+    $loaded = require $path;
+    if (!is_array($loaded)) {
+        throw new RuntimeException('Config-filen skal returnere et array.');
     }
 
-    if ($caBundle === null) {
-        $fallbacks = [
-            $configDir . '/cacert-2025-08-12.pem',
-            $configDir . '/cacert.pem',
-        ];
-        foreach ($fallbacks as $candidate) {
-            if (is_readable($candidate)) {
-                $caBundle = $candidate;
-                break;
-            }
-        }
-    }
-
-    return $cache = [
-        'api_key' => $apiKey,
-        'ca_bundle' => $caBundle,
+    return $context = [
+        'config' => $loaded,
+        'dir' => dirname($path),
     ];
-}
-
-function getOpenAiApiKey(): string
-{
-    return getOpenAiCredentials()['api_key'];
-}
-
-function getOpenAiCaBundle(): ?string
-{
-    return getOpenAiCredentials()['ca_bundle'];
 }
 
 function callOpenAiChat(array $messages, array $options = []): string
 {
-    $credentials = getOpenAiCredentials();
+    $context = getSharedConfigContext();
+    $config = $context['config'];
+    $configDir = $context['dir'];
 
-    if ($credentials['api_key'] === '') {
-        throw new RuntimeException('OpenAI API-nøglen er ikke tilgængelig i den centrale config.');
+    $apiKey = trim((string)($config['OPENAI_API_KEY'] ?? ''));
+    if ($apiKey === '') {
+        throw new RuntimeException('API-nøglen mangler – opdater Config/config.php med en gyldig nøgle.');
     }
 
-    $payload = array_merge([
-        'model' => 'gpt-4o-mini',
-        'messages' => $messages,
-        'temperature' => 0.7,
-        'max_tokens' => 600,
-    ], $options);
+    $apiBase = trim((string)($config['OPENAI_BASE'] ?? 'https://api.openai.com/v1'));
+    if ($apiBase === '') {
+        $apiBase = 'https://api.openai.com/v1';
+    }
+    $apiBase = rtrim($apiBase, '/');
 
-    $ch = curl_init('https://api.openai.com/v1/chat/completions');
-    $curlOptions = [
-        CURLOPT_POST => true,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => [
-            'Content-Type: application/json',
-            'Authorization: ' . 'Bearer ' . $credentials['api_key'],
-        ],
-        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
-        CURLOPT_TIMEOUT => 15,
+    $model = $options['model'] ?? ($config['OPENAI_MODEL'] ?? 'gpt-4o-mini');
+    unset($options['model']);
+
+    $basePayload = [
+        'model' => $model,
+        'messages' => $messages,
     ];
 
-    if ($credentials['ca_bundle']) {
-        $curlOptions[CURLOPT_CAINFO] = $credentials['ca_bundle'];
+    if (!array_key_exists('temperature', $options)) {
+        $basePayload['temperature'] = isset($config['OPENAI_TEMPERATURE'])
+            ? (float) $config['OPENAI_TEMPERATURE']
+            : 0.7;
     }
 
-    curl_setopt_array($ch, $curlOptions);
+    $payload = array_merge($basePayload, $options);
 
-    $response = curl_exec($ch);
-
-    if ($response === false) {
-        $error = curl_error($ch);
-        curl_close($ch);
-        throw new RuntimeException('Kunne ikke kontakte OpenAI: ' . $error);
+    $timeout = (int)($config['TIMEOUT'] ?? 30);
+    if ($timeout <= 0) {
+        $timeout = 30;
     }
 
-    $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $endpoint = $apiBase . '/chat/completions';
+    $ch = curl_init($endpoint);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'Authorization: ' . 'Bearer ' . $apiKey,
+        ],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => $timeout,
+    ]);
+
+    $caBundle = $config['CA_BUNDLE'] ?? '';
+    if (is_string($caBundle) && $caBundle !== '') {
+        $bundlePath = $caBundle;
+        if (!is_file($bundlePath)) {
+            $candidate = $configDir . '/' . ltrim($caBundle, '/\\');
+            if (is_file($candidate)) {
+                $bundlePath = $candidate;
+            }
+        }
+        if (is_file($bundlePath)) {
+            curl_setopt($ch, CURLOPT_CAINFO, $bundlePath);
+        }
+    }
+
+    $rawResponse = curl_exec($ch);
+    $curlErrNo = curl_errno($ch);
+    $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = $curlErrNo ? curl_error($ch) : null;
     curl_close($ch);
 
-    if ($statusCode < 200 || $statusCode >= 300) {
-        throw new RuntimeException('OpenAI svarede med status ' . $statusCode . ': ' . $response);
+    if ($curlErrNo) {
+        throw new RuntimeException('Forbindelsen til OpenAI fejlede: ' . $curlError);
     }
 
-    $decoded = json_decode($response, true);
-    if (!is_array($decoded)) {
-        throw new RuntimeException('Ugyldigt svar fra OpenAI.');
+    if ($httpStatus < 200 || $httpStatus >= 300) {
+        throw new RuntimeException('OpenAI svarede med HTTP-status ' . $httpStatus . '. Svar: ' . $rawResponse);
     }
 
-    $content = $decoded['choices'][0]['message']['content'] ?? '';
-    if (!is_string($content) || trim($content) === '') {
-        throw new RuntimeException('OpenAI returnerede ikke noget indhold.');
+    $decoded = json_decode($rawResponse, true);
+    if (!is_array($decoded) || empty($decoded['choices'][0]['message']['content'])) {
+        throw new RuntimeException('OpenAI returnerede et uventet svar.');
     }
 
-    return trim($content);
-}
-
-function resolveSharedConfigDirectory(): string
-{
-    static $cached = null;
-    if ($cached !== null) {
-        return $cached;
-    }
-
-    $candidates = [];
-    $envDir = getenv('CONFIG_DIR');
-    if (is_string($envDir) && $envDir !== '') {
-        $candidates[] = rtrim($envDir, '\\/');
-    }
-
-    $candidates[] = __DIR__;
-    $candidates[] = dirname(__DIR__) . '/config';
-    $candidates[] = dirname(__DIR__, 2) . '/config';
-    $candidates[] = dirname(__DIR__, 2) . '/Config';
-
-    foreach ($candidates as $dir) {
-        if ($dir !== '' && is_dir($dir)) {
-            return $cached = $dir;
-        }
-    }
-
-    return $cached = __DIR__;
-}
-
-/**
- * @return array{0:string,1:?string}
- */
-function loadSharedCredentials(string $configDir): array
-{
-    $apiKey = '';
-    $caBundle = null;
-
-    $configFiles = ['config.php', 'config.phg'];
-
-    foreach ($configFiles as $candidate) {
-        $candidatePath = $configDir . '/' . $candidate;
-        if (!is_readable($candidatePath)) {
-            continue;
-        }
-
-        $loaded = require $candidatePath;
-
-        if (is_string($loaded)) {
-            $candidateKey = trim($loaded);
-            if ($candidateKey !== '') {
-                $apiKey = $candidateKey;
-            }
-        } elseif (is_array($loaded)) {
-            if (isset($loaded['OPENAI_API_KEY'])) {
-                $candidateKey = trim((string) $loaded['OPENAI_API_KEY']);
-                if ($candidateKey !== '') {
-                    $apiKey = $candidateKey;
-                }
-            }
-
-            if (isset($loaded['CA_BUNDLE'])) {
-                $bundle = resolveReadablePath($loaded['CA_BUNDLE'], $configDir);
-                if ($bundle !== null) {
-                    $caBundle = $bundle;
-                }
-            }
-        }
-
-        if ($apiKey !== '' && $caBundle !== null) {
-            break;
-        }
-    }
-
-    return [$apiKey, $caBundle];
-}
-
-function readKeyFromFile(string $path): string
-{
-    if (!is_readable($path)) {
-        return '';
-    }
-
-    $raw = (string) file_get_contents($path);
-    $lines = preg_split('/\r?\n/', $raw);
-    foreach ($lines as $line) {
-        $candidate = trim($line);
-        if ($candidate === '' || str_starts_with($candidate, '#')) {
-            continue;
-        }
-        if (str_contains($candidate, '=')) {
-            [, $candidate] = array_pad(explode('=', $candidate, 2), 2, '');
-            $candidate = trim($candidate);
-        }
-        if ($candidate !== '') {
-            return $candidate;
-        }
-    }
-
-    return '';
-}
-
-/**
- * @param mixed $path
- */
-function resolveReadablePath($path, string $baseDir): ?string
-{
-    if (!is_string($path)) {
-        return null;
-    }
-
-    $candidate = trim($path);
-    if ($candidate === '') {
-        return null;
-    }
-
-    if (is_readable($candidate)) {
-        return $candidate;
-    }
-
-    $relative = $baseDir . '/' . ltrim($candidate, '/\\');
-    if (is_readable($relative)) {
-        return $relative;
-    }
-
-    return null;
+    return trim((string) $decoded['choices'][0]['message']['content']);
 }

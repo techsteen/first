@@ -1,5 +1,4 @@
 <?php
-require_once __DIR__ . '/config/central_sync.php';
 
 header('Content-Type: application/json');
 

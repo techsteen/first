@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 
-require_once __DIR__ . '/config/central_sync.php';
 require_once __DIR__ . '/config/openai.php';
 
 try {
