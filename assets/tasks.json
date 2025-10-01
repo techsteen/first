@@ -1,0 +1,185 @@
+{
+  "metadata": {
+    "version": "3.0",
+    "updated": "2024-06-01"
+  },
+  "tasks": [
+    {
+      "id": "BASE-1",
+      "title": "CIDR til netmaske",
+      "type": "short_answer",
+      "difficulty": 1,
+      "topic": "cidr",
+      "question": "Hvilken decimalt netmaske svarer til prefixlængden /26?",
+      "hints": [
+        "Tænk på hvor mange bits der er tændt i et /26 net.",
+        "Skriv de fire oktetter i binær og konverter til decimal."
+      ],
+      "answer_schema": {
+        "expected": "255.255.255.192",
+        "accept": ["255.255.255.192", "255 255 255 192"]
+      },
+      "rubric": {
+        "max_score": 1,
+        "criteria": [
+          "Eleven angiver korrekt netmaske i decimalnotation.",
+          "Små formateringsfejl tolereres, men talværdierne skal være korrekte."
+        ],
+        "solution": "En /26 betyder at de første 26 bits er 1. Det giver oktetterne 255.255.255.192."
+      },
+      "max_attempts_before_solution": 3
+    },
+    {
+      "id": "BASE-2",
+      "title": "Antal hosts i et subnet",
+      "type": "short_answer",
+      "difficulty": 2,
+      "topic": "hosts",
+      "question": "Hvor mange brugbare værter (hosts) er der i et /27 net?",
+      "hints": [
+        "Brug formlen 2^(hostbits) - 2.",
+        "Et /27 net efterlader 5 hostbits."
+      ],
+      "answer_schema": {
+        "expected": "30",
+        "accept": ["30", "30 hosts"]
+      },
+      "rubric": {
+        "max_score": 1,
+        "criteria": [
+          "Eleven viser forståelse for formlen 2^(hostbits) - 2.",
+          "Korrekt talværdi kræves."
+        ],
+        "solution": "Et /27 net har 5 hostbits: 2^5 - 2 = 32 - 2 = 30 brugbare adresser."
+      },
+      "max_attempts_before_solution": 3
+    },
+    {
+      "id": "BASE-3",
+      "title": "Net- og broadcastadresse",
+      "type": "multi_step",
+      "difficulty": 3,
+      "topic": "net_broadcast",
+      "question": "Du har IP-adressen 192.168.14.73/28. Angiv først netadressen og derefter broadcastadressen for subnettet.",
+      "steps": [
+        "Find netadressen.",
+        "Find broadcastadressen."
+      ],
+      "hints": [
+        "En /28 betyder blokke på 16 adresser.",
+        "Find den nærmeste nedre multipel af 16 for den relevante oktet."
+      ],
+      "answer_schema": {
+        "expected": {
+          "network": "192.168.14.64",
+          "broadcast": "192.168.14.79"
+        }
+      },
+      "rubric": {
+        "max_score": 1,
+        "criteria": [
+          "Net- og broadcastadresse skal matche subnetgrænserne for /28.",
+          "Begge værdier skal være i korrekt format."
+        ],
+        "solution": "Et /28 subnet har blokstørrelse 16. 64 er den nærmeste nedre blok for 73, så netadressen er 192.168.14.64 og broadcastadressen 192.168.14.79."
+      },
+      "max_attempts_before_solution": 3
+    },
+    {
+      "id": "BASE-4",
+      "title": "Binær til decimal",
+      "type": "fill_in_table",
+      "difficulty": 1,
+      "topic": "binary",
+      "question": "Udfyld tabellen ved at konvertere de binære oktetter til decimal.",
+      "table": {
+        "headers": ["Binær", "Decimal"],
+        "rows": [
+          {"binary": "11111111", "decimal": "255"},
+          {"binary": "11110000", "decimal": "240"},
+          {"binary": "11000000", "decimal": "192"}
+        ]
+      },
+      "hints": [
+        "Husk vægtene 128-64-32-16-8-4-2-1.",
+        "Start fra venstre og læg værdierne med 1'er sammen."
+      ],
+      "answer_schema": {
+        "expected": ["255", "240", "192"]
+      },
+      "rubric": {
+        "max_score": 1,
+        "criteria": [
+          "Alle tre decimalværdier skal angives korrekt.",
+          "Tallene skal være i base 10 uden ekstra tekst."
+        ],
+        "solution": "11111111 = 255, 11110000 = 240 og 11000000 = 192."
+      },
+      "max_attempts_before_solution": 2
+    },
+    {
+      "id": "BASE-5",
+      "title": "Vælg korrekt netmaske",
+      "type": "multiple_choice",
+      "difficulty": 2,
+      "topic": "netmask",
+      "question": "Hvilken netmaske giver præcis 62 brugbare værter?",
+      "options": [
+        "255.255.255.0 (/24)",
+        "255.255.255.192 (/26)",
+        "255.255.255.224 (/27)",
+        "255.255.255.192 (/26) med specialregel"
+      ],
+      "correct_options": [1],
+      "hints": [
+        "Start med antal hostbits.",
+        "Hvor mange adresser giver 6 hostbits?"
+      ],
+      "answer_schema": {
+        "expected": ["255.255.255.192 (/26)"]
+      },
+      "rubric": {
+        "max_score": 1,
+        "criteria": [
+          "Eleven identificerer netmasken med 6 hostbits.",
+          "Fokuser på tallet 62 = 2^6 - 2."
+        ],
+        "solution": "Et /26 subnet har 6 hostbits og giver 2^6 - 2 = 62 adresser."
+      },
+      "max_attempts_before_solution": 2
+    },
+    {
+      "id": "ADV-1",
+      "title": "VLSM tildeling",
+      "type": "multi_step",
+      "difficulty": 4,
+      "topic": "vlsm",
+      "question": "Du administrerer netværket 10.10.0.0/24 og skal lave VLSM til tre afdelinger med 60, 30 og 10 brugbare værter. Angiv passende subnet (CIDR) til hver afdeling, startende fra laveste adresser.",
+      "steps": [
+        "Tildel subnet til afdeling A (60 brugbare).",
+        "Tildel subnet til afdeling B (30 brugbare).",
+        "Tildel subnet til afdeling C (10 brugbare)."
+      ],
+      "hints": [
+        "Start med det største subnet først.",
+        "Husk at runde op til nærmeste potens af to og reserver næste ledige blok."
+      ],
+      "answer_schema": {
+        "expected": {
+          "A": "10.10.0.0/26",
+          "B": "10.10.0.64/27",
+          "C": "10.10.0.96/28"
+        }
+      },
+      "rubric": {
+        "max_score": 1,
+        "criteria": [
+          "Subnettene skal fordeles uden overlap og i korrekt rækkefølge.",
+          "Hvert subnet skal dække mindst antallet af ønskede værter."
+        ],
+        "solution": "A: 10.10.0.0/26 (62 hosts), B: 10.10.0.64/27 (30 hosts), C: 10.10.0.96/28 (14 hosts)."
+      },
+      "max_attempts_before_solution": 4
+    }
+  ]
+}

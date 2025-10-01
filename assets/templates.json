@@ -1,0 +1,124 @@
+{
+  "metadata": {
+    "version": "3.0",
+    "notes": "Skabelonerne bruges af api_generate_tasks.php. LLM skal holde sig strengt til beskrivelserne."
+  },
+  "topics": {
+    "cidr": {
+      "1": [
+        {
+          "template_id": "cidr-mask-basic",
+          "type": "short_answer",
+          "description": "Konverter et givent prefix til decimalt netmaske.",
+          "variables": {
+            "prefix": ["/25", "/26", "/27", "/28"],
+            "mask": {
+              "/25": "255.255.255.128",
+              "/26": "255.255.255.192",
+              "/27": "255.255.255.224",
+              "/28": "255.255.255.240"
+            }
+          },
+          "instructions": "Vælg et prefix fra listen og returnér spørgsmål, hints, rubric og korrekt maske."
+        },
+        {
+          "template_id": "cidr-host-count",
+          "type": "short_answer",
+          "description": "Beregn antal brugbare værter ud fra prefix.",
+          "variables": {
+            "prefix": ["/24", "/25", "/26", "/27"],
+            "host_count": {
+              "/24": 254,
+              "/25": 126,
+              "/26": 62,
+              "/27": 30
+            }
+          }
+        }
+      ],
+      "2": [
+        {
+          "template_id": "cidr-range",
+          "type": "multi_step",
+          "description": "Find net- og broadcastadresse for IP med givet prefix.",
+          "variables": {
+            "networks": [
+              {"ip": "172.16.9.34", "prefix": "/27"},
+              {"ip": "10.0.5.200", "prefix": "/26"},
+              {"ip": "192.168.22.78", "prefix": "/28"}
+            ]
+          }
+        }
+      ]
+    },
+    "netmask": {
+      "2": [
+        {
+          "template_id": "mask-selection",
+          "type": "multiple_choice",
+          "description": "Vælg den netmaske der matcher et krav om hosts.",
+          "variables": {
+            "host_requirements": [
+              {"hosts": 50, "correct": "255.255.255.192 (/26)"},
+              {"hosts": 28, "correct": "255.255.255.224 (/27)"},
+              {"hosts": 12, "correct": "255.255.255.240 (/28)"}
+            ],
+            "distractors": [
+              "255.255.255.0 (/24)",
+              "255.255.255.128 (/25)",
+              "255.255.255.252 (/30)"
+            ]
+          }
+        }
+      ]
+    },
+    "vlsm": {
+      "4": [
+        {
+          "template_id": "vlsm-three-subnets",
+          "type": "multi_step",
+          "description": "Fordel tre subnet i rækkefølge efter krav.",
+          "variables": {
+            "base_networks": ["10.20.0.0/24", "172.16.4.0/24"],
+            "demands": [
+              [60, 30, 10],
+              [100, 40, 12]
+            ]
+          }
+        }
+      ],
+      "5": [
+        {
+          "template_id": "vlsm-advanced",
+          "type": "multi_step",
+          "description": "Planlæg fire subnet med overlapkontrol og noter opsummering.",
+          "variables": {
+            "base_networks": ["192.168.50.0/23", "10.50.8.0/22"],
+            "demands": [
+              [200, 50, 30, 12],
+              [120, 70, 40, 18]
+            ]
+          }
+        }
+      ]
+    },
+    "binary": {
+      "1": [
+        {
+          "template_id": "binary-decimal-table",
+          "type": "fill_in_table",
+          "description": "Konverter tre binære oktetter til decimal.",
+          "variables": {
+            "rows": [
+              ["11111111", "255"],
+              ["11100000", "224"],
+              ["11000000", "192"],
+              ["10100000", "160"],
+              ["11111100", "252"]
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
