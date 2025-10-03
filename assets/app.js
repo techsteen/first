@@ -168,51 +168,188 @@ function renderFrontpage(container) {
 function renderLearn(container) {
     container.innerHTML = `
         <section class="learning-section" aria-labelledby="learn-heading">
-            <h2 id="learn-heading">Teori om subnetting</h2>
+            <h2 id="learn-heading">Start med teorien</h2>
+            <p class="learning-intro">Vælg et emne for at bygge din forståelse trin for trin. Begynd med IP-adresser og gå derefter videre til net- og broadcastadresser, før du udforsker subnetting.</p>
             ${getLearningContent()}
         </section>
     `;
+    setupLearnTabs(container);
 }
 
 function getLearningContent() {
     return `
-    <article class="learning-card">
-        <h3>CIDR og prefixlængder</h3>
-        <p>CIDR (Classless Inter-Domain Routing) bruger prefixlængden til at angive hvor mange bits i adressen der beskriver netværket. Et /24 betyder 24 bits til netdelen.</p>
-        <ul>
-            <li>Netmasker kan skrives som /x eller i decimal, f.eks. 255.255.255.0.</li>
-            <li>Jo højere prefix, desto mindre subnet og færre hosts.</li>
-        </ul>
-    </article>
-    <article class="learning-card">
-        <h3>Netmasker og bitmønstre</h3>
-        <p>En netmaske består af sammenhængende 1'ere efterfulgt af 0'ere. 1'erne låser netdelen, mens 0'erne bruges til værtsadresser.</p>
-        <ul>
-            <li>/25 = 11111111.11111111.11111111.10000000</li>
-            <li>/26 = 11111111.11111111.11111111.11000000</li>
-            <li>/27 = 11111111.11111111.11111111.11100000</li>
-        </ul>
-    </article>
-    <article class="learning-card">
-        <h3>Net- og broadcastadresse</h3>
-        <p>Netadressen har alle hostbits sat til 0, mens broadcastadressen har alle hostbits sat til 1. Et subnet med blokstørrelsen 16 vil starte ved 0, 16, 32, 48 osv.</p>
-    </article>
-    <article class="learning-card">
-        <h3>Antal værter</h3>
-        <p>Antallet af brugbare værtsadresser beregnes som 2<sup>hostbits</sup> - 2. Vi trækker net- og broadcastadresse fra.</p>
-    </article>
-    <article class="learning-card">
-        <h3>Binær ↔ decimal</h3>
-        <p>For at omregne binært til decimal lægges værdierne for de bits, der er 1, sammen. Tabellen 128-64-32-16-8-4-2-1 bruges til hurtig beregning.</p>
-    </article>
-    <article class="learning-card">
-        <h3>Klassefulde net (overblik)</h3>
-        <p>Klasse A, B og C giver en hurtig tommelfingerregel om standardmasker (f.eks. /8, /16, /24), men med CIDR er det mere fleksibelt.</p>
-    </article>
-    <article class="learning-card">
-        <h3>Intro til VLSM</h3>
-        <p>Variable Length Subnet Masking gør det muligt at opdele et netværk i subnet af forskellig størrelse. Start altid med det største behov.</p>
-    </article>`;
+    <div class="learn-tabs" role="tablist" aria-label="Teoriemner">
+        <button type="button" class="tab" role="tab" id="tab-ip-intro" aria-controls="panel-ip-intro" aria-selected="true">Hvad er en IP-adresse?</button>
+        <button type="button" class="tab" role="tab" id="tab-net-broadcast" aria-controls="panel-net-broadcast" aria-selected="false">Net- og broadcastadresser</button>
+        <button type="button" class="tab" role="tab" id="tab-subnetting-overview" aria-controls="panel-subnetting-overview" aria-selected="false">Overblik: subnetting</button>
+    </div>
+    <div class="tab-panels">
+        <section role="tabpanel" id="panel-ip-intro" aria-labelledby="tab-ip-intro">
+            <article class="learning-card">
+                <h3>IP-adressen – din digitale adresse</h3>
+                <p>En IPv4-adresse er en række på <strong>32 bits</strong> (nul eller ét). For at vi mennesker kan læse den, deles den op i fire blokke á <strong>8 bits</strong>, som vi kalder <em>octetter</em>. Hver octet oversættes til decimal og adskilles med punktummer. Eksempel: <code>192.168.010.034</code> (binært) bliver til <code>192.168.10.34</code> (decimal).</p>
+                <div class="bit-grid" role="presentation" aria-hidden="true">
+                    <span>11100000</span><span>10101000</span><span>00001010</span><span>00100010</span>
+                </div>
+                <p>Octetterne svarer til talværdierne 128, 64, 32, 16, 8, 4, 2 og 1. Når vi læser en octet, lægger vi værdierne for de bits, der er <strong>1</strong>, sammen. Det er derfor adresserne er opdelt i grupper af otte bit: det gør det nemt at oversætte mellem binær og decimal og passer til netværksudstyr, der arbejder i hele bytes.</p>
+            </article>
+            <article class="learning-card">
+                <h3>Hvad bruger vi IP-adresser til i et LAN?</h3>
+                <p>I et lokalnetværk (LAN) fungerer IP-adressen som en unik identifikator for hver enhed – computere, printere, kameraer og servere. Når en elev-maskine skal sende en fil til skolens printer, pakkes data med afsenderens og modtagerens IP-adresser, så netværket ved, hvor data skal hen.</p>
+                <ul>
+                    <li><strong>Netdelen</strong> fortæller, hvilket lokalnet enheden tilhører.</li>
+                    <li><strong>Værtsdelen</strong> identificerer den konkrete enhed på det net.</li>
+                </ul>
+                <p>Routere bruger netdelen til at finde vej til det rigtige netværk, mens switche bruger værtsdelen (sammen med MAC-adresser) til at levere data til den rigtige port. Derfor er korrekt IP-adressering fundamentet for, at et LAN virker stabilt.</p>
+                <figure class="lan-figure">
+                    <figcaption>IP-adresser forbinder enheder i samme net</figcaption>
+                    <div class="lan-diagram" role="presentation" aria-hidden="true">
+                        <span>192.168.10.<strong>1</strong> (router)</span>
+                        <span>192.168.10.<strong>14</strong> (PC)</span>
+                        <span>192.168.10.<strong>25</strong> (printer)</span>
+                    </div>
+                </figure>
+            </article>
+            <article class="learning-card">
+                <h3>Sådan læser du en IP-adresse</h3>
+                <ol>
+                    <li>Split adressen i fire octetter (f.eks. <code>172.16.4.25</code> → 172 | 16 | 4 | 25).</li>
+                    <li>Oversæt hver octet til binær, hvis du vil se bitmønsteret.</li>
+                    <li>Identificér net- og værtsdel ud fra netmasken (kommer i næste faner).</li>
+                </ol>
+                <p>At mestre dette trin gør resten af subnetting-rejsen langt lettere.</p>
+            </article>
+        </section>
+        <section role="tabpanel" id="panel-net-broadcast" aria-labelledby="tab-net-broadcast" hidden>
+            <article class="learning-card">
+                <h3>Hvorfor taler vi om netadresser?</h3>
+                <p>Netadressen er navneskiltet på selve lokalnettet. Den beskriver hele gruppen af IP-adresser, der hører sammen. Netværksudstyr bruger netadressen til at vide, om en pakke skal blive i LAN'et eller sendes videre til en router.</p>
+                <p>Forestil dig et klasseværelse: netadressen svarer til klassens navn på døren. Alle elever (værter) inde i lokalet har deres egne navneskilte, men hører til samme klasse.</p>
+                <div class="net-broadcast-diagram" role="presentation" aria-hidden="true">
+                    <span class="net">Net: 192.168.10.<strong>0</strong></span>
+                    <span class="hosts">Værter: ... .1 – ... .254</span>
+                    <span class="broadcast">Broadcast: 192.168.10.<strong>255</strong></span>
+                </div>
+            </article>
+            <article class="learning-card">
+                <h3>Broadcastadressen – fællesbeskeden</h3>
+                <p>Broadcastadressen er den adresse, alle enheder lytter efter, når der skal sendes en besked til hele netværket på én gang – f.eks. når en lærer-pc vil fortælle alle computere, at der er en vigtig besked.</p>
+                <ul>
+                    <li>Den har alle værtsbits sat til 1.</li>
+                    <li>Den må ikke gives til en enkelt enhed – den er reserveret til fællesbeskeder.</li>
+                    <li>Når netværket vokser, hjælper broadcastadressen med at nå alle hurtigt, uden at sende beskeden en ad gangen.</li>
+                </ul>
+            </article>
+            <article class="learning-card">
+                <h3>Samspillet i praksis</h3>
+                <p>En enhed i LAN'et sender normalt til andre værter. Kun når destinationen ligger uden for netadressen, kontakter den routeren. Når en besked skal ud til alle, bruges broadcastadressen. Det er derfor vigtigt at kende begge adresser, før vi begynder på selve subnetting-arbejdet.</p>
+                <p class="tip-box">Tip: Du kan altid finde net- og broadcastadressen ved at kigge på netmasken og se, hvilke bits der er låst (net) og hvilke der kan skifte (værter). Selve beregningen lærer du i de næste faner.</p>
+            </article>
+        </section>
+        <section role="tabpanel" id="panel-subnetting-overview" aria-labelledby="tab-subnetting-overview" hidden>
+            <article class="learning-card">
+                <h3>CIDR og prefixlængder</h3>
+                <p>CIDR (Classless Inter-Domain Routing) bruger prefixlængden til at angive, hvor mange bits i adressen der beskriver netværket. Et <code>/24</code> betyder 24 bits til netdelen.</p>
+                <ul>
+                    <li>Netmasker kan skrives som /x eller i decimal, f.eks. 255.255.255.0.</li>
+                    <li>Jo højere prefix, desto mindre subnet og færre hosts.</li>
+                </ul>
+            </article>
+            <article class="learning-card">
+                <h3>Netmasker og bitmønstre</h3>
+                <p>En netmaske består af sammenhængende 1'ere efterfulgt af 0'ere. 1'erne låser netdelen, mens 0'erne bruges til værtsadresser.</p>
+                <ul>
+                    <li>/25 = 11111111.11111111.11111111.10000000</li>
+                    <li>/26 = 11111111.11111111.11111111.11000000</li>
+                    <li>/27 = 11111111.11111111.11111111.11100000</li>
+                </ul>
+            </article>
+            <article class="learning-card">
+                <h3>Antal værter</h3>
+                <p>Antallet af brugbare værtsadresser beregnes som <code>2<sup>hostbits</sup> - 2</code>. Vi trækker net- og broadcastadresse fra.</p>
+            </article>
+            <article class="learning-card">
+                <h3>Binær ↔ decimal</h3>
+                <p>For at omregne binært til decimal lægges værdierne for de bits, der er 1, sammen. Tabellen 128-64-32-16-8-4-2-1 bruges til hurtig beregning.</p>
+            </article>
+            <article class="learning-card">
+                <h3>Klassefulde net (overblik)</h3>
+                <p>Klasse A, B og C giver en hurtig tommelfingerregel om standardmasker (f.eks. /8, /16, /24), men med CIDR er det mere fleksibelt.</p>
+            </article>
+            <article class="learning-card">
+                <h3>Intro til VLSM</h3>
+                <p>Variable Length Subnet Masking gør det muligt at opdele et netværk i subnet af forskellig størrelse. Start altid med det største behov.</p>
+            </article>
+        </section>
+    </div>`;
+}
+
+function setupLearnTabs(container) {
+    const tablist = container.querySelector('.learn-tabs');
+    if (!tablist) return;
+
+    const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
+    if (!tabs.length) return;
+
+    const panels = tabs.map(tab => container.querySelector(`#${tab.getAttribute('aria-controls')}`));
+
+    function activateTab(tab) {
+        tabs.forEach((button, index) => {
+            const isActive = button === tab;
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            button.setAttribute('tabindex', isActive ? '0' : '-1');
+            button.classList.toggle('active', isActive);
+            const panel = panels[index];
+            if (panel) {
+                if (isActive) {
+                    panel.removeAttribute('hidden');
+                } else {
+                    panel.setAttribute('hidden', '');
+                }
+            }
+        });
+    }
+
+    function focusTab(tab) {
+        tab.focus();
+    }
+
+    tablist.addEventListener('click', event => {
+        const target = event.target;
+        if (target instanceof HTMLElement && target.getAttribute('role') === 'tab') {
+            activateTab(target);
+            focusTab(target);
+        }
+    });
+
+    tablist.addEventListener('keydown', event => {
+        const currentTab = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        const currentIndex = currentTab ? tabs.indexOf(currentTab) : -1;
+        if (currentIndex === -1) return;
+
+        if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+            event.preventDefault();
+            const next = tabs[(currentIndex + 1) % tabs.length];
+            activateTab(next);
+            focusTab(next);
+        } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            const prev = tabs[(currentIndex - 1 + tabs.length) % tabs.length];
+            activateTab(prev);
+            focusTab(prev);
+        } else if (event.key === 'Home') {
+            event.preventDefault();
+            activateTab(tabs[0]);
+            focusTab(tabs[0]);
+        } else if (event.key === 'End') {
+            event.preventDefault();
+            const last = tabs[tabs.length - 1];
+            activateTab(last);
+            focusTab(last);
+        }
+    });
+
+    activateTab(tabs[0]);
 }
 
 function renderPractice(container) {
