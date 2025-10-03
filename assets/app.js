@@ -176,6 +176,7 @@ function renderLearn(container) {
     setupLearnTabs(container);
     setupClassSimulator(container);
     setupNetmaskSimulator(container);
+    setupSubnettingSimulator(container);
 }
 
 function getLearningContent() {
@@ -184,6 +185,7 @@ function getLearningContent() {
         <button type="button" class="tab" role="tab" id="tab-ip-intro" aria-controls="panel-ip-intro" aria-selected="true">Hvad er en IP-adresse?</button>
         <button type="button" class="tab" role="tab" id="tab-net-broadcast" aria-controls="panel-net-broadcast" aria-selected="false">Net- og broadcastadresser</button>
         <button type="button" class="tab" role="tab" id="tab-classful" aria-controls="panel-classful" aria-selected="false">Adresseklasser</button>
+        <button type="button" class="tab" role="tab" id="tab-subnetting" aria-controls="panel-subnetting" aria-selected="false">Subnetting og CIDR</button>
         <button type="button" class="tab" role="tab" id="tab-netmask-patterns" aria-controls="panel-netmask-patterns" aria-selected="false">Netmasker og bitmønstre</button>
     </div>
     <div class="tab-panels">
@@ -345,6 +347,75 @@ function getLearningContent() {
                     </dl>
                     <p class="help-text">Bemærk: Hvis der kun er én eller to værtsbits tilbage, kan der være få eller ingen brugbare værter. Det dækker vi mere i den kommende subnetting-del.</p>
                 </div>
+            </article>
+        </section>
+        <section role="tabpanel" id="panel-subnetting" aria-labelledby="tab-subnetting" hidden>
+            <article class="learning-card subnet-card">
+                <h3>Hvorfor subnetting og hvad er CIDR?</h3>
+                <p>Subnetting betyder, at vi deler et større netværk op i mindre, kontrollerede bidder. I stedet for kun at bruge de historiske klasser, arbejder vi med <strong>CIDR</strong> (Classless Inter-Domain Routing). Her beskrives masken med en <em>prefixlængde</em>, fx <code>/26</code>, som fortæller hvor mange af de 32 bits der er låst til netdelen.</p>
+                <ul>
+                    <li><strong>Lån bits</strong>: Vi “låner” værtsbits og gør dem til netbits for at få flere netværk.</li>
+                    <li><strong>Passer til behov</strong>: Mindre subnet giver mindre broadcaststøj og bedre kontrol over adresser.</li>
+                    <li><strong>Respektér klassen</strong>: Vi tager altid udgangspunkt i en klasse A, B eller C-adresse. Adresser som <code>127.x.x.x</code> (loopback) eller klasse D/E bruges ikke til almindelig subnetting.</li>
+                </ul>
+                <p>Prefixlængden og netmasken hænger sammen: <code>/26</code> betyder 26 netbits og en maske på <code>255.255.255.192</code>. Hver gang du øger prefixet med én, halveres antal værter pr. subnet.</p>
+            </article>
+            <article class="learning-card subnet-card">
+                <h3>Simulator: Fra klasse til subnet</h3>
+                <div class="subnet-simulator" data-subnet-simulator>
+                    <div class="subnet-inputs">
+                        <label for="subnet-ip">Grundadresse (klasse A, B eller C)
+                            <input type="text" id="subnet-ip" name="subnet-ip" value="192.168.10.0" inputmode="decimal" autocomplete="off" aria-describedby="subnet-ip-help">
+                        </label>
+                        <p id="subnet-ip-help" class="help-text">Vælg et net i dit LAN som udgangspunkt. Undgå 0.x.x.x, 127.x.x.x og klasse D/E, da de ikke subnettes i praksis.</p>
+                        <label for="subnet-prefix">Prefixlængde (låste netbits)
+                            <input type="range" id="subnet-prefix" name="subnet-prefix" min="8" max="30" value="24">
+                            <output id="subnet-prefix-display" for="subnet-prefix">24</output>
+                        </label>
+                    </div>
+                    <p class="subnet-error" data-subnet-field="error" role="alert" hidden>Indtast en gyldig klasse A-, B- eller C-adresse (ikke 127.x.x.x).</p>
+                    <dl class="subnet-results" aria-live="polite">
+                        <div>
+                            <dt>Adresseklasse</dt>
+                            <dd data-subnet-field="classLabel">Klasse C – 192.0.0.0 – 223.255.255.255</dd>
+                        </div>
+                        <div>
+                            <dt>Standardmaske</dt>
+                            <dd data-subnet-field="defaultMask">/24 – 255.255.255.0</dd>
+                        </div>
+                        <div>
+                            <dt>Valgt prefix og maske</dt>
+                            <dd data-subnet-field="selectedMask">/24 – 255.255.255.0</dd>
+                        </div>
+                        <div>
+                            <dt>Lånte bits</dt>
+                            <dd data-subnet-field="borrowedBits">0 lånte bit (giver 1 delnet)</dd>
+                        </div>
+                        <div>
+                            <dt>Antal subnet</dt>
+                            <dd data-subnet-field="subnetCount">1 delnet</dd>
+                        </div>
+                        <div>
+                            <dt>Brugbare værter pr. subnet</dt>
+                            <dd data-subnet-field="hostCount">254 adresser (8 værtsbits)</dd>
+                        </div>
+                    </dl>
+                    <div class="host-requirement">
+                        <label for="subnet-hosts">Hvor mange værter skal ét subnet mindst rumme?
+                            <input type="number" id="subnet-hosts" name="subnet-hosts" min="1" step="1" placeholder="fx 50">
+                        </label>
+                        <p class="help-text" data-subnet-field="hostAdvice">Angiv et antal værter for at få en anbefaling til prefix.</p>
+                    </div>
+                </div>
+            </article>
+            <article class="learning-card subnet-card">
+                <h3>Tips til beregninger</h3>
+                <ul class="tip-list">
+                    <li><strong>Antal subnet</strong>: <code>2<sup>lånte bits</sup></code>. Låner du fx 3 bits i en klasse C (<code>/27</code>), får du 8 subnet.</li>
+                    <li><strong>Brugbare værter</strong>: <code>2<sup>værtsbits</sup> - 2</code>. Ved <code>/27</code> er der 5 værtsbits, altså 30 værter pr. subnet.</li>
+                    <li><strong>Spring-størrelse</strong>: Del 256 med antallet af subnet i sidste octet for at finde næste netadresse. Ved <code>/26</code> (4 subnet) er springet 64: <code>192.168.10.0</code>, <code>.64</code>, <code>.128</code>, <code>.192</code>.</li>
+                    <li><strong>Undgå særafdelinger</strong>: Hold dig fra 127.x.x.x (loopback) og klasse D/E-adresser til multicast og forskning. De bruges ikke i almindelige LAN-subnet.</li>
+                </ul>
             </article>
         </section>
     </div>`;
@@ -595,6 +666,154 @@ function setupNetmaskSimulator(container) {
     updateSimulator();
 }
 
+function setupSubnettingSimulator(container) {
+    const simulator = container.querySelector('[data-subnet-simulator]');
+    if (!simulator) return;
+
+    const ipInput = simulator.querySelector('#subnet-ip');
+    const prefixInput = simulator.querySelector('#subnet-prefix');
+    const prefixDisplay = simulator.querySelector('#subnet-prefix-display');
+    const hostInput = simulator.querySelector('#subnet-hosts');
+    const errorField = simulator.querySelector('[data-subnet-field="error"]');
+    const fields = {
+        classLabel: simulator.querySelector('[data-subnet-field="classLabel"]'),
+        defaultMask: simulator.querySelector('[data-subnet-field="defaultMask"]'),
+        selectedMask: simulator.querySelector('[data-subnet-field="selectedMask"]'),
+        borrowedBits: simulator.querySelector('[data-subnet-field="borrowedBits"]'),
+        subnetCount: simulator.querySelector('[data-subnet-field="subnetCount"]'),
+        hostCount: simulator.querySelector('[data-subnet-field="hostCount"]'),
+        hostAdvice: simulator.querySelector('[data-subnet-field="hostAdvice"]')
+    };
+
+    if (!ipInput || !prefixInput || !prefixDisplay || !hostInput) return;
+
+    function updateSimulator() {
+        let prefixBits = parseInt(prefixInput.value, 10);
+        if (!Number.isInteger(prefixBits)) {
+            prefixBits = 24;
+        }
+
+        const ipParts = parseIp(ipInput.value.trim());
+        if (!ipParts) {
+            prefixInput.min = '8';
+            prefixInput.max = '30';
+            prefixDisplay.textContent = String(prefixBits);
+            showError('Indtast en gyldig IPv4-adresse i klasse A, B eller C (fx 10.0.0.0 eller 192.168.0.0).');
+            setPlaceholders();
+            return;
+        }
+
+        const classInfo = getClassInfo(ipParts[0]);
+        if (!classInfo) {
+            prefixInput.min = '8';
+            prefixInput.max = '30';
+            prefixDisplay.textContent = String(prefixBits);
+            showError('Adressen skal være i klasse A, B eller C. 127.x.x.x og klasse D/E subnettes ikke.');
+            setPlaceholders();
+            return;
+        }
+
+        hideError();
+        const minPrefix = classInfo.defaultBits;
+        const maxPrefix = 30;
+        prefixBits = Math.min(Math.max(prefixBits, minPrefix), maxPrefix);
+        if (prefixBits !== parseInt(prefixInput.value, 10)) {
+            prefixInput.value = String(prefixBits);
+        }
+        prefixInput.min = String(minPrefix);
+        prefixInput.max = String(maxPrefix);
+        prefixDisplay.textContent = String(prefixBits);
+
+        const selectedMaskNumber = maskFromBits(prefixBits);
+        const selectedMask = numberToIp(selectedMaskNumber);
+        const defaultMaskNumber = maskFromBits(classInfo.defaultBits);
+        const borrowedBits = Math.max(0, prefixBits - classInfo.defaultBits);
+        const subnetCount = 2 ** borrowedBits;
+        const hostBits = 32 - prefixBits;
+
+        updateField('classLabel', `${classInfo.label} – ${classInfo.range}`);
+        updateField('defaultMask', `/${classInfo.defaultBits} – ${numberToIp(defaultMaskNumber)}`);
+        updateField('selectedMask', `/${prefixBits} – ${selectedMask}`);
+        updateField('borrowedBits', formatBorrowedBits(borrowedBits));
+        updateField('subnetCount', formatSubnetCount(subnetCount));
+        updateField('hostCount', formatHostCount(hostBits));
+
+        updateHostAdvice(classInfo, prefixBits, hostBits);
+    }
+
+    function updateHostAdvice(classInfo, prefixBits, hostBits) {
+        const adviceField = fields.hostAdvice;
+        if (!adviceField) return;
+
+        const value = hostInput.value.trim();
+        if (!value) {
+            adviceField.textContent = 'Angiv et antal værter for at få en anbefaling til prefix.';
+            return;
+        }
+
+        const required = Number(value);
+        if (!Number.isFinite(required) || required <= 0) {
+            adviceField.textContent = 'Indtast et positivt heltal for antal værter.';
+            return;
+        }
+
+        const requiredInt = Math.floor(required);
+        const neededHostBits = Math.max(2, Math.ceil(Math.log2(requiredInt + 2)));
+        const recommendedPrefix = 32 - neededHostBits;
+
+        if (recommendedPrefix < classInfo.defaultBits) {
+            adviceField.textContent = `${classInfo.label} kan højst give ${formatHostCount(32 - classInfo.defaultBits)}. Vælg en adresse i ${suggestClass(requiredInt)} eller fordel værterne på flere subnet.`;
+            return;
+        }
+
+        const recommendedCapacity = formatHostCount(neededHostBits);
+        const currentCapacity = formatHostCount(hostBits);
+
+        if (prefixBits <= recommendedPrefix) {
+            adviceField.textContent = `Prefix /${recommendedPrefix} dækker behovet (${recommendedCapacity}). Din nuværende indstilling /${prefixBits} giver ${currentCapacity}.`;
+        } else {
+            adviceField.textContent = `Dit valgte prefix /${prefixBits} giver ${currentCapacity}. For mindst ${requiredInt} værter skal du vælge mindst /${recommendedPrefix} (${recommendedCapacity}).`;
+        }
+    }
+
+    function showError(message) {
+        if (!errorField) return;
+        errorField.textContent = message;
+        errorField.hidden = false;
+    }
+
+    function hideError() {
+        if (!errorField) return;
+        errorField.hidden = true;
+    }
+
+    function setPlaceholders() {
+        updateField('classLabel', '—');
+        updateField('defaultMask', '—');
+        updateField('selectedMask', '—');
+        updateField('borrowedBits', '—');
+        updateField('subnetCount', '—');
+        updateField('hostCount', '—');
+        const adviceField = fields.hostAdvice;
+        if (adviceField) {
+            adviceField.textContent = 'Angiv et antal værter for at få en anbefaling til prefix.';
+        }
+    }
+
+    function updateField(key, value) {
+        const field = fields[key];
+        if (field) {
+            field.textContent = value;
+        }
+    }
+
+    ipInput.addEventListener('input', updateSimulator);
+    prefixInput.addEventListener('input', updateSimulator);
+    hostInput.addEventListener('input', updateSimulator);
+
+    updateSimulator();
+}
+
 function parseIp(value) {
     const parts = value.split('.').map(part => part.trim());
     if (parts.length !== 4) return null;
@@ -654,6 +873,34 @@ function formatClassHostCount(hostBits) {
         return 'Standardmasken giver ingen brugbare værter';
     }
     return `${formatHostCount(hostBits)} (standard)`;
+}
+
+function formatSubnetCount(subnetCount) {
+    const rounded = Math.max(1, Math.floor(subnetCount));
+    const label = rounded === 1 ? 'delnet' : 'delnet';
+    return `${rounded.toLocaleString('da-DK')} ${label}`;
+}
+
+function formatBorrowedBits(borrowedBits) {
+    if (borrowedBits <= 0) {
+        return '0 lånte bit (giver 1 delnet)';
+    }
+    const subnetCount = 2 ** borrowedBits;
+    const bitLabel = borrowedBits === 1 ? 'lånt bit' : 'lånte bit';
+    return `${borrowedBits} ${bitLabel} (giver ${subnetCount.toLocaleString('da-DK')} delnet)`;
+}
+
+function suggestClass(requiredHosts) {
+    if (requiredHosts <= 254) {
+        return 'klasse C';
+    }
+    if (requiredHosts <= 65534) {
+        return 'klasse B';
+    }
+    if (requiredHosts <= 16777214) {
+        return 'klasse A';
+    }
+    return 'IPv6';
 }
 
 function getClassInfo(firstOctet) {
