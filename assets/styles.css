@@ -275,6 +275,104 @@ section h3 {
     color: #fef3c7;
 }
 
+.mask-card {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.mask-simulator {
+    display: grid;
+    gap: 1rem;
+    background: rgba(30, 41, 59, 0.6);
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    padding: 1.5rem;
+}
+
+.mask-inputs {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.mask-inputs label {
+    display: grid;
+    gap: 0.35rem;
+    font-weight: 600;
+    color: #e2e8f0;
+}
+
+.mask-inputs input[type="text"] {
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: rgba(15, 23, 42, 0.85);
+    color: var(--color-text);
+}
+
+.mask-inputs input[type="text"]:focus {
+    outline: 2px solid rgba(56, 189, 248, 0.45);
+    border-color: rgba(56, 189, 248, 0.6);
+}
+
+.mask-inputs input[type="range"] {
+    width: 100%;
+}
+
+.mask-inputs output {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: rgba(148, 163, 184, 0.9);
+}
+
+.mask-results {
+    display: grid;
+    gap: 0.75rem;
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.mask-results div {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.mask-results dt {
+    font-weight: 600;
+    color: rgba(148, 163, 184, 0.85);
+}
+
+.mask-results dd {
+    margin: 0;
+    font-family: 'Source Code Pro', Menlo, monospace;
+    font-size: 1rem;
+    color: #f8fafc;
+}
+
+.mask-error {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    background: rgba(248, 113, 113, 0.12);
+    border: 1px solid rgba(248, 113, 113, 0.35);
+    color: #fecaca;
+}
+
+.mask-card .help-text {
+    margin: 0;
+    font-size: 0.9rem;
+    color: rgba(226, 232, 240, 0.75);
+}
+
+.mask-card .help-text + label {
+    margin-top: 0.25rem;
+}
+
+.mask-card .help-text:last-child {
+    margin-top: 0.5rem;
+}
+
 .task-list {
     display: grid;
     gap: 1rem;

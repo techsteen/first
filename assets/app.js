@@ -169,11 +169,12 @@ function renderLearn(container) {
     container.innerHTML = `
         <section class="learning-section" aria-labelledby="learn-heading">
             <h2 id="learn-heading">Start med teorien</h2>
-            <p class="learning-intro">Vælg et emne for at bygge din forståelse trin for trin. Begynd med IP-adresser og gå derefter videre til net- og broadcastadresser, før du udforsker subnetting.</p>
+            <p class="learning-intro">Vælg et emne for at bygge din forståelse trin for trin. Begynd med IP-adresser og gå derefter videre til net- og broadcastadresser, før du senere kaster dig over subnetting.</p>
             ${getLearningContent()}
         </section>
     `;
     setupLearnTabs(container);
+    setupNetmaskSimulator(container);
 }
 
 function getLearningContent() {
@@ -181,13 +182,13 @@ function getLearningContent() {
     <div class="learn-tabs" role="tablist" aria-label="Teoriemner">
         <button type="button" class="tab" role="tab" id="tab-ip-intro" aria-controls="panel-ip-intro" aria-selected="true">Hvad er en IP-adresse?</button>
         <button type="button" class="tab" role="tab" id="tab-net-broadcast" aria-controls="panel-net-broadcast" aria-selected="false">Net- og broadcastadresser</button>
-        <button type="button" class="tab" role="tab" id="tab-subnetting-overview" aria-controls="panel-subnetting-overview" aria-selected="false">Overblik: subnetting</button>
+        <button type="button" class="tab" role="tab" id="tab-netmask-patterns" aria-controls="panel-netmask-patterns" aria-selected="false">Netmasker og bitmønstre</button>
     </div>
     <div class="tab-panels">
         <section role="tabpanel" id="panel-ip-intro" aria-labelledby="tab-ip-intro">
             <article class="learning-card">
                 <h3>IP-adressen – din digitale adresse</h3>
-                <p>En IPv4-adresse er en række på <strong>32 bits</strong> (nul eller ét). For at vi mennesker kan læse den, deles den op i fire blokke á <strong>8 bits</strong>, som vi kalder <em>octetter</em>. Hver octet oversættes til decimal og adskilles med punktummer. Eksempel: <code>192.168.010.034</code> (binært) bliver til <code>192.168.10.34</code> (decimal).</p>
+                <p>En IPv4-adresse er en række på <strong>32 bits</strong> (nul eller ét). For at vi mennesker kan læse den, deles den op i fire blokke á <strong>8 bits</strong>, som vi kalder <em>octetter</em>. Hver octet oversættes til decimal og adskilles med punktummer. Eksempel: binært <code>11000000.10101000.00001010.00100010</code> bliver til decimal <code>192.168.10.34</code>.</p>
                 <div class="bit-grid" role="presentation" aria-hidden="true">
                     <span>11100000</span><span>10101000</span><span>00001010</span><span>00100010</span>
                 </div>
@@ -235,10 +236,11 @@ function getLearningContent() {
                 <h3>Broadcastadressen – fællesbeskeden</h3>
                 <p>Broadcastadressen er den adresse, alle enheder lytter efter, når der skal sendes en besked til hele netværket på én gang – f.eks. når en lærer-pc vil fortælle alle computere, at der er en vigtig besked.</p>
                 <ul>
-                    <li>Den har alle værtsbits sat til 1.</li>
+                    <li>I IPv4 er det adressen med alle værtsbits sat til 1, f.eks. <code>192.168.10.255</code>. Det er noget helt andet end MAC-broadcasten <code>ff:ff:ff:ff:ff:ff</code>, som hører til på lag 2.</li>
                     <li>Den må ikke gives til en enkelt enhed – den er reserveret til fællesbeskeder.</li>
                     <li>Når netværket vokser, hjælper broadcastadressen med at nå alle hurtigt, uden at sende beskeden en ad gangen.</li>
                 </ul>
+                <p>Eksempel: Når en ny elev-pc tændes og bruger DHCP til at spørge “Er der en DHCP-server?”, sendes spørgsmålet til broadcastadressen, så alle i netværket hører det på samme tid.</p>
             </article>
             <article class="learning-card">
                 <h3>Samspillet i praksis</h3>
@@ -246,39 +248,50 @@ function getLearningContent() {
                 <p class="tip-box">Tip: Du kan altid finde net- og broadcastadressen ved at kigge på netmasken og se, hvilke bits der er låst (net) og hvilke der kan skifte (værter). Selve beregningen lærer du i de næste faner.</p>
             </article>
         </section>
-        <section role="tabpanel" id="panel-subnetting-overview" aria-labelledby="tab-subnetting-overview" hidden>
+        <section role="tabpanel" id="panel-netmask-patterns" aria-labelledby="tab-netmask-patterns" hidden>
             <article class="learning-card">
-                <h3>CIDR og prefixlængder</h3>
-                <p>CIDR (Classless Inter-Domain Routing) bruger prefixlængden til at angive, hvor mange bits i adressen der beskriver netværket. Et <code>/24</code> betyder 24 bits til netdelen.</p>
-                <ul>
-                    <li>Netmasker kan skrives som /x eller i decimal, f.eks. 255.255.255.0.</li>
-                    <li>Jo højere prefix, desto mindre subnet og færre hosts.</li>
-                </ul>
+                <h3>Netmasker i øjenhøjde</h3>
+                <p>En netmaske er et filter, der afgør, hvilke bits i IP-adressen der beskriver selve nettet, og hvilke der kan bruges til værter. Masken består af sammenhængende 1'ere (net) efterfulgt af 0'ere (værter). Når vi ændrer masken, ændrer vi størrelsen på nettet.</p>
+                <p>Prøv simuleringen herunder: vælg en IP-adresse i dit LAN og justér, hvor mange bits masken skal låse. Du ser straks, hvordan netadresse, broadcastadresse og antal værter påvirkes.</p>
             </article>
-            <article class="learning-card">
-                <h3>Netmasker og bitmønstre</h3>
-                <p>En netmaske består af sammenhængende 1'ere efterfulgt af 0'ere. 1'erne låser netdelen, mens 0'erne bruges til værtsadresser.</p>
-                <ul>
-                    <li>/25 = 11111111.11111111.11111111.10000000</li>
-                    <li>/26 = 11111111.11111111.11111111.11000000</li>
-                    <li>/27 = 11111111.11111111.11111111.11100000</li>
-                </ul>
-            </article>
-            <article class="learning-card">
-                <h3>Antal værter</h3>
-                <p>Antallet af brugbare værtsadresser beregnes som <code>2<sup>hostbits</sup> - 2</code>. Vi trækker net- og broadcastadresse fra.</p>
-            </article>
-            <article class="learning-card">
-                <h3>Binær ↔ decimal</h3>
-                <p>For at omregne binært til decimal lægges værdierne for de bits, der er 1, sammen. Tabellen 128-64-32-16-8-4-2-1 bruges til hurtig beregning.</p>
-            </article>
-            <article class="learning-card">
-                <h3>Klassefulde net (overblik)</h3>
-                <p>Klasse A, B og C giver en hurtig tommelfingerregel om standardmasker (f.eks. /8, /16, /24), men med CIDR er det mere fleksibelt.</p>
-            </article>
-            <article class="learning-card">
-                <h3>Intro til VLSM</h3>
-                <p>Variable Length Subnet Masking gør det muligt at opdele et netværk i subnet af forskellig størrelse. Start altid med det største behov.</p>
+            <article class="learning-card mask-card">
+                <h3>Leg med netmasken</h3>
+                <div class="mask-simulator" data-mask-simulator>
+                    <div class="mask-inputs">
+                        <label for="mask-ip">IP-adresse (base)
+                            <input type="text" id="mask-ip" name="mask-ip" value="192.168.10.34" inputmode="decimal" autocomplete="off" aria-describedby="mask-ip-help">
+                        </label>
+                        <p id="mask-ip-help" class="help-text">Angiv en adresse i det net, du vil undersøge. Vi bruger den til at beregne net- og broadcastadresser.</p>
+                        <label for="mask-bits">Antal net-bits
+                            <input type="range" id="mask-bits" name="mask-bits" min="8" max="30" value="24">
+                            <output for="mask-bits" id="mask-bits-display">24</output>
+                        </label>
+                    </div>
+                    <p class="mask-error" data-mask-field="error" role="alert" hidden>Indtast en gyldig IPv4-adresse (fx 192.168.10.34).</p>
+                    <dl class="mask-results" aria-live="polite">
+                        <div>
+                            <dt>Netmaske (decimal)</dt>
+                            <dd data-mask-field="maskDecimal">255.255.255.0</dd>
+                        </div>
+                        <div>
+                            <dt>Netmaske (binær)</dt>
+                            <dd data-mask-field="maskBinary">11111111.11111111.11111111.00000000</dd>
+                        </div>
+                        <div>
+                            <dt>Netadresse</dt>
+                            <dd data-mask-field="networkAddress">192.168.10.0</dd>
+                        </div>
+                        <div>
+                            <dt>Broadcastadresse</dt>
+                            <dd data-mask-field="broadcastAddress">192.168.10.255</dd>
+                        </div>
+                        <div>
+                            <dt>Brugbare værter</dt>
+                            <dd data-mask-field="hostCount">254 adresser (8 værtsbits)</dd>
+                        </div>
+                    </dl>
+                    <p class="help-text">Bemærk: Hvis der kun er én eller to værtsbits tilbage, kan der være få eller ingen brugbare værter. Det dækker vi mere i den kommende subnetting-del.</p>
+                </div>
             </article>
         </section>
     </div>`;
@@ -350,6 +363,141 @@ function setupLearnTabs(container) {
     });
 
     activateTab(tabs[0]);
+}
+
+function setupNetmaskSimulator(container) {
+    const simulator = container.querySelector('[data-mask-simulator]');
+    if (!simulator) return;
+
+    const ipInput = simulator.querySelector('#mask-ip');
+    const bitsInput = simulator.querySelector('#mask-bits');
+    const bitsDisplay = simulator.querySelector('#mask-bits-display');
+    const errorField = simulator.querySelector('[data-mask-field="error"]');
+    const fields = {
+        maskDecimal: simulator.querySelector('[data-mask-field="maskDecimal"]'),
+        maskBinary: simulator.querySelector('[data-mask-field="maskBinary"]'),
+        networkAddress: simulator.querySelector('[data-mask-field="networkAddress"]'),
+        broadcastAddress: simulator.querySelector('[data-mask-field="broadcastAddress"]'),
+        hostCount: simulator.querySelector('[data-mask-field="hostCount"]')
+    };
+
+    if (!ipInput || !bitsInput || !bitsDisplay) return;
+
+    function updateSimulator() {
+        let bits = parseInt(bitsInput.value, 10);
+        if (!Number.isInteger(bits)) {
+            bits = 24;
+        }
+        bits = Math.min(Math.max(bits, 0), 32);
+        if (bits !== parseInt(bitsInput.value, 10)) {
+            bitsInput.value = String(bits);
+        }
+        bitsDisplay.textContent = String(bits);
+        const ipParts = parseIp(ipInput.value.trim());
+
+        if (!ipParts) {
+            showError('Indtast en gyldig IPv4-adresse (fx 192.168.10.34).');
+            setFieldsPlaceholder();
+            return;
+        }
+
+        hideError();
+        const ipNumber = ipPartsToNumber(ipParts);
+        const maskNumber = maskFromBits(bits);
+        const maskDecimal = numberToIp(maskNumber);
+        const maskBinary = maskToBinaryString(maskNumber);
+        const networkNumber = ipNumber & maskNumber;
+        const broadcastNumber = networkNumber | (~maskNumber >>> 0);
+        const hostBits = 32 - bits;
+        const hostCountText = formatHostCount(hostBits);
+
+        updateField('maskDecimal', maskDecimal);
+        updateField('maskBinary', maskBinary);
+        updateField('networkAddress', numberToIp(networkNumber));
+        updateField('broadcastAddress', numberToIp(broadcastNumber));
+        updateField('hostCount', hostCountText);
+    }
+
+    function showError(message) {
+        if (!errorField) return;
+        errorField.textContent = message;
+        errorField.hidden = false;
+    }
+
+    function hideError() {
+        if (!errorField) return;
+        errorField.hidden = true;
+    }
+
+    function setFieldsPlaceholder() {
+        Object.keys(fields).forEach(key => updateField(key, '—'));
+    }
+
+    function updateField(key, value) {
+        const field = fields[key];
+        if (field) {
+            field.textContent = value;
+        }
+    }
+
+    ipInput.addEventListener('input', updateSimulator);
+    bitsInput.addEventListener('input', updateSimulator);
+
+    updateSimulator();
+}
+
+function parseIp(value) {
+    const parts = value.split('.').map(part => part.trim());
+    if (parts.length !== 4) return null;
+    const numbers = parts.map(part => {
+        if (part === '') return NaN;
+        const num = Number(part);
+        return Number.isInteger(num) ? num : NaN;
+    });
+    if (numbers.some(num => Number.isNaN(num) || num < 0 || num > 255)) {
+        return null;
+    }
+    return numbers;
+}
+
+function ipPartsToNumber(parts) {
+    return ((parts[0] << 24) >>> 0) | ((parts[1] << 16) >>> 0) | ((parts[2] << 8) >>> 0) | (parts[3] >>> 0);
+}
+
+function numberToIp(number) {
+    const octets = [
+        (number >>> 24) & 0xff,
+        (number >>> 16) & 0xff,
+        (number >>> 8) & 0xff,
+        number & 0xff
+    ];
+    return octets.join('.');
+}
+
+function maskFromBits(bits) {
+    if (bits <= 0) return 0;
+    return (0xffffffff << (32 - bits)) >>> 0;
+}
+
+function maskToBinaryString(mask) {
+    const octets = [
+        (mask >>> 24) & 0xff,
+        (mask >>> 16) & 0xff,
+        (mask >>> 8) & 0xff,
+        mask & 0xff
+    ];
+    return octets.map(octet => octet.toString(2).padStart(8, '0')).join('.');
+}
+
+function formatHostCount(hostBits) {
+    if (hostBits <= 0) {
+        return 'Ingen brugbare værter (kun netadressen)';
+    }
+    if (hostBits === 1) {
+        return '0 adresser (kun net- og broadcastadresse)';
+    }
+    const hosts = (2 ** hostBits) - 2;
+    return `${hosts.toLocaleString('da-DK')} adresser (${hostBits} værtsbits)`;
 }
 
 function renderPractice(container) {
