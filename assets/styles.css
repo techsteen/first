@@ -77,8 +77,8 @@ body {
 .app {
     flex: 1 1 auto;
     padding: clamp(1.5rem, 5vw, 3rem);
-    max-width: 1100px;
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
     width: 100%;
 }
 
@@ -323,15 +323,18 @@ section h3 {
 }
 
 .bit-pattern {
-    display: flex;
-    flex-wrap: wrap;
+    display: inline-flex;
+    flex-wrap: nowrap;
+    align-items: center;
     gap: 0.35rem;
     font-family: 'Fira Code', 'Fira Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
     font-size: 0.95rem;
+    white-space: nowrap;
+    overflow-x: auto;
 }
 
 .bit-octet {
-    display: flex;
+    display: inline-flex;
     gap: 0.2rem;
     padding: 0.35rem 0.45rem;
     background: rgba(15, 23, 42, 0.9);
@@ -340,6 +343,7 @@ section h3 {
 }
 
 .bit-sep {
+    display: inline-block;
     align-self: center;
     color: #94a3b8;
     font-weight: 600;
