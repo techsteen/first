@@ -355,10 +355,29 @@ function getLearningContent() {
                 <p>Subnetting betyder, at vi deler et større netværk op i mindre, kontrollerede bidder. I stedet for kun at bruge de historiske klasser, arbejder vi med <strong>CIDR</strong> (Classless Inter-Domain Routing). Her beskrives masken med en <em>prefixlængde</em>, fx <code>/26</code>, som fortæller hvor mange af de 32 bits der er låst til netdelen.</p>
                 <ul>
                     <li><strong>Lån bits</strong>: Vi “låner” værtsbits og gør dem til netbits for at få flere netværk.</li>
-                    <li><strong>Passer til behov</strong>: Mindre subnet giver mindre broadcaststøj og bedre kontrol over adresser.</li>
+                    <li><strong>Passer til behov</strong>: Mindre subnet giver mindre broadcaststøj og bedre kontrol over adresser. Animationen herunder viser to /26-net, hvor broadcastfelterne blinker for at understrege adskillelsen.</li>
                     <li><strong>Respektér klassen</strong>: Vi tager altid udgangspunkt i en klasse A, B eller C-adresse. Adresser som <code>127.x.x.x</code> (loopback) eller klasse D/E bruges ikke til almindelig subnetting.</li>
                 </ul>
-                <p>Prefixlængden og netmasken hænger sammen: <code>/26</code> betyder 26 netbits og en maske på <code>255.255.255.192</code>. Hver gang du øger prefixet med én, halveres antal værter pr. subnet.</p>
+                <figure class="subnet-animation" aria-labelledby="subnet-animation-caption">
+                    <figcaption id="subnet-animation-caption">To /26-delnet fra det oprindelige 192.168.10.0/24-net: hvert net får sit eget broadcastfelt og færre værter.</figcaption>
+                    <div class="subnet-animation-stage" aria-hidden="true">
+                        <div class="subnet-animation-network">
+                            <p class="label">Subnet A – 192.168.10.0/26</p>
+                            <div class="bar">
+                                <span class="hosts">Værter 192.168.10.1 – 192.168.10.62</span>
+                                <span class="broadcast">Broadcast 192.168.10.63</span>
+                            </div>
+                        </div>
+                        <div class="subnet-animation-network">
+                            <p class="label">Subnet B – 192.168.10.64/26</p>
+                            <div class="bar">
+                                <span class="hosts">Værter 192.168.10.65 – 192.168.10.126</span>
+                                <span class="broadcast">Broadcast 192.168.10.127</span>
+                            </div>
+                        </div>
+                    </div>
+                </figure>
+                <p>Prefixlængden og netmasken hænger sammen: <code>/26</code> betyder 26 netbits og en maske på <code>255.255.255.192</code>. Hver gang du øger prefixet med én, halveres antal værter pr. subnet – men du får tilsvarende flere net.</p>
             </article>
             <article class="learning-card subnet-card">
                 <h3>Simulator: Fra klasse til subnet</h3>
@@ -388,6 +407,10 @@ function getLearningContent() {
                             <dd data-subnet-field="selectedMask">/24 – 255.255.255.0</dd>
                         </div>
                         <div>
+                            <dt>Netmaske (binær)</dt>
+                            <dd data-subnet-field="maskBinary" class="bit-field">11111111.11111111.11111111.00000000</dd>
+                        </div>
+                        <div>
                             <dt>Lånte bits</dt>
                             <dd data-subnet-field="borrowedBits">0 lånte bit (giver 1 delnet)</dd>
                         </div>
@@ -398,6 +421,10 @@ function getLearningContent() {
                         <div>
                             <dt>Brugbare værter pr. subnet</dt>
                             <dd data-subnet-field="hostCount">254 adresser (8 værtsbits)</dd>
+                        </div>
+                        <div>
+                            <dt>Subnetoversigt</dt>
+                            <dd data-subnet-field="subnetList">—</dd>
                         </div>
                     </dl>
                     <div class="host-requirement">
@@ -679,9 +706,11 @@ function setupSubnettingSimulator(container) {
         classLabel: simulator.querySelector('[data-subnet-field="classLabel"]'),
         defaultMask: simulator.querySelector('[data-subnet-field="defaultMask"]'),
         selectedMask: simulator.querySelector('[data-subnet-field="selectedMask"]'),
+        maskBinary: simulator.querySelector('[data-subnet-field="maskBinary"]'),
         borrowedBits: simulator.querySelector('[data-subnet-field="borrowedBits"]'),
         subnetCount: simulator.querySelector('[data-subnet-field="subnetCount"]'),
         hostCount: simulator.querySelector('[data-subnet-field="hostCount"]'),
+        subnetList: simulator.querySelector('[data-subnet-field="subnetList"]'),
         hostAdvice: simulator.querySelector('[data-subnet-field="hostAdvice"]')
     };
 
@@ -727,6 +756,8 @@ function setupSubnettingSimulator(container) {
         const selectedMaskNumber = maskFromBits(prefixBits);
         const selectedMask = numberToIp(selectedMaskNumber);
         const defaultMaskNumber = maskFromBits(classInfo.defaultBits);
+        const ipNumber = ipPartsToNumber(ipParts);
+        const classNetworkNumber = ipNumber & defaultMaskNumber;
         const borrowedBits = Math.max(0, prefixBits - classInfo.defaultBits);
         const subnetCount = 2 ** borrowedBits;
         const hostBits = 32 - prefixBits;
@@ -734,9 +765,11 @@ function setupSubnettingSimulator(container) {
         updateField('classLabel', `${classInfo.label} – ${classInfo.range}`);
         updateField('defaultMask', `/${classInfo.defaultBits} – ${numberToIp(defaultMaskNumber)}`);
         updateField('selectedMask', `/${prefixBits} – ${selectedMask}`);
+        updateField('maskBinary', formatMaskBinary(prefixBits, classInfo.defaultBits));
         updateField('borrowedBits', formatBorrowedBits(borrowedBits));
         updateField('subnetCount', formatSubnetCount(subnetCount));
         updateField('hostCount', formatHostCount(hostBits));
+        updateField('subnetList', formatSubnetList(classNetworkNumber, prefixBits, subnetCount, hostBits, classInfo.defaultBits));
 
         updateHostAdvice(classInfo, prefixBits, hostBits);
     }
@@ -791,9 +824,11 @@ function setupSubnettingSimulator(container) {
         updateField('classLabel', '—');
         updateField('defaultMask', '—');
         updateField('selectedMask', '—');
+        updateField('maskBinary', '—');
         updateField('borrowedBits', '—');
         updateField('subnetCount', '—');
         updateField('hostCount', '—');
+        updateField('subnetList', '—');
         const adviceField = fields.hostAdvice;
         if (adviceField) {
             adviceField.textContent = 'Angiv et antal værter for at få en anbefaling til prefix.';
@@ -803,7 +838,11 @@ function setupSubnettingSimulator(container) {
     function updateField(key, value) {
         const field = fields[key];
         if (field) {
-            field.textContent = value;
+            if (typeof value === 'object' && value !== null && 'html' in value) {
+                field.innerHTML = value.html;
+            } else {
+                field.textContent = value;
+            }
         }
     }
 
@@ -857,6 +896,15 @@ function maskToBinaryString(mask) {
     return octets.map(octet => octet.toString(2).padStart(8, '0')).join('.');
 }
 
+function getBinaryOctets(number) {
+    return [
+        ((number >>> 24) & 0xff).toString(2).padStart(8, '0'),
+        ((number >>> 16) & 0xff).toString(2).padStart(8, '0'),
+        ((number >>> 8) & 0xff).toString(2).padStart(8, '0'),
+        (number & 0xff).toString(2).padStart(8, '0')
+    ];
+}
+
 function formatHostCount(hostBits) {
     if (hostBits <= 0) {
         return 'Ingen brugbare værter (kun netadressen)';
@@ -888,6 +936,74 @@ function formatBorrowedBits(borrowedBits) {
     const subnetCount = 2 ** borrowedBits;
     const bitLabel = borrowedBits === 1 ? 'lånt bit' : 'lånte bit';
     return `${borrowedBits} ${bitLabel} (giver ${subnetCount.toLocaleString('da-DK')} delnet)`;
+}
+
+function formatMaskBinary(prefixBits, defaultBits) {
+    const maskNumber = maskFromBits(prefixBits);
+    const octets = getBinaryOctets(maskNumber);
+    let bitIndex = 0;
+    const octetMarkup = octets.map(octet => {
+        let bitsMarkup = '';
+        for (const bit of octet) {
+            let bitClass = 'bit-host';
+            if (bitIndex < defaultBits) {
+                bitClass = 'bit-default';
+            } else if (bitIndex < prefixBits) {
+                bitClass = 'bit-borrowed';
+            }
+            bitsMarkup += `<span class="${bitClass}">${bit}</span>`;
+            bitIndex += 1;
+        }
+        return `<span class="bit-octet">${bitsMarkup}</span>`;
+    });
+    const patternHtml = octetMarkup.join('<span class="bit-sep">.</span>');
+    const borrowedBits = Math.max(0, prefixBits - defaultBits);
+    const hostBits = Math.max(0, 32 - prefixBits);
+    const borrowedText = borrowedBits > 0 ? `${borrowedBits} lånte bit er markeret med fed guld.` : 'Ingen lånte bit – masken er standard for adressens klasse.';
+    const hostText = hostBits > 0 ? `${hostBits} værtsbit er vist i grå.` : 'Ingen værtsbit er tilbage i denne maske.';
+    return {
+        html: `<div class="bit-pattern" aria-hidden="true">${patternHtml}</div><p class="bit-legend">Blå = oprindelige netbit, <strong>guld = lånte bit</strong>, grå = værtsbit.</p><p class="sr-only">${borrowedText} ${hostText}</p>`
+    };
+}
+
+function formatSubnetList(baseNetworkNumber, prefixBits, subnetCount, hostBits, defaultBits) {
+    if (!Number.isFinite(baseNetworkNumber) || subnetCount <= 0) {
+        return '—';
+    }
+    const subnetSize = 2 ** (32 - prefixBits);
+    const maxPreview = Math.max(1, Math.min(subnetCount, 8));
+    const items = [];
+    for (let index = 0; index < maxPreview; index += 1) {
+        const networkNumber = (baseNetworkNumber + index * subnetSize) >>> 0;
+        const broadcastNumber = (networkNumber + subnetSize - 1) >>> 0;
+        items.push(formatSubnetListItem(index + 1, networkNumber, broadcastNumber, prefixBits, hostBits));
+    }
+    const listHtml = `<ol class="subnet-list" aria-label="Subnetoversigt">${items.join('')}</ol>`;
+    const remainder = subnetCount - maxPreview;
+    if (remainder > 0) {
+        const baseLabel = numberToIp(baseNetworkNumber);
+        return {
+            html: `${listHtml}<p class="subnet-list-note">Viser de første ${maxPreview} af ${subnetCount.toLocaleString('da-DK')} delnet i ${baseLabel}/${defaultBits}-området.</p>`
+        };
+    }
+    return { html: listHtml };
+}
+
+function formatSubnetListItem(index, networkNumber, broadcastNumber, prefixBits, hostBits) {
+    const networkLabel = numberToIp(networkNumber);
+    const broadcastLabel = numberToIp(broadcastNumber);
+    const hostRange = formatHostRange(networkNumber, broadcastNumber, hostBits);
+    return `<li><div class="subnet-line"><span class="subnet-index">${index}.</span><span class="subnet-network"><strong>${networkLabel}/${prefixBits}</strong></span></div><div class="subnet-meta"><span class="subnet-broadcast">Broadcast ${broadcastLabel}</span><span class="subnet-hosts">${hostRange}</span></div></li>`;
+}
+
+function formatHostRange(networkNumber, broadcastNumber, hostBits) {
+    if (hostBits <= 1) {
+        return 'Ingen brugbare værter (kun net- og broadcastadresse)';
+    }
+    const firstHost = numberToIp((networkNumber + 1) >>> 0);
+    const lastHost = numberToIp((broadcastNumber - 1) >>> 0);
+    const hostCount = (2 ** hostBits) - 2;
+    return `${firstHost} – ${lastHost} (${hostCount.toLocaleString('da-DK')} værter)`;
 }
 
 function suggestClass(requiredHosts) {
