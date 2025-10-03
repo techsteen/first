@@ -258,10 +258,10 @@ function getLearningContent() {
                 <h3>Leg med netmasken</h3>
                 <div class="mask-simulator" data-mask-simulator>
                     <div class="mask-inputs">
-                        <label for="mask-ip">IP-adresse (base)
+                        <label for="mask-ip">IP-adresse i nettet
                             <input type="text" id="mask-ip" name="mask-ip" value="192.168.10.34" inputmode="decimal" autocomplete="off" aria-describedby="mask-ip-help">
                         </label>
-                        <p id="mask-ip-help" class="help-text">Angiv en adresse i det net, du vil undersøge. Vi bruger den til at beregne net- og broadcastadresser.</p>
+                        <p id="mask-ip-help" class="help-text">Skriv en konkret IP-adresse fra dit LAN (fx en pc eller printer). Simulatoren bruger den som udgangspunkt for at beregne net- og broadcastadresser.</p>
                         <label for="mask-bits">Antal net-bits
                             <input type="range" id="mask-bits" name="mask-bits" min="8" max="30" value="24">
                             <output for="mask-bits" id="mask-bits-display">24</output>
