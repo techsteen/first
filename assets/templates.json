@@ -72,6 +72,128 @@
         }
       ]
     },
+    "subnetting": {
+      "2": [
+        {
+          "template_id": "subnet-plan-foundation",
+          "type": "fill_in_table",
+          "description": "Opsummer klasse C subnetting og udfyld de første fire delnet.",
+          "variables": {
+            "scenarios": [
+              {
+                "network": "192.168.50.0/26",
+                "class": "C",
+                "borrowed_bits": 2,
+                "subnet_mask": "255.255.255.192",
+                "hosts_per_subnet": 62,
+                "subnet_count": 4,
+                "table_subnets": [
+                  {"label": "Delnet 0", "network": "192.168.50.0", "first_host": "192.168.50.1", "last_host": "192.168.50.62", "broadcast": "192.168.50.63"},
+                  {"label": "Delnet 1", "network": "192.168.50.64", "first_host": "192.168.50.65", "last_host": "192.168.50.126", "broadcast": "192.168.50.127"},
+                  {"label": "Delnet 2", "network": "192.168.50.128", "first_host": "192.168.50.129", "last_host": "192.168.50.190", "broadcast": "192.168.50.191"},
+                  {"label": "Delnet 3", "network": "192.168.50.192", "first_host": "192.168.50.193", "last_host": "192.168.50.254", "broadcast": "192.168.50.255"}
+                ]
+              },
+              {
+                "network": "192.168.120.0/27",
+                "class": "C",
+                "borrowed_bits": 3,
+                "subnet_mask": "255.255.255.224",
+                "hosts_per_subnet": 30,
+                "subnet_count": 8,
+                "table_subnets": [
+                  {"label": "Delnet 0", "network": "192.168.120.0", "first_host": "192.168.120.1", "last_host": "192.168.120.30", "broadcast": "192.168.120.31"},
+                  {"label": "Delnet 1", "network": "192.168.120.32", "first_host": "192.168.120.33", "last_host": "192.168.120.62", "broadcast": "192.168.120.63"},
+                  {"label": "Delnet 2", "network": "192.168.120.64", "first_host": "192.168.120.65", "last_host": "192.168.120.94", "broadcast": "192.168.120.95"},
+                  {"label": "Delnet 3", "network": "192.168.120.96", "first_host": "192.168.120.97", "last_host": "192.168.120.126", "broadcast": "192.168.120.127"}
+                ]
+              }
+            ]
+          },
+          "instructions": "Vælg et scenario der passer til sværhedsgraden. Beskriv kort base-netværket og at eleven skal udfylde opsummeringen samt de fire viste delnet. Returnér table som en liste med to tabeller: Første tabel har title 'Opsummering', headers ['Felt','Svar'] og rækker for netværksklasse, antal lånte bits, subnetmaske, antal hosts pr. subnet og antal subnet. Hver række består af celler hvor første celle er {\"value\": label, \"editable\": false} og anden celle er {\"value\": \"\", \"editable\": true, \"placeholder\": eksempeltekst}. Anden tabel har title 'Delnetoversigt', headers ['Delnet','Netværksadresse','Første hostadresse','Sidste hostadresse','Broadcast-adresse'] og én række per element i table_subnets. Første celle i hver række er scenarioets label med editable=false. De øvrige celler skal være editable=true med tom value og sigende placeholder. Svarfeltet answer_schema.expected skal være en liste med elevens korrekte svar i rækkefølgen: alle opsummeringsfelter fra top til bund efterfulgt af hver delnets oplysninger fra venstre mod højre (uden de statiske felter). Rubric skal forklare hvad der bedømmes og solution må først afsløres efter reglerne."
+        }
+      ],
+      "3": [
+        {
+          "template_id": "subnet-plan-intermediate",
+          "type": "fill_in_table",
+          "description": "Planlæg klasse B subnet og angiv fire delnet i tabellen.",
+          "variables": {
+            "scenarios": [
+              {
+                "network": "145.12.0.0/19",
+                "class": "B",
+                "borrowed_bits": 3,
+                "subnet_mask": "255.255.224.0",
+                "hosts_per_subnet": 8190,
+                "subnet_count": 8,
+                "table_subnets": [
+                  {"label": "Delnet 0", "network": "145.12.0.0", "first_host": "145.12.0.1", "last_host": "145.12.31.254", "broadcast": "145.12.31.255"},
+                  {"label": "Delnet 1", "network": "145.12.32.0", "first_host": "145.12.32.1", "last_host": "145.12.63.254", "broadcast": "145.12.63.255"},
+                  {"label": "Delnet 2", "network": "145.12.64.0", "first_host": "145.12.64.1", "last_host": "145.12.95.254", "broadcast": "145.12.95.255"},
+                  {"label": "Delnet 3", "network": "145.12.96.0", "first_host": "145.12.96.1", "last_host": "145.12.127.254", "broadcast": "145.12.127.255"}
+                ]
+              },
+              {
+                "network": "172.30.0.0/20",
+                "class": "B",
+                "borrowed_bits": 4,
+                "subnet_mask": "255.255.240.0",
+                "hosts_per_subnet": 4094,
+                "subnet_count": 16,
+                "table_subnets": [
+                  {"label": "Delnet 0", "network": "172.30.0.0", "first_host": "172.30.0.1", "last_host": "172.30.15.254", "broadcast": "172.30.15.255"},
+                  {"label": "Delnet 1", "network": "172.30.16.0", "first_host": "172.30.16.1", "last_host": "172.30.31.254", "broadcast": "172.30.31.255"},
+                  {"label": "Delnet 2", "network": "172.30.32.0", "first_host": "172.30.32.1", "last_host": "172.30.47.254", "broadcast": "172.30.47.255"},
+                  {"label": "Delnet 3", "network": "172.30.48.0", "first_host": "172.30.48.1", "last_host": "172.30.63.254", "broadcast": "172.30.63.255"}
+                ]
+              }
+            ]
+          },
+          "instructions": "Samme format som subnet-plan-foundation, men tilpas forklaringen så den understreger klasse B-adresser og de store hostmængder. Brug de angivne scenarier til at udfylde expected-svar i samme rækkefølge."
+        }
+      ],
+      "4": [
+        {
+          "template_id": "subnet-plan-advanced",
+          "type": "fill_in_table",
+          "description": "Analyser klasse A subnetting med store delnetblokke.",
+          "variables": {
+            "scenarios": [
+              {
+                "network": "10.4.0.0/20",
+                "class": "A",
+                "borrowed_bits": 12,
+                "subnet_mask": "255.255.240.0",
+                "hosts_per_subnet": 4094,
+                "subnet_count": 4096,
+                "table_subnets": [
+                  {"label": "Delnet 0", "network": "10.4.0.0", "first_host": "10.4.0.1", "last_host": "10.4.15.254", "broadcast": "10.4.15.255"},
+                  {"label": "Delnet 1", "network": "10.4.16.0", "first_host": "10.4.16.1", "last_host": "10.4.31.254", "broadcast": "10.4.31.255"},
+                  {"label": "Delnet 2", "network": "10.4.32.0", "first_host": "10.4.32.1", "last_host": "10.4.47.254", "broadcast": "10.4.47.255"},
+                  {"label": "Delnet 3", "network": "10.4.48.0", "first_host": "10.4.48.1", "last_host": "10.4.63.254", "broadcast": "10.4.63.255"}
+                ]
+              },
+              {
+                "network": "10.128.0.0/18",
+                "class": "A",
+                "borrowed_bits": 10,
+                "subnet_mask": "255.255.192.0",
+                "hosts_per_subnet": 16382,
+                "subnet_count": 1024,
+                "table_subnets": [
+                  {"label": "Delnet 0", "network": "10.128.0.0", "first_host": "10.128.0.1", "last_host": "10.128.63.254", "broadcast": "10.128.63.255"},
+                  {"label": "Delnet 1", "network": "10.128.64.0", "first_host": "10.128.64.1", "last_host": "10.128.127.254", "broadcast": "10.128.127.255"},
+                  {"label": "Delnet 2", "network": "10.128.128.0", "first_host": "10.128.128.1", "last_host": "10.128.191.254", "broadcast": "10.128.191.255"},
+                  {"label": "Delnet 3", "network": "10.128.192.0", "first_host": "10.128.192.1", "last_host": "10.128.255.254", "broadcast": "10.128.255.255"}
+                ]
+              }
+            ]
+          },
+          "instructions": "Som de øvrige subnet-plan skabeloner, men fremhæv i teksten hvorfor klasse A-net kræver særlig omtanke (fx mange delnet og broadcast-støj). Hold samme tabelformat og rækkefølge for expected-svar."
+        }
+      ]
+    },
     "vlsm": {
       "4": [
         {

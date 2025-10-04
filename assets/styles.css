@@ -769,6 +769,54 @@ section h3 {
     border-color: var(--color-primary);
     outline: 2px solid rgba(56, 189, 248, 0.45);
 }
+.task-card .table-wrapper {
+    margin-top: 1rem;
+    overflow-x: auto;
+}
+.task-card .table-wrapper:first-of-type {
+    margin-top: 0.5rem;
+}
+.task-card .table-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: rgba(226, 232, 240, 0.85);
+}
+.task-card table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 320px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.task-card th,
+.task-card td {
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+    font-size: 0.95rem;
+}
+.task-card th {
+    background: rgba(30, 41, 59, 0.7);
+    color: rgba(226, 232, 240, 0.9);
+    font-weight: 600;
+}
+.task-card tbody tr:last-child td {
+    border-bottom: none;
+}
+.task-card td input[type="text"] {
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    border-radius: 6px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(15, 23, 42, 0.85);
+    color: var(--color-text);
+}
+.task-card td input[type="text"]:focus {
+    border-color: var(--color-primary);
+    outline: 2px solid rgba(56, 189, 248, 0.45);
+}
 
 .task-controls {
     margin-top: 1rem;

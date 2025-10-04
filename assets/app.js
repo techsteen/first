@@ -16,6 +16,7 @@ const PRACTICE_TOPIC_LABELS = {
     binary: 'Binær forståelse',
     cidr: 'CIDR og præfikser',
     netmask: 'Netmasker i praksis',
+    subnetting: 'Subnetplanlægning',
     vlsm: 'VLSM og avanceret subnetting'
 };
 
@@ -1141,19 +1142,49 @@ function renderTaskCard(task, mode, options = {}) {
     }
 
     if (task.type === 'fill_in_table' && task.table) {
-        inputHtml = `
-            <table role="grid">
-                <thead>
-                    <tr>${task.table.headers.map(header => `<th scope="col">${header}</th>`).join('')}</tr>
-                </thead>
-                <tbody>
-                    ${task.table.rows.map((row, rowIndex) => `
-                        <tr>
-                            <td>${row.binary}</td>
-                            <td><input type="text" name="table-${rowIndex}" ${disableInput ? 'disabled' : ''} aria-label="Decimalværdi for række ${rowIndex + 1}"></td>
-                        </tr>`).join('')}
-                </tbody>
-            </table>`;
+        const tables = Array.isArray(task.table) ? task.table : [task.table];
+        let inputIndex = 0;
+
+        inputHtml = tables.map((table, tableIndex) => {
+            const headers = Array.isArray(table?.headers) ? table.headers : [];
+            const title = typeof table?.title === 'string' ? table.title : '';
+            const rows = Array.isArray(table?.rows) ? table.rows : [];
+            const caption = title ? `<caption class="sr-only">${escapeHtml(title)}</caption>` : '';
+            const tableTitle = title ? `<div class="table-title">${escapeHtml(title)}</div>` : '';
+
+            const body = rows.map((row, rowIdx) => {
+                const cells = normalizeTableRow(row).map((cell, cellIdx) => {
+                    if (cell.editable) {
+                        const labelParts = [];
+                        if (title) labelParts.push(title);
+                        const headerLabel = headers[cellIdx] || `Kolonne ${cellIdx + 1}`;
+                        labelParts.push(`${headerLabel.toLowerCase()} række ${rowIdx + 1}`);
+                        const ariaLabel = labelParts.join(', ');
+                        const placeholder = cell.placeholder ? ` placeholder="${escapeAttribute(cell.placeholder)}"` : '';
+                        const currentIndex = inputIndex;
+                        inputIndex++;
+                        return `<td><input type="text" name="table-${currentIndex}" data-input-index="${currentIndex}" ${disableInput ? 'disabled' : ''} aria-label="${escapeAttribute(ariaLabel)}"${placeholder}></td>`;
+                    }
+                    return `<td>${escapeHtml(cell.value)}</td>`;
+                }).join('');
+                return `<tr>${cells}</tr>`;
+            }).join('');
+
+            const headerRow = headers.length
+                ? `<thead><tr>${headers.map(header => `<th scope="col">${escapeHtml(header)}</th>`).join('')}</tr></thead>`
+                : '';
+
+            return `
+                <div class="table-wrapper" data-table-index="${tableIndex}">
+                    ${tableTitle}
+                    <table role="grid">
+                        ${caption}
+                        ${headerRow}
+                        <tbody>${body}</tbody>
+                    </table>
+                </div>
+            `;
+        }).join('');
     }
 
     const showHintButton = hints.length > (progress?.hintsShown || 0);
@@ -1338,10 +1369,66 @@ function extractAnswer(form, task) {
         return Array.from(form.querySelectorAll('input[name="option"]:checked')).map(input => input.value);
     }
     if (task.type === 'fill_in_table') {
-        return Array.from(form.querySelectorAll('input[type="text"]')).map(input => input.value.trim());
+        return Array.from(form.querySelectorAll('input[data-input-index]'))
+            .sort((a, b) => Number(a.dataset.inputIndex) - Number(b.dataset.inputIndex))
+            .map(input => input.value.trim());
     }
     const textarea = form.querySelector('textarea');
     return textarea ? textarea.value.trim() : '';
+}
+
+function normalizeTableRow(row) {
+    if (Array.isArray(row)) {
+        return row.map(normalizeTableCell);
+    }
+    if (row && typeof row === 'object') {
+        const entries = Object.entries(row);
+        return entries.map(([_, value], index) => {
+            if (value && typeof value === 'object' && 'value' in value) {
+                return normalizeTableCell(value);
+            }
+            return {
+                value: typeof value === 'string' ? value : String(value ?? ''),
+                editable: index > 0,
+                placeholder: ''
+            };
+        });
+    }
+    return [{
+        value: typeof row === 'string' ? row : String(row ?? ''),
+        editable: true,
+        placeholder: ''
+    }];
+}
+
+function normalizeTableCell(cell) {
+    if (cell && typeof cell === 'object') {
+        const value = 'value' in cell ? cell.value : '';
+        return {
+            value: typeof value === 'string' ? value : String(value ?? ''),
+            editable: Boolean(cell.editable),
+            placeholder: typeof cell.placeholder === 'string' ? cell.placeholder : ''
+        };
+    }
+    return {
+        value: typeof cell === 'string' ? cell : String(cell ?? ''),
+        editable: false,
+        placeholder: ''
+    };
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function escapeAttribute(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;');
 }
 
 function rerenderTask(card, task, mode) {

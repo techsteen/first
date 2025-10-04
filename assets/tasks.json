@@ -95,9 +95,18 @@
       "table": {
         "headers": ["Binær", "Decimal"],
         "rows": [
-          {"binary": "11111111", "decimal": "255"},
-          {"binary": "11110000", "decimal": "240"},
-          {"binary": "11000000", "decimal": "192"}
+          [
+            {"value": "11111111", "editable": false},
+            {"value": "", "editable": true, "placeholder": "Skriv decimalværdien"}
+          ],
+          [
+            {"value": "11110000", "editable": false},
+            {"value": "", "editable": true, "placeholder": "Skriv decimalværdien"}
+          ],
+          [
+            {"value": "11000000", "editable": false},
+            {"value": "", "editable": true, "placeholder": "Skriv decimalværdien"}
+          ]
         ]
       },
       "hints": [
