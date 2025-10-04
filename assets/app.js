@@ -940,29 +940,33 @@ function formatBorrowedBits(borrowedBits) {
 
 function formatMaskBinary(prefixBits, defaultBits) {
     const maskNumber = maskFromBits(prefixBits);
-    const octets = getBinaryOctets(maskNumber);
+    const binaryMask = getBinaryOctets(maskNumber).join('.');
     let bitIndex = 0;
-    const octetMarkup = octets.map(octet => {
-        let bitsMarkup = '';
-        for (const bit of octet) {
-            let bitClass = 'bit-host';
-            if (bitIndex < defaultBits) {
-                bitClass = 'bit-default';
-            } else if (bitIndex < prefixBits) {
-                bitClass = 'bit-borrowed';
-            }
-            bitsMarkup += `<span class="${bitClass}">${bit}</span>`;
-            bitIndex += 1;
+    let patternHtml = '';
+
+    for (const char of binaryMask) {
+        if (char === '.') {
+            patternHtml += '<span class="bit-sep">.</span>';
+            continue;
         }
-        return `<span class="bit-octet">${bitsMarkup}</span>`;
-    });
-    const patternHtml = octetMarkup.join('<span class="bit-sep">.</span>');
+
+        let bitClass = 'bit-host';
+        if (bitIndex < defaultBits) {
+            bitClass = 'bit-default';
+        } else if (bitIndex < prefixBits) {
+            bitClass = 'bit-borrowed';
+        }
+
+        patternHtml += `<span class="${bitClass}">${char}</span>`;
+        bitIndex += 1;
+    }
+
     const borrowedBits = Math.max(0, prefixBits - defaultBits);
     const hostBits = Math.max(0, 32 - prefixBits);
     const borrowedText = borrowedBits > 0 ? `${borrowedBits} lånte bit er markeret med fed guld.` : 'Ingen lånte bit – masken er standard for adressens klasse.';
     const hostText = hostBits > 0 ? `${hostBits} værtsbit er vist i grå.` : 'Ingen værtsbit er tilbage i denne maske.';
     return {
-        html: `<div class="bit-pattern" aria-hidden="true">${patternHtml}</div><p class="bit-legend">Blå = oprindelige netbit, <strong>guld = lånte bit</strong>, grå = værtsbit.</p><p class="sr-only">${borrowedText} ${hostText}</p>`
+        html: `<code class="bit-pattern" aria-hidden="true">${patternHtml}</code><p class="bit-legend">Blå = oprindelige netbit, <strong>guld = lånte bit</strong>, grå = værtsbit.</p><p class="sr-only">${borrowedText} ${hostText}</p>`
     };
 }
 

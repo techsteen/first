@@ -324,30 +324,28 @@ section h3 {
 }
 
 .bit-pattern {
-    display: inline-flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    gap: 0.35rem;
+    display: block;
     font-family: 'Fira Code', 'Fira Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
     font-size: 0.95rem;
     white-space: nowrap;
     overflow-x: auto;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 8px;
+    padding: 0.45rem 0.6rem;
 }
 
-.bit-octet {
-    display: inline-flex;
-    gap: 0.2rem;
-    padding: 0.35rem 0.45rem;
-    background: rgba(15, 23, 42, 0.9);
-    border-radius: 8px;
-    border: 1px solid rgba(148, 163, 184, 0.2);
+.bit-pattern span {
+    display: inline-block;
+    min-width: 0.75ch;
+    text-align: center;
 }
 
 .bit-sep {
     display: inline-block;
-    align-self: center;
     color: #94a3b8;
     font-weight: 600;
+    padding: 0 0.15rem;
 }
 
 .bit-default {
