@@ -175,7 +175,6 @@ function renderLearn(container) {
     `;
     setupLearnTabs(container);
     setupClassSimulator(container);
-    setupNetmaskSimulator(container);
     setupSubnettingSimulator(container);
 }
 
@@ -186,7 +185,6 @@ function getLearningContent() {
         <button type="button" class="tab" role="tab" id="tab-net-broadcast" aria-controls="panel-net-broadcast" aria-selected="false">Net- og broadcastadresser</button>
         <button type="button" class="tab" role="tab" id="tab-classful" aria-controls="panel-classful" aria-selected="false">Adresseklasser</button>
         <button type="button" class="tab" role="tab" id="tab-subnetting" aria-controls="panel-subnetting" aria-selected="false">Subnetting og CIDR</button>
-        <button type="button" class="tab" role="tab" id="tab-netmask-patterns" aria-controls="panel-netmask-patterns" aria-selected="false">Netmasker og bitmønstre</button>
     </div>
     <div class="tab-panels">
         <section role="tabpanel" id="panel-ip-intro" aria-labelledby="tab-ip-intro">
@@ -296,56 +294,6 @@ function getLearningContent() {
                         </div>
                     </dl>
                     <p class="help-text">Klasseinddelingen er grundlaget for standardmasker. Senere i forløbet viser vi, hvordan subnetting ændrer netmasken for at få net i den størrelse, man har brug for.</p>
-                </div>
-            </article>
-        </section>
-        <section role="tabpanel" id="panel-netmask-patterns" aria-labelledby="tab-netmask-patterns" hidden>
-            <article class="learning-card">
-                <h3>Netmasker i øjenhøjde</h3>
-                <p>En netmaske er et filter, der afgør, hvilke bits i IP-adressen der beskriver selve nettet, og hvilke der kan bruges til værter. Masken består af sammenhængende 1'ere (net) efterfulgt af 0'ere (værter). Når vi ændrer masken, ændrer vi størrelsen på nettet.</p>
-                <p>Prøv simuleringen herunder: vælg en IP-adresse i dit LAN og justér, hvor mange bits masken skal låse. Simulatoren starter i standardmasken for adressens klasse, men du kan trække slideren mod højre for at se, hvordan netadresse, broadcastadresse og antal værter påvirkes.</p>
-            </article>
-            <article class="learning-card mask-card">
-                <h3>Leg med netmasken</h3>
-                <div class="mask-simulator" data-mask-simulator>
-                    <div class="mask-inputs">
-                        <label for="mask-ip">IP-adresse i nettet
-                            <input type="text" id="mask-ip" name="mask-ip" value="192.168.10.34" inputmode="decimal" autocomplete="off" aria-describedby="mask-ip-help">
-                        </label>
-                        <p id="mask-ip-help" class="help-text">Skriv en konkret IP-adresse fra dit LAN (fx en pc eller printer). Simulatoren bruger den som udgangspunkt for at beregne net- og broadcastadresser.</p>
-                        <label for="mask-bits">Antal net-bits
-                            <input type="range" id="mask-bits" name="mask-bits" min="8" max="30" value="24">
-                            <output for="mask-bits" id="mask-bits-display">24</output>
-                        </label>
-                    </div>
-                    <p class="mask-error" data-mask-field="error" role="alert" hidden>Indtast en gyldig IPv4-adresse (fx 192.168.10.34).</p>
-                    <dl class="mask-results" aria-live="polite">
-                        <div>
-                            <dt>Adresseklasse</dt>
-                            <dd data-mask-field="classLabel">Klasse C – standardmaske /24 (255.255.255.0)</dd>
-                        </div>
-                        <div>
-                            <dt>Netmaske (decimal)</dt>
-                            <dd data-mask-field="maskDecimal">255.255.255.0</dd>
-                        </div>
-                        <div>
-                            <dt>Netmaske (binær)</dt>
-                            <dd data-mask-field="maskBinary">11111111.11111111.11111111.00000000</dd>
-                        </div>
-                        <div>
-                            <dt>Netadresse</dt>
-                            <dd data-mask-field="networkAddress">192.168.10.0</dd>
-                        </div>
-                        <div>
-                            <dt>Broadcastadresse</dt>
-                            <dd data-mask-field="broadcastAddress">192.168.10.255</dd>
-                        </div>
-                        <div>
-                            <dt>Brugbare værter</dt>
-                            <dd data-mask-field="hostCount">254 adresser (8 værtsbits)</dd>
-                        </div>
-                    </dl>
-                    <p class="help-text">Bemærk: Hvis der kun er én eller to værtsbits tilbage, kan der være få eller ingen brugbare værter. Det dækker vi mere i den kommende subnetting-del.</p>
                 </div>
             </article>
         </section>
@@ -585,110 +533,6 @@ function setupClassSimulator(container) {
     }
 
     ipInput.addEventListener('input', updateSimulator);
-
-    updateSimulator();
-}
-
-function setupNetmaskSimulator(container) {
-    const simulator = container.querySelector('[data-mask-simulator]');
-    if (!simulator) return;
-
-    const ipInput = simulator.querySelector('#mask-ip');
-    const bitsInput = simulator.querySelector('#mask-bits');
-    const bitsDisplay = simulator.querySelector('#mask-bits-display');
-    const errorField = simulator.querySelector('[data-mask-field="error"]');
-    const fields = {
-        classLabel: simulator.querySelector('[data-mask-field="classLabel"]'),
-        maskDecimal: simulator.querySelector('[data-mask-field="maskDecimal"]'),
-        maskBinary: simulator.querySelector('[data-mask-field="maskBinary"]'),
-        networkAddress: simulator.querySelector('[data-mask-field="networkAddress"]'),
-        broadcastAddress: simulator.querySelector('[data-mask-field="broadcastAddress"]'),
-        hostCount: simulator.querySelector('[data-mask-field="hostCount"]')
-    };
-
-    if (!ipInput || !bitsInput || !bitsDisplay) return;
-
-    function updateSimulator() {
-        let bits = parseInt(bitsInput.value, 10);
-        if (!Number.isInteger(bits)) {
-            bits = 24;
-        }
-        const ipParts = parseIp(ipInput.value.trim());
-
-        if (!ipParts) {
-            showError('Indtast en gyldig IPv4-adresse (fx 192.168.10.34).');
-            bits = Math.min(Math.max(bits, 8), 30);
-            bitsInput.value = String(bits);
-            bitsDisplay.textContent = String(bits);
-            bitsInput.min = '8';
-            setFieldsPlaceholder();
-            return;
-        }
-
-        const classInfo = getClassInfo(ipParts[0]);
-        if (!classInfo) {
-            showError('Adressen skal ligge i klasse A, B eller C for denne simulering.');
-            bits = Math.min(Math.max(bits, 8), 30);
-            bitsInput.value = String(bits);
-            bitsDisplay.textContent = String(bits);
-            bitsInput.min = '8';
-            setFieldsPlaceholder();
-            return;
-        }
-
-        hideError();
-        const minBits = classInfo.defaultBits;
-        const maxBits = 30;
-        bitsInput.min = String(minBits);
-        bitsInput.max = String(maxBits);
-        bits = Math.min(Math.max(bits, minBits), maxBits);
-        if (bits !== parseInt(bitsInput.value, 10)) {
-            bitsInput.value = String(bits);
-        }
-        bitsDisplay.textContent = String(bits);
-        const ipNumber = ipPartsToNumber(ipParts);
-        const maskNumber = maskFromBits(bits);
-        const maskDecimal = numberToIp(maskNumber);
-        const maskBinary = maskToBinaryString(maskNumber);
-        const networkNumber = ipNumber & maskNumber;
-        const broadcastNumber = networkNumber | (~maskNumber >>> 0);
-        const hostBits = 32 - bits;
-        const hostCountText = formatHostCount(hostBits);
-
-        const defaultMaskNumber = maskFromBits(classInfo.defaultBits);
-        updateField('classLabel', `${classInfo.label} – standardmaske /${classInfo.defaultBits} (${numberToIp(defaultMaskNumber)})`);
-
-        updateField('maskDecimal', maskDecimal);
-        updateField('maskBinary', maskBinary);
-        updateField('networkAddress', numberToIp(networkNumber));
-        updateField('broadcastAddress', numberToIp(broadcastNumber));
-        updateField('hostCount', hostCountText);
-    }
-
-    function showError(message) {
-        if (!errorField) return;
-        errorField.textContent = message;
-        errorField.hidden = false;
-    }
-
-    function hideError() {
-        if (!errorField) return;
-        errorField.hidden = true;
-    }
-
-    function setFieldsPlaceholder() {
-        Object.keys(fields).forEach(key => updateField(key, '—'));
-    }
-
-    function updateField(key, value) {
-        const field = fields[key];
-        if (field) {
-            field.textContent = value;
-        }
-    }
-
-    ipInput.addEventListener('input', updateSimulator);
-    bitsInput.addEventListener('input', updateSimulator);
 
     updateSimulator();
 }

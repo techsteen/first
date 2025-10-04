@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
-require_once realpath(__DIR__ . '/../Config/config.php');
+require_once realpath(__DIR__ . '/../../Config/config.php');
 
 $response = function ($data, $status = 200) {
     http_response_code($status);
@@ -238,7 +238,7 @@ function logEvent(array $entry): void
 
 function findCaBundle(): ?string
 {
-    $configDir = realpath(__DIR__ . '/../Config');
+    $configDir = realpath(__DIR__ . '/../../Config');
     if (!$configDir) {
         return null;
     }

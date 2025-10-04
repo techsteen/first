@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
-require_once realpath(__DIR__ . '/../Config/config.php');
+require_once realpath(__DIR__ . '/../../Config/config.php');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendResponse(['error' => 'Kun POST er tilladt.'], 405);
@@ -388,7 +388,7 @@ function logEvent(array $entry): void
 
 function findCaBundle(): ?string
 {
-    $configDir = realpath(__DIR__ . '/../Config');
+    $configDir = realpath(__DIR__ . '/../../Config');
     if (!$configDir) {
         return null;
     }
