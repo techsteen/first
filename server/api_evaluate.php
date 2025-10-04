@@ -1,23 +1,20 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
-$configDir = locateConfigDir(__DIR__);
-if (!$configDir) {
+try {
+    $configContext = loadConfigContext(__DIR__);
+} catch (\RuntimeException $e) {
     http_response_code(500);
-    echo json_encode(['error' => 'Config-mappen blev ikke fundet. Kontakt administratoren.'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['error' => 'Konfigurationen kunne ikke indlæses. Kontakt administratoren.'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-$configPath = $configDir . '/config.php';
-if (!is_file($configPath)) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Config-filen mangler. Kontakt administratoren.'], JSON_UNESCAPED_UNICODE);
-    exit;
+$configValues = $configContext['config'];
+$configDir = $configContext['dir'];
+
+if (!defined('CONFIG_DIR_PATH')) {
+    define('CONFIG_DIR_PATH', $configDir);
 }
-
-define('CONFIG_DIR_PATH', $configDir);
-
-require_once $configPath;
 
 $response = function ($data, $status = 200) {
     http_response_code($status);
@@ -66,7 +63,7 @@ if (!checkRateLimit('evaluate', 10, 30)) {
     $response(['error' => 'For mange forespørgsler. Vent lidt og prøv igen.'], 429);
 }
 
-$apiKey = readApiKey();
+$apiKey = readApiKey($configValues, $configDir);
 if (!$apiKey) {
     $response(['error' => 'API-nøglen kunne ikke indlæses. Kontakt administratoren.'], 500);
 }
@@ -86,7 +83,7 @@ $payload = [
     ]
 ];
 
-$result = callOpenAi($payload, $apiKey);
+$result = callOpenAi($payload, $apiKey, $configDir);
 if (isset($result['error'])) {
     $response(['error' => $result['error']], $result['status'] ?? 500);
 }
@@ -109,10 +106,13 @@ logEvent($logData);
 
 $response($parsed);
 
-function readApiKey(): ?string
+function readApiKey(array $configValues, string $configDir): ?string
 {
     if (defined('OPENAI_API_KEY') && OPENAI_API_KEY) {
         return trim(OPENAI_API_KEY);
+    }
+    if (isset($configValues['OPENAI_API_KEY']) && $configValues['OPENAI_API_KEY']) {
+        return trim((string) $configValues['OPENAI_API_KEY']);
     }
     if (defined('OPENAI_KEY_FILE') && OPENAI_KEY_FILE) {
         $path = OPENAI_KEY_FILE;
@@ -121,17 +121,28 @@ function readApiKey(): ?string
             return $content ?: null;
         }
     }
+    if (isset($configValues['OPENAI_KEY_FILE']) && $configValues['OPENAI_KEY_FILE']) {
+        $filePath = (string) $configValues['OPENAI_KEY_FILE'];
+        if (!preg_match('~^(?:[A-Za-z]:[\\/]|/|\\\\)~', $filePath)) {
+            $filePath = rtrim($configDir, '/\\') . '/' . ltrim($filePath, '/\\');
+        }
+        $resolved = realpath($filePath) ?: $filePath;
+        if (is_readable($resolved)) {
+            $content = trim((string) file_get_contents($resolved));
+            return $content ?: null;
+        }
+    }
     return null;
 }
 
-function callOpenAi(array $payload, string $apiKey): array
+function callOpenAi(array $payload, string $apiKey, string $configDir): array
 {
     $ch = curl_init('https://api.openai.com/v1/chat/completions');
     if (!$ch) {
         return ['error' => 'Kunne ikke initialisere forespørgsel.', 'status' => 500];
     }
 
-    $caBundle = findCaBundle();
+    $caBundle = findCaBundle($configDir);
     if (!$caBundle) {
         return ['error' => 'CA-bundle blev ikke fundet. Upload cacert-filen til Config-mappen.', 'status' => 500];
     }
@@ -252,26 +263,31 @@ function logEvent(array $entry): void
     @file_put_contents($path, $line, FILE_APPEND | LOCK_EX);
 }
 
-function findCaBundle(): ?string
+function findCaBundle(string $configDir): ?string
 {
-    $searchDir = defined('CONFIG_DIR_PATH') ? CONFIG_DIR_PATH : locateConfigDir(__DIR__);
-    if (!$searchDir) {
-        return null;
-    }
-    $files = glob($searchDir . '/cacert-*.pem');
+    $files = glob(rtrim($configDir, '/\\') . '/cacert-*.pem');
     return $files ? $files[0] : null;
 }
 
-function locateConfigDir(string $startDir, int $maxLevels = 5): ?string
+function loadConfigContext(string $startDir): array
 {
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+
     $current = $startDir;
-    for ($i = 0; $i <= $maxLevels; $i++) {
-        $candidate = $current . '/Config';
-        if (is_dir($candidate)) {
-            $real = realpath($candidate);
-            if ($real !== false) {
-                return $real;
-            }
+    for ($i = 0; $i < 8; $i++) {
+        $configPath = rtrim($current, '/\\') . '/Config/config.php';
+        if (is_file($configPath)) {
+            $configDir = dirname($configPath);
+            $loaded = require_once $configPath;
+            $configValues = is_array($loaded) ? $loaded : [];
+
+            return $cached = [
+                'config' => $configValues,
+                'dir' => $configDir,
+            ];
         }
 
         $parent = dirname($current);
@@ -281,5 +297,5 @@ function locateConfigDir(string $startDir, int $maxLevels = 5): ?string
         $current = $parent;
     }
 
-    return null;
+    throw new \RuntimeException('Config ikke fundet');
 }
