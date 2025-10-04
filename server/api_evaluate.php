@@ -1,7 +1,23 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
-require_once realpath(__DIR__ . '/../../Config/config.php');
+$configDir = locateConfigDir(__DIR__);
+if (!$configDir) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Config-mappen blev ikke fundet. Kontakt administratoren.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$configPath = $configDir . '/config.php';
+if (!is_file($configPath)) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Config-filen mangler. Kontakt administratoren.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+define('CONFIG_DIR_PATH', $configDir);
+
+require_once $configPath;
 
 $response = function ($data, $status = 200) {
     http_response_code($status);
@@ -238,10 +254,32 @@ function logEvent(array $entry): void
 
 function findCaBundle(): ?string
 {
-    $configDir = realpath(__DIR__ . '/../../Config');
-    if (!$configDir) {
+    $searchDir = defined('CONFIG_DIR_PATH') ? CONFIG_DIR_PATH : locateConfigDir(__DIR__);
+    if (!$searchDir) {
         return null;
     }
-    $files = glob($configDir . '/cacert-*.pem');
+    $files = glob($searchDir . '/cacert-*.pem');
     return $files ? $files[0] : null;
+}
+
+function locateConfigDir(string $startDir, int $maxLevels = 5): ?string
+{
+    $current = $startDir;
+    for ($i = 0; $i <= $maxLevels; $i++) {
+        $candidate = $current . '/Config';
+        if (is_dir($candidate)) {
+            $real = realpath($candidate);
+            if ($real !== false) {
+                return $real;
+            }
+        }
+
+        $parent = dirname($current);
+        if ($parent === $current) {
+            break;
+        }
+        $current = $parent;
+    }
+
+    return null;
 }
