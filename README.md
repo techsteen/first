@@ -15,8 +15,13 @@ Dette projekt er en lille SPA-applikation til GF2-elever og undervisere med foku
 Hvis `cacert-*.pem` mangler, returnerer API-endpoints en elevvenlig fejl om, at CA-bundle ikke blev fundet. Upload den korrekte fil til `/Config/` og sørg for, at filnavnet følger mønsteret `cacert-YYYY-MM-DD.pem`.
 
 ## Konfiguration af opgaver
-- `assets/tasks.json` indeholder øvelses- og testopgaver. Struktur: hvert objekt har `id`, `type`, `difficulty`, `topic`, `question`, `hints`, `answer_schema`, `rubric` og `max_attempts_before_solution`.
+- `assets/tasks.json` rummer de faste testopgaver og kan bruges som fallback/eksempler. Struktur: hvert objekt har `id`, `type`, `difficulty`, `topic`, `question`, `hints`, `answer_schema`, `rubric` og `max_attempts_before_solution`.
 - `assets/templates.json` beskriver de skabeloner, som AI-generatoren må bruge. Tilføj nye skabeloner ved at følge det eksisterende format (grupperet pr. emne og sværhedsgrad).
+
+## Øv-siden (AI-genererede emnespor)
+- Under fanen “Øv” kan elever vælge et emne (binær, netmasker, CIDR, VLSM) og generere et sæt AI-opgaver inden for samme spor.
+- Sværhedsgrad og antal opgaver kan justeres pr. emne. Nye opgaver hentes via `api_generate_tasks.php`, og progressionen gemmes lokalt.
+- Feedback ved fejl er hjælpende og løsningen skjules automatisk i elevtilstand, uanset antal forsøg.
 
 ## Lærer-tilstand
 - Aktiveres i klienten via knappen “Lærer-tilstand”. Standard-PIN er **4285** og kan ændres i `assets/app.js` (konstanten `PIN_CODE`).

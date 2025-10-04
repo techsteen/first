@@ -6,7 +6,17 @@ const state = {
     progress: loadProgress(),
     teacherMode: loadTeacherMode(),
     aiSets: [],
-    storageMode: 'ukendt'
+    storageMode: 'ukendt',
+    practiceSets: {},
+    practiceLoading: {},
+    practiceErrors: {}
+};
+
+const PRACTICE_TOPIC_LABELS = {
+    binary: 'Binær forståelse',
+    cidr: 'CIDR og præfikser',
+    netmask: 'Netmasker i praksis',
+    vlsm: 'VLSM og avanceret subnetting'
 };
 
 const PIN_CODE = '4285';
@@ -896,15 +906,89 @@ function getClassInfo(firstOctet) {
 }
 
 function renderPractice(container) {
-    const cards = state.tasks.map(task => renderTaskCard(task, 'practice'));
+    if (!state.templates) {
+        container.innerHTML = `
+            <section aria-labelledby="practice-heading">
+                <h2 id="practice-heading">Øvelsesopgaver</h2>
+                <p>Indlæser skabeloner til AI-opgaver …</p>
+            </section>
+        `;
+        return;
+    }
+
+    const topics = Object.keys(state.templates.topics || {});
+
+    if (!topics.length) {
+        container.innerHTML = `
+            <section aria-labelledby="practice-heading">
+                <h2 id="practice-heading">Øvelsesopgaver</h2>
+                <p>Der er endnu ikke defineret nogen emner i skabelonbiblioteket.</p>
+            </section>
+        `;
+        return;
+    }
+
     container.innerHTML = `
-        <section aria-labelledby="practice-heading">
-            <h2 id="practice-heading">Øvelsesopgaver</h2>
-            <p>Besvar opgaverne herunder. Du får feedback efter hver indsendelse. Progressionen gemmes lokalt.</p>
-            <div class="task-list">${cards.join('')}</div>
+        <section aria-labelledby="practice-heading" class="practice-section">
+            <h2 id="practice-heading">Øv dig med AI-genererede opgaver</h2>
+            <p>Vælg et emne, generér et sæt opgaver og træn flere opgaver i samme spor. Alle besvarelser evalueres automatisk, og du får hjælpende feedback når der er fejl.</p>
+            <div class="practice-topic-grid">
+                ${topics.map(topic => renderPracticeTopicSection(topic)).join('')}
+            </div>
         </section>
     `;
+
+    setupPracticeTopicHandlers(container);
     bindTaskEvents(container);
+}
+
+function renderPracticeTopicSection(topic) {
+    const label = PRACTICE_TOPIC_LABELS[topic] || topic.toUpperCase();
+    const topicConfig = state.templates?.topics?.[topic] || {};
+    const availableDifficulties = Object.keys(topicConfig).map(Number).sort((a, b) => a - b);
+    const stored = state.practiceSets[topic] || { tasks: [] };
+    const selectedDifficulty = stored.difficulty || availableDifficulties[0] || 1;
+    const selectedCount = Math.min(10, Math.max(1, stored.count || 3));
+    const loading = Boolean(state.practiceLoading[topic]);
+    const error = state.practiceErrors[topic];
+    const tasks = Array.isArray(stored.tasks) ? stored.tasks : [];
+
+    const difficultyOptions = (availableDifficulties.length ? availableDifficulties : [selectedDifficulty]).map(value => `
+        <option value="${value}" ${value === selectedDifficulty ? 'selected' : ''}>Niveau ${value}</option>
+    `).join('');
+
+    const taskMarkup = tasks.length
+        ? tasks.map((task, index) => renderTaskCard(task, 'practice', { topic, index })).join('')
+        : '<p class="empty">Ingen opgaver endnu. Vælg sværhedsgrad og generér et sæt.</p>';
+
+    const loadingMarkup = loading ? '<p class="loading" role="status">Genererer opgaver …</p>' : '';
+    const errorMarkup = error ? `<p class="error" role="alert">${error}</p>` : '';
+
+    return `
+        <article class="practice-topic" data-topic="${topic}">
+            <header>
+                <h3>${label}</h3>
+            </header>
+            <form class="practice-generator" data-topic="${topic}" novalidate>
+                <label>Vælg sværhedsgrad
+                    <select name="difficulty">${difficultyOptions}</select>
+                </label>
+                <label>Antal opgaver
+                    <input type="number" name="count" min="1" max="10" step="1" value="${selectedCount}">
+                </label>
+                <button type="submit" class="button">Generér opgaver</button>
+            </form>
+            ${errorMarkup}
+            ${loadingMarkup}
+            <div class="task-list" data-topic="${topic}">${!loading || tasks.length ? taskMarkup : ''}</div>
+        </article>
+    `;
+}
+
+function setupPracticeTopicHandlers(container) {
+    container.querySelectorAll('.practice-generator').forEach(form => {
+        form.addEventListener('submit', handlePracticeGenerate);
+    });
 }
 
 function renderTest(container) {
@@ -1023,18 +1107,20 @@ function renderAiTasks(container) {
         return;
     }
 
-    container.innerHTML = state.aiSets.map((task, index) => renderTaskCard(task, 'ai', index)).join('');
+    container.innerHTML = state.aiSets.map((task, index) => renderTaskCard(task, 'ai', { index })).join('');
     bindTaskEvents(container);
 }
 
-function renderTaskCard(task, mode, index = 0) {
+function renderTaskCard(task, mode, options = {}) {
+    const hasIndex = typeof options.index === 'number' && Number.isFinite(options.index);
+    const index = hasIndex ? options.index : 0;
+    const topic = options.topic || '';
     const progress = getTaskProgress(task.id, mode);
     const hints = Array.isArray(task.hints) ? task.hints : [];
     const hintHtml = progress?.hintsShown ? hints.slice(0, progress.hintsShown).map((hint, i) => `<div class="hint-text">Hint ${i + 1}: ${hint}</div>`).join('') : '';
     const answered = progress?.lastResult;
     const statusClass = answered ? (answered.is_correct ? 'correct' : 'incorrect') : '';
-    const statusLabel = answered ? (answered.is_correct ? '✅ Korrekt' : '❌ Ikke korrekt endnu') : 'Ingen forsøg endnu';
-    const attemptCount = progress?.attempts ?? 0;
+    const statusLabel = answered ? (answered.is_correct ? '✅ Korrekt' : '❌ Ikke korrekt endnu') : '';
     const disableInput = answered?.is_correct;
 
     let inputHtml = `<textarea name="answer" rows="4" ${disableInput ? 'disabled' : ''} aria-label="Dit svar"></textarea>`;
@@ -1074,11 +1160,24 @@ function renderTaskCard(task, mode, index = 0) {
 
     const solutionBlock = answered?.show_solution && answered.solution ? `<details><summary>Se løsning</summary><p>${answered.solution}</p></details>` : '';
 
+    const attributes = [
+        `data-task-id="${task.id}"`,
+        `data-mode="${mode}"`
+    ];
+    if (hasIndex) {
+        attributes.push(`data-index="${index}"`);
+    }
+    if (topic) {
+        attributes.push(`data-topic="${topic}"`);
+    }
+
+    const statusChip = statusLabel ? `<span class="status-chip ${statusClass}">${statusLabel}</span>` : '';
+
     return `
-        <article class="task-card" data-task-id="${task.id}" data-mode="${mode}" ${mode === 'ai' ? `data-index="${index}"` : ''}>
+        <article class="task-card" ${attributes.join(' ')}>
             <header>
                 <h3>${task.title || 'Opgave'}</h3>
-                <span class="status-chip ${statusClass}">${statusLabel}</span>
+                ${statusChip}
             </header>
             <p>${task.question}</p>
             ${Array.isArray(task.steps) ? `<ol>${task.steps.map(step => `<li>${step}</li>`).join('')}</ol>` : ''}
@@ -1099,11 +1198,13 @@ function renderTaskCard(task, mode, index = 0) {
 function renderFeedback(result) {
     const classes = ['feedback'];
     classes.push(result.is_correct ? 'correct' : 'incorrect');
+    const brief = result.feedback_brief || (result.is_correct ? 'Flot klaret.' : 'Godt forsøg – tjek dine mellemregninger.');
+    const next = result.feedback_next_step || (result.is_correct ? 'Gå videre til næste opgave.' : 'Brug hintsene eller gennemgå eksemplet igen.');
     return `
         <section class="${classes.join(' ')}" aria-live="polite">
             <h4>${result.is_correct ? 'Godt arbejde!' : 'Næsten i mål'}</h4>
-            <p>${result.feedback_brief}</p>
-            <p><strong>Næste skridt:</strong> ${result.feedback_next_step}</p>
+            <p>${brief}</p>
+            <p><strong>Næste skridt:</strong> ${next}</p>
         </section>`;
 }
 
@@ -1170,6 +1271,15 @@ function findTask(taskId, mode) {
     if (mode === 'ai') {
         return state.aiSets.find(task => task.id === taskId);
     }
+    if (mode === 'practice') {
+        for (const topicKey of Object.keys(state.practiceSets)) {
+            const topicData = state.practiceSets[topicKey];
+            if (!topicData || !Array.isArray(topicData.tasks)) continue;
+            const found = topicData.tasks.find(task => task.id === taskId);
+            if (found) return found;
+        }
+        return null;
+    }
     return state.tasks.find(task => task.id === taskId);
 }
 
@@ -1195,6 +1305,12 @@ async function handleSubmit(card, form) {
         }
 
         const result = await response.json();
+        if (mode === 'practice' && !state.teacherMode) {
+            result.show_solution = false;
+            if ('solution' in result) {
+                result.solution = null;
+            }
+        }
         if (state.teacherMode) {
             result.show_solution = true;
         }
@@ -1231,7 +1347,15 @@ function extractAnswer(form, task) {
 function rerenderTask(card, task, mode) {
     const container = card.parentElement;
     if (!container) return;
-    card.outerHTML = renderTaskCard(task, mode, parseInt(card.dataset.index ?? '0', 10));
+    const options = {};
+    const indexValue = card.dataset.index ? parseInt(card.dataset.index, 10) : NaN;
+    if (!Number.isNaN(indexValue)) {
+        options.index = indexValue;
+    }
+    if (card.dataset.topic) {
+        options.topic = card.dataset.topic;
+    }
+    card.outerHTML = renderTaskCard(task, mode, options);
     bindTaskEvents(container);
 }
 
@@ -1271,14 +1395,7 @@ async function handleGenerateTasks(event) {
     };
 
     try {
-        const response = await fetch('server/api_generate_tasks.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if (!response.ok) throw new Error('Serverfejl');
-        const data = await response.json();
-        state.aiSets = data.tasks || [];
+        state.aiSets = await requestAiTasks(payload);
         renderAiTasks(document.getElementById('ai-task-container'));
     } catch (error) {
         console.error('Fejl ved generering', error);
@@ -1287,6 +1404,75 @@ async function handleGenerateTasks(event) {
             container.innerHTML = '<p>Kunne ikke generere opgaver. Prøv igen senere.</p>';
         }
     }
+}
+
+async function handlePracticeGenerate(event) {
+    event.preventDefault();
+    const form = event.target;
+    const topic = form.dataset.topic;
+    if (!topic) return;
+
+    const formData = new FormData(form);
+    const payload = {
+        topic,
+        difficulty: Number(formData.get('difficulty')),
+        count: Number(formData.get('count'))
+    };
+
+    const availableDifficulties = Object.keys(state.templates?.topics?.[topic] || {}).map(Number);
+    if (!Number.isFinite(payload.difficulty) || payload.difficulty < 1) {
+        payload.difficulty = 1;
+    }
+    if (!Number.isFinite(payload.count) || payload.count < 1) {
+        payload.count = 1;
+    }
+    payload.count = Math.min(10, Math.round(payload.count));
+
+    if (!availableDifficulties.includes(payload.difficulty)) {
+        payload.difficulty = availableDifficulties[0] || 1;
+    }
+
+    state.practiceLoading[topic] = true;
+    state.practiceErrors[topic] = null;
+    renderPractice(document.getElementById('app'));
+
+    try {
+        const tasks = await requestAiTasks(payload);
+        state.practiceSets[topic] = {
+            tasks: tasks.map(task => ({ ...task, practiceTopic: topic })),
+            difficulty: payload.difficulty,
+            count: payload.count
+        };
+        state.practiceErrors[topic] = tasks.length ? null : 'Der kom ingen opgaver retur. Prøv med en anden sværhedsgrad.';
+        state.practiceLoading[topic] = false;
+        renderPractice(document.getElementById('app'));
+    } catch (error) {
+        console.error('Fejl ved generering af øveopgaver', error);
+        state.practiceLoading[topic] = false;
+        state.practiceErrors[topic] = 'Kunne ikke generere opgaver lige nu. Prøv igen lidt senere.';
+        renderPractice(document.getElementById('app'));
+    }
+}
+
+async function requestAiTasks(payload) {
+    const body = JSON.stringify(payload);
+    const response = await fetch('server/api_generate_tasks.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body
+    });
+
+    if (!response.ok) {
+        throw new Error('Serverfejl');
+    }
+
+    const data = await response.json();
+    if (Array.isArray(data.tasks)) {
+        return data.tasks;
+    }
+
+    const message = typeof data.message === 'string' ? data.message : 'Ugyldigt svarformat';
+    throw new Error(message);
 }
 
 async function handleSaveAiSet(statusEl) {
