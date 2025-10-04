@@ -318,8 +318,9 @@ section h3 {
 }
 
 .subnet-results .bit-field {
-    display: grid;
-    gap: 0.5rem;
+    display: block;
+    white-space: nowrap;
+    overflow-x: auto;
 }
 
 .bit-pattern {
