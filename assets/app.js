@@ -12,6 +12,15 @@ const state = {
     practiceErrors: {}
 };
 
+const answerExpansionState = {
+    overlay: null,
+    expandedCard: null,
+    placeholder: null,
+    trigger: null,
+    previousScroll: 0,
+    keyListenerAttached: false
+};
+
 const PRACTICE_TOPIC_LABELS = {
     binary: 'Binær forståelse',
     cidr: 'CIDR og præfikser',
@@ -156,6 +165,9 @@ function refreshActiveRoute() {
     const path = hash.startsWith('/') ? hash : `/${hash}`;
     const app = document.getElementById('app');
     if (!app) return;
+    if (answerExpansionState.expandedCard) {
+        closeAnswerArea(answerExpansionState.expandedCard, { skipFocusRestore: true, skipScrollRestore: true });
+    }
     switch (path) {
         case '/practice':
             renderPractice(app);
@@ -1149,6 +1161,13 @@ function renderTaskCard(task, mode, options = {}) {
             const headers = Array.isArray(table?.headers) ? table.headers : [];
             const title = typeof table?.title === 'string' ? table.title : '';
             const rows = Array.isArray(table?.rows) ? table.rows : [];
+            const normalizedTitle = title.trim().toLowerCase();
+            let tableType = 'generic';
+            if (normalizedTitle.includes('opsummering')) {
+                tableType = 'summary';
+            } else if (normalizedTitle.includes('delnet')) {
+                tableType = 'subnet-list';
+            }
             const caption = title ? `<caption class="sr-only">${escapeHtml(title)}</caption>` : '';
             const tableTitle = title ? `<div class="table-title">${escapeHtml(title)}</div>` : '';
 
@@ -1175,7 +1194,7 @@ function renderTaskCard(task, mode, options = {}) {
                 : '';
 
             return `
-                <div class="table-wrapper" data-table-index="${tableIndex}">
+                <div class="table-wrapper" data-table-index="${tableIndex}" data-table-type="${tableType}">
                     ${tableTitle}
                     <table role="grid">
                         ${caption}
@@ -1213,11 +1232,15 @@ function renderTaskCard(task, mode, options = {}) {
             <p>${task.question}</p>
             ${Array.isArray(task.steps) ? `<ol>${task.steps.map(step => `<li>${step}</li>`).join('')}</ol>` : ''}
             <form class="task-form">
-                ${inputHtml}
+                <div class="answer-wrapper">
+                    <button type="button" class="close-answer-icon" data-action="close-answer" aria-label="Luk svarfelt">✕</button>
+                    <div class="answer-inputs">${inputHtml}</div>
+                </div>
                 <div class="task-controls">
                     <button type="submit" class="button" ${disableInput ? 'disabled' : ''}>Aflevér</button>
                     ${showHintButton ? '<button type="button" class="hint-button" data-action="hint">Hint</button>' : ''}
                     <button type="button" class="hint-button" data-action="reset">Nulstil</button>
+                    <button type="button" class="button secondary close-answer-button" data-action="close-answer">Luk svarfelt</button>
                 </div>
             </form>
             ${hintHtml}
@@ -1256,6 +1279,7 @@ function bindTaskEvents(container) {
         if (resetBtn) {
             resetBtn.addEventListener('click', () => resetTask(card));
         }
+        setupAnswerExpansion(card);
     });
 }
 
@@ -1432,6 +1456,9 @@ function escapeAttribute(value) {
 }
 
 function rerenderTask(card, task, mode) {
+    if (card.classList.contains('answer-expanded')) {
+        closeAnswerArea(card, { skipFocusRestore: true, skipScrollRestore: true });
+    }
     const container = card.parentElement;
     if (!container) return;
     const options = {};
@@ -1444,6 +1471,108 @@ function rerenderTask(card, task, mode) {
     }
     card.outerHTML = renderTaskCard(task, mode, options);
     bindTaskEvents(container);
+}
+
+function setupAnswerExpansion(card) {
+    const inputs = card.querySelectorAll('.answer-inputs textarea, .answer-inputs input, .answer-inputs select');
+    inputs.forEach(input => {
+        if (input.dataset.expandBound) return;
+        input.dataset.expandBound = 'true';
+        input.addEventListener('focus', () => {
+            if (input.disabled || card.classList.contains('answer-expanded')) return;
+            openAnswerArea(card, input);
+        });
+    });
+
+    card.querySelectorAll('[data-action="close-answer"]').forEach(button => {
+        if (button.dataset.expandBound) return;
+        button.dataset.expandBound = 'true';
+        button.addEventListener('click', event => {
+            event.preventDefault();
+            closeAnswerArea(card);
+        });
+    });
+}
+
+function ensureAnswerOverlay() {
+    if (!answerExpansionState.overlay) {
+        const overlay = document.createElement('div');
+        overlay.className = 'answer-overlay';
+        document.body.appendChild(overlay);
+        answerExpansionState.overlay = overlay;
+        if (!answerExpansionState.keyListenerAttached) {
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape' && answerExpansionState.expandedCard) {
+                    event.preventDefault();
+                    closeAnswerArea(answerExpansionState.expandedCard);
+                }
+            });
+            answerExpansionState.keyListenerAttached = true;
+        }
+    }
+    return answerExpansionState.overlay;
+}
+
+function openAnswerArea(card, focusTarget) {
+    const overlay = ensureAnswerOverlay();
+    if (!overlay) return;
+    if (answerExpansionState.expandedCard && answerExpansionState.expandedCard !== card) {
+        closeAnswerArea(answerExpansionState.expandedCard, { skipFocusRestore: true, skipScrollRestore: true });
+    }
+    if (card.classList.contains('answer-expanded')) return;
+
+    const placeholder = document.createElement('div');
+    placeholder.className = 'task-card-placeholder';
+    placeholder.style.height = `${card.offsetHeight}px`;
+    answerExpansionState.previousScroll = window.scrollY;
+    answerExpansionState.trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const parent = card.parentElement;
+    if (parent) {
+        parent.insertBefore(placeholder, card);
+        answerExpansionState.placeholder = placeholder;
+    } else {
+        answerExpansionState.placeholder = null;
+    }
+
+    overlay.appendChild(card);
+    overlay.classList.add('visible');
+    document.body.classList.add('answer-overlay-active');
+    card.classList.add('answer-expanded');
+    answerExpansionState.expandedCard = card;
+
+    requestAnimationFrame(() => {
+        if (focusTarget && typeof focusTarget.focus === 'function') {
+            focusTarget.focus();
+        }
+    });
+}
+
+function closeAnswerArea(card, options = {}) {
+    const overlay = answerExpansionState.overlay;
+    if (!overlay) return;
+    if (!card.classList.contains('answer-expanded')) return;
+
+    card.classList.remove('answer-expanded');
+    overlay.classList.remove('visible');
+    document.body.classList.remove('answer-overlay-active');
+
+    if (answerExpansionState.placeholder && answerExpansionState.placeholder.parentElement) {
+        answerExpansionState.placeholder.parentElement.replaceChild(card, answerExpansionState.placeholder);
+    }
+    answerExpansionState.placeholder = null;
+
+    if (!options.skipScrollRestore) {
+        window.scrollTo(0, answerExpansionState.previousScroll);
+    }
+
+    if (!options.skipFocusRestore && answerExpansionState.trigger && typeof answerExpansionState.trigger.focus === 'function') {
+        answerExpansionState.trigger.focus();
+    }
+
+    answerExpansionState.expandedCard = null;
+    answerExpansionState.trigger = null;
+    answerExpansionState.previousScroll = 0;
 }
 
 function showError(card, message) {
