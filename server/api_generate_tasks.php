@@ -44,6 +44,7 @@ switch ($action) {
 
 function handleGenerate(array $input): void
 {
+    global $configValues, $configDir;
     $allowed = ['topic', 'difficulty', 'count'];
     foreach ($input as $key => $value) {
         if (!in_array($key, $allowed, true)) {
@@ -85,8 +86,7 @@ function handleGenerate(array $input): void
         sendResponse(['error' => 'Ingen passende skabeloner fundet til valget.'], 400);
     }
 
-    $context = loadConfigContext(__DIR__);
-    $apiKey = readApiKey($context['config'], $context['dir']);
+    $apiKey = readApiKey($configValues, $configDir);
     if (!$apiKey) {
         sendResponse(['error' => 'API-nøglen kunne ikke indlæses. Kontakt administratoren.'], 500);
     }
@@ -106,26 +106,82 @@ function handleGenerate(array $input): void
         ]
     ];
 
-    $result = callOpenAi($payload, $apiKey, $context['dir']);
+    $result = callOpenAi($payload, $apiKey, $configDir);
     if (isset($result['error'])) {
+        $fallback = loadCachedTasksFor($topic, $difficulty);
+        if ($fallback) {
+            logEvent([
+                'timestamp' => date('c'),
+                'route' => 'generate_cache_hit',
+                'task_count' => count($fallback),
+                'topic' => $topic,
+                'difficulty' => $difficulty
+            ]);
+            sendResponse([
+                'tasks' => $fallback,
+                'source' => 'cache',
+                'message' => 'AI-tjenesten svarede ikke. Viser det senest gemte sæt for dette emne.'
+            ]);
+        }
         sendResponse(['error' => $result['error']], $result['status'] ?? 500);
     }
 
     $content = $result['content'] ?? '';
     $decoded = json_decode($content, true);
     if (!isset($decoded['tasks']) || !is_array($decoded['tasks'])) {
+        $fallback = loadCachedTasksFor($topic, $difficulty);
+        if ($fallback) {
+            logEvent([
+                'timestamp' => date('c'),
+                'route' => 'generate_cache_hit',
+                'task_count' => count($fallback),
+                'topic' => $topic,
+                'difficulty' => $difficulty
+            ]);
+            sendResponse([
+                'tasks' => $fallback,
+                'source' => 'cache',
+                'message' => 'AI-svaret kunne ikke læses. Viser seneste fungerende sæt i stedet.'
+            ]);
+        }
         sendResponse(['error' => 'AI-svaret havde ikke gyldigt task-format.'], 502);
     }
 
     $validated = validateGeneratedTasks($decoded['tasks'], $topic, $difficulty);
 
+    if (!count($validated)) {
+        $fallback = loadCachedTasksFor($topic, $difficulty);
+        if ($fallback) {
+            logEvent([
+                'timestamp' => date('c'),
+                'route' => 'generate_cache_hit',
+                'task_count' => count($fallback),
+                'topic' => $topic,
+                'difficulty' => $difficulty
+            ]);
+            sendResponse([
+                'tasks' => $fallback,
+                'source' => 'cache',
+                'message' => 'AI-svaret indeholdt ingen gyldige opgaver. Viser et tidligere sæt.'
+            ]);
+        }
+        sendResponse(['error' => 'AI-svaret indeholdt ingen gyldige opgaver.'], 502);
+    }
+
+    cacheGeneratedTasks($topic, $difficulty, $validated);
+
     logEvent([
         'timestamp' => date('c'),
         'route' => 'generate',
-        'task_count' => count($validated)
+        'task_count' => count($validated),
+        'topic' => $topic,
+        'difficulty' => $difficulty
     ]);
 
-    sendResponse(['tasks' => $validated]);
+    sendResponse([
+        'tasks' => $validated,
+        'source' => 'live'
+    ]);
 }
 
 function handleSave(array $input): void
@@ -412,6 +468,54 @@ function logEvent(array $entry): void
     $path = __DIR__ . '/../data/usage.log';
     $line = json_encode($entry) . PHP_EOL;
     @file_put_contents($path, $line, FILE_APPEND | LOCK_EX);
+}
+
+function cacheGeneratedTasks(string $topic, int $difficulty, array $tasks): void
+{
+    $path = __DIR__ . '/../data/ai_task_cache.json';
+    $payload = [
+        'tasks' => $tasks,
+        'cached_at' => date('c')
+    ];
+
+    $all = [];
+    if (is_file($path)) {
+        $raw = file_get_contents($path);
+        $decoded = $raw ? json_decode($raw, true) : null;
+        if (is_array($decoded)) {
+            $all = $decoded;
+        }
+    }
+
+    if (!isset($all[$topic])) {
+        $all[$topic] = [];
+    }
+
+    $all[$topic][(string) $difficulty] = $payload;
+
+    @file_put_contents(
+        $path,
+        json_encode($all, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        LOCK_EX
+    );
+}
+
+function loadCachedTasksFor(string $topic, int $difficulty): ?array
+{
+    $path = __DIR__ . '/../data/ai_task_cache.json';
+    if (!is_readable($path)) {
+        return null;
+    }
+    $raw = file_get_contents($path);
+    if (!$raw) {
+        return null;
+    }
+    $decoded = json_decode($raw, true);
+    if (!isset($decoded[$topic][(string) $difficulty]['tasks'])) {
+        return null;
+    }
+    $tasks = $decoded[$topic][(string) $difficulty]['tasks'];
+    return is_array($tasks) ? $tasks : null;
 }
 
 function findCaBundle(string $configDir): ?string

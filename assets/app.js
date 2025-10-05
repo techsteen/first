@@ -9,7 +9,9 @@ const state = {
     storageMode: 'ukendt',
     practiceSets: {},
     practiceLoading: {},
-    practiceErrors: {}
+    practiceErrors: {},
+    practiceNotices: {},
+    aiNotice: null
 };
 
 const answerExpansionState = {
@@ -965,6 +967,7 @@ function renderPracticeTopicSection(topic) {
     const loading = Boolean(state.practiceLoading[topic]);
     const error = state.practiceErrors[topic];
     const tasks = Array.isArray(stored.tasks) ? stored.tasks : [];
+    const notice = state.practiceNotices[topic];
 
     const difficultyOptions = (availableDifficulties.length ? availableDifficulties : [selectedDifficulty]).map(value => `
         <option value="${value}" ${value === selectedDifficulty ? 'selected' : ''}>Niveau ${value}</option>
@@ -976,6 +979,7 @@ function renderPracticeTopicSection(topic) {
 
     const loadingMarkup = loading ? '<p class="loading" role="status">Genererer opgaver …</p>' : '';
     const errorMarkup = error ? `<p class="error" role="alert">${error}</p>` : '';
+    const noticeMarkup = notice ? `<p class="info-notice" role="status">${escapeHtml(notice)}</p>` : '';
 
     return `
         <article class="practice-topic" data-topic="${topic}">
@@ -993,7 +997,7 @@ function renderPracticeTopicSection(topic) {
             </form>
             ${errorMarkup}
             ${loadingMarkup}
-            <div class="task-list" data-topic="${topic}">${!loading || tasks.length ? taskMarkup : ''}</div>
+            <div class="task-list" data-topic="${topic}">${noticeMarkup}${!loading || tasks.length ? taskMarkup : ''}</div>
         </article>
     `;
 }
@@ -1120,7 +1124,8 @@ function renderAiTasks(container) {
         return;
     }
 
-    container.innerHTML = state.aiSets.map((task, index) => renderTaskCard(task, 'ai', { index })).join('');
+    const notice = state.aiNotice ? `<div class="info-notice" role="status">${escapeHtml(state.aiNotice)}</div>` : '';
+    container.innerHTML = notice + state.aiSets.map((task, index) => renderTaskCard(task, 'ai', { index })).join('');
     bindTaskEvents(container);
 }
 
@@ -1611,10 +1616,14 @@ async function handleGenerateTasks(event) {
     };
 
     try {
-        state.aiSets = await requestAiTasks(payload);
+        state.aiNotice = null;
+        const result = await requestAiTasks(payload);
+        state.aiSets = result.tasks;
+        state.aiNotice = result.message;
         renderAiTasks(document.getElementById('ai-task-container'));
     } catch (error) {
         console.error('Fejl ved generering', error);
+        state.aiNotice = null;
         const container = document.getElementById('ai-task-container');
         if (container) {
             container.innerHTML = '<p>Kunne ikke generere opgaver. Prøv igen senere.</p>';
@@ -1650,21 +1659,25 @@ async function handlePracticeGenerate(event) {
 
     state.practiceLoading[topic] = true;
     state.practiceErrors[topic] = null;
+    state.practiceNotices[topic] = null;
     renderPractice(document.getElementById('app'));
 
     try {
-        const tasks = await requestAiTasks(payload);
+        const result = await requestAiTasks(payload);
+        const tasks = result.tasks;
         state.practiceSets[topic] = {
             tasks: tasks.map(task => ({ ...task, practiceTopic: topic })),
             difficulty: payload.difficulty,
             count: payload.count
         };
+        state.practiceNotices[topic] = result.message;
         state.practiceErrors[topic] = tasks.length ? null : 'Der kom ingen opgaver retur. Prøv med en anden sværhedsgrad.';
         state.practiceLoading[topic] = false;
         renderPractice(document.getElementById('app'));
     } catch (error) {
         console.error('Fejl ved generering af øveopgaver', error);
         state.practiceLoading[topic] = false;
+        state.practiceNotices[topic] = null;
         state.practiceErrors[topic] = 'Kunne ikke generere opgaver lige nu. Prøv igen lidt senere.';
         renderPractice(document.getElementById('app'));
     }
@@ -1684,7 +1697,11 @@ async function requestAiTasks(payload) {
 
     const data = await response.json();
     if (Array.isArray(data.tasks)) {
-        return data.tasks;
+        return {
+            tasks: data.tasks,
+            message: typeof data.message === 'string' ? data.message : null,
+            source: typeof data.source === 'string' ? data.source : 'live'
+        };
     }
 
     const message = typeof data.message === 'string' ? data.message : 'Ugyldigt svarformat';

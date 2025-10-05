@@ -229,7 +229,7 @@
         {
           "template_id": "binary-decimal-table",
           "type": "fill_in_table",
-          "description": "Konverter tre binære oktetter til decimal.",
+          "description": "Konverter en konkret binær oktet til decimal.",
           "variables": {
             "rows": [
               ["11111111", "255"],
@@ -238,7 +238,8 @@
               ["10100000", "160"],
               ["11111100", "252"]
             ]
-          }
+          },
+          "instructions": "Vælg én unik række pr. opgave. Skriv spørgsmålet som: 'Hvad er decimalværdien af binærtallet 10100000?' Brug binærtallet fra rækken. Hints skal guide til at gruppere i 8 bit og forklare binær til decimal kort. answer_schema.expected er det decimal-tal fra rækken og accept-listen må inkludere varianter som '160' og '160 decimal'. Rubric skal have max_score=1, beskrive korrekt konvertering og inkludere en kort løsning med trinvis visning af bits til decimal."
         }
       ]
     }
