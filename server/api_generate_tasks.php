@@ -16,6 +16,14 @@ if (!defined('CONFIG_DIR_PATH')) {
     define('CONFIG_DIR_PATH', $configDir);
 }
 
+sendResponse([
+    'status' => 'disabled',
+    'message' => 'Dynamisk generering er slået fra. Brug assets/ai_prebuilt_tasks.json til forudbyggede opgaver.',
+    'source' => 'static'
+], 410);
+
+exit;
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendResponse(['error' => 'Kun POST er tilladt.'], 405);
 }

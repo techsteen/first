@@ -2,22 +2,18 @@ import { defineRoute } from './router.js';
 
 const state = {
     tasks: [],
-    templates: null,
+    prebuiltAiTasks: null,
+    prebuiltCursor: {},
     progress: loadProgress(),
     teacherMode: loadTeacherMode(),
     aiSets: [],
-    storageMode: 'ukendt',
+    aiSelection: null,
     practiceSets: {},
-    practiceLoading: {},
     practiceErrors: {},
     practiceNotices: {},
-    practiceFallbackIndex: {},
     aiNotice: null,
-    debugPrompts: {
-        ai: null,
-        practice: {}
-    },
-    seededPracticeTopics: {}
+    seededPracticeTopics: {},
+    taskDesigner: null
 };
 
 const answerExpansionState = {
@@ -40,15 +36,109 @@ const PRACTICE_TOPIC_LABELS = {
 const PIN_CODE = '4285';
 const STORAGE_KEYS = {
     PROGRESS: 'subnetting-progress',
-    TEACHER: 'subnetting-teacher-mode',
-    AI_SETS: 'subnetting-ai-sets'
+    TEACHER: 'subnetting-teacher-mode'
 };
 
+function ensureAiSelection() {
+    if (!state.prebuiltAiTasks || typeof state.prebuiltAiTasks !== 'object') {
+        return;
+    }
+
+    const topics = Object.keys(state.prebuiltAiTasks.topics || {});
+    if (!topics.length) {
+        state.aiSelection = null;
+        return;
+    }
+
+    if (!state.aiSelection || !topics.includes(state.aiSelection.topic)) {
+        state.aiSelection = {
+            topic: topics[0],
+            difficulty: null
+        };
+    }
+
+    const available = getAvailableDifficulties(state.aiSelection.topic);
+    if (!available.length) {
+        state.aiSelection.difficulty = null;
+        return;
+    }
+
+    if (!available.includes(state.aiSelection.difficulty)) {
+        state.aiSelection.difficulty = available[0];
+    }
+}
+
+function getPrebuiltTopicData(topic) {
+    if (!state.prebuiltAiTasks || typeof state.prebuiltAiTasks !== 'object') {
+        return null;
+    }
+    const topics = state.prebuiltAiTasks.topics || {};
+    return topics[topic] || null;
+}
+
+function getAvailableDifficulties(topic) {
+    const topicData = getPrebuiltTopicData(topic);
+    if (!topicData) return [];
+    return Object.keys(topicData)
+        .map(Number)
+        .filter(value => Number.isFinite(value))
+        .sort((a, b) => a - b);
+}
+
+function pickPrebuiltTask(topic, difficulty) {
+    const topicData = getPrebuiltTopicData(topic);
+    if (!topicData) {
+        return null;
+    }
+
+    let pool = topicData[difficulty];
+    if (!Array.isArray(pool) || !pool.length) {
+        const fallbacks = getAvailableDifficulties(topic)
+            .map(level => ({ level, tasks: topicData[level] }))
+            .find(entry => Array.isArray(entry.tasks) && entry.tasks.length);
+        if (!fallbacks) {
+            return null;
+        }
+        difficulty = fallbacks.level;
+        pool = fallbacks.tasks;
+    }
+
+    const key = `${topic}-${difficulty}`;
+    const index = state.prebuiltCursor[key] || 0;
+    const original = pool[index % pool.length];
+    const task = deepClone(original);
+    const baseId = typeof task.id === 'string' && task.id ? task.id : `PB-${topic.toUpperCase()}-${difficulty}`;
+    const uniqueSuffix = `${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;
+    task.id = `${baseId}-RUN-${uniqueSuffix}`;
+    state.prebuiltCursor[key] = (index + 1) % pool.length;
+    return { task, difficulty };
+}
+
+function getPrebuiltTaskSet(topic, difficulty) {
+    const topicData = getPrebuiltTopicData(topic);
+    if (!topicData) {
+        return { tasks: [], difficulty: null };
+    }
+
+    let pool = topicData[difficulty];
+    let resolvedDifficulty = difficulty;
+    if (!Array.isArray(pool) || !pool.length) {
+        const available = getAvailableDifficulties(topic);
+        if (!available.length) {
+            return { tasks: [], difficulty: null };
+        }
+        resolvedDifficulty = available[0];
+        pool = topicData[resolvedDifficulty];
+    }
+
+    const tasks = Array.isArray(pool) ? pool.map(task => deepClone(task)) : [];
+    return { tasks, difficulty: resolvedDifficulty };
+}
+
 async function init() {
-    await Promise.all([loadTasks(), loadTemplates()]);
+    await Promise.all([loadTasks(), loadPrebuiltAiTasks()]);
     setupTeacherControls();
     setupRouteHandlers();
-    attemptLoadAiSets();
 }
 
 defineRoute('/', renderFrontpage);
@@ -56,6 +146,7 @@ defineRoute('/learn', renderLearn);
 defineRoute('/practice', renderPractice);
 defineRoute('/test', renderTest);
 defineRoute('/ai', renderAi);
+defineRoute('/builder', renderTaskBuilder);
 
 function setupRouteHandlers() {
     document.addEventListener('click', event => {
@@ -88,15 +179,16 @@ function deepClone(value) {
     }
 }
 
-async function loadTemplates() {
-    if (state.templates) return;
+async function loadPrebuiltAiTasks() {
+    if (state.prebuiltAiTasks) return;
     try {
-        const res = await fetch('assets/templates.json');
-        if (!res.ok) throw new Error('Kunne ikke hente templates.');
-        state.templates = await res.json();
+        const res = await fetch('assets/ai_prebuilt_tasks.json');
+        if (!res.ok) throw new Error('Kunne ikke hente forudbyggede AI-opgaver.');
+        state.prebuiltAiTasks = await res.json();
+        ensureAiSelection();
         refreshActiveRoute();
     } catch (error) {
-        console.error('Fejl ved hentning af templates.json', error);
+        console.error('Fejl ved hentning af ai_prebuilt_tasks.json', error);
     }
 }
 
@@ -936,23 +1028,23 @@ function getClassInfo(firstOctet) {
 }
 
 function renderPractice(container) {
-    if (!state.templates) {
+    if (!state.prebuiltAiTasks) {
         container.innerHTML = `
             <section aria-labelledby="practice-heading">
                 <h2 id="practice-heading">Øvelsesopgaver</h2>
-                <p>Indlæser skabeloner til AI-opgaver …</p>
+                <p>Indlæser forudbyggede opgaver …</p>
             </section>
         `;
         return;
     }
 
-    const topics = Object.keys(state.templates.topics || {});
+    const topics = Object.keys(state.prebuiltAiTasks.topics || {});
 
     if (!topics.length) {
         container.innerHTML = `
             <section aria-labelledby="practice-heading">
                 <h2 id="practice-heading">Øvelsesopgaver</h2>
-                <p>Der er endnu ikke defineret nogen emner i skabelonbiblioteket.</p>
+                <p>Der er endnu ikke defineret nogen emner i biblioteket med forudbyggede opgaver.</p>
             </section>
         `;
         return;
@@ -974,13 +1066,13 @@ function renderPractice(container) {
     const debugMarkup = renderPracticeDebugSection();
     const teacherHint = state.teacherMode ? '' : `
         <section class="teacher-hint" aria-label="Lærerhjælp">
-            <p><strong>Undervisere:</strong> Aktiver lærer-tilstand via knappen nederst på siden. Standard-PIN er <code>${PIN_CODE}</code>. Herefter vises prompts og ekstra værktøjer.</p>
+            <p><strong>Undervisere:</strong> Aktiver lærer-tilstand via knappen nederst på siden. Standard-PIN er <code>${PIN_CODE}</code>. Herefter vises ekstra værktøjer og filreferencer.</p>
         </section>`;
 
     container.innerHTML = `
         <section aria-labelledby="practice-heading" class="practice-section">
-            <h2 id="practice-heading">Øv dig med AI-genererede opgaver</h2>
-            <p>Vælg et emne, generér en opgave og gentag efter behov for at træne flere opgaver i samme spor. Alle besvarelser evalueres automatisk, og du får hjælpende feedback når der er fejl.</p>
+            <h2 id="practice-heading">Øv dig med bibliotekets opgaver</h2>
+            <p>Vælg et emne, hent den næste forudbyggede opgave og gentag efter behov. Alle besvarelser evalueres automatisk, og du får hjælpende feedback når der er fejl.</p>
             ${gridMarkup || '<p class="empty">Ingen emner tilgængelige.</p>'}
             ${subnetMarkup}
             ${debugMarkup}
@@ -997,23 +1089,16 @@ function renderPracticeDebugSection() {
         return '';
     }
 
-    const prompts = state.debugPrompts?.practice || {};
-    const entries = Object.entries(prompts).filter(([, prompt]) => typeof prompt === 'string' && prompt.trim() !== '');
-    const items = entries.length ? entries.map(([topic, prompt]) => {
-        const label = PRACTICE_TOPIC_LABELS[topic] || topic.toUpperCase();
-        return `
-            <article class="debug-prompt-entry">
-                <h4>${escapeHtml(label)}</h4>
-                <pre class="debug-prompt" tabindex="0">${escapeHtml(prompt)}</pre>
-            </article>
-        `;
-    }).join('') : '<p class="debug-prompt-empty">Ingen prompts registreret endnu. Generér en opgave for at se prompten.</p>';
-
     return `
         <section class="debug-prompt-section" aria-labelledby="practice-debug-heading">
-            <h3 id="practice-debug-heading">Debug: Seneste prompts pr. emne</h3>
-            <p class="debug-prompt-hint">Synligt kun i lærer-tilstand. Brug teksten til at fejlfinde AI-generering.</p>
-            <div class="debug-prompt-list">${items}</div>
+            <h3 id="practice-debug-heading">Debug: Kilde til øvelsesopgaver</h3>
+            <p class="debug-prompt-hint">Dynamisk AI-generering er slået fra. Opgaverne hentes fra filen <code>assets/ai_prebuilt_tasks.json</code>.</p>
+            <div class="debug-prompt-list">
+                <article class="debug-prompt-entry">
+                    <h4>Forudbyggede opgaver</h4>
+                    <p class="debug-prompt-empty">Tilpas filen for at ændre indholdet eller brug Opgaveværktøjet til at generere nye objekter.</p>
+                </article>
+            </div>
         </section>
     `;
 }
@@ -1023,32 +1108,39 @@ function ensureDefaultPracticeContent(topics) {
         return;
     }
 
-    if (topics.includes('subnetting') && !state.practiceLoading.subnetting && !state.seededPracticeTopics.subnetting) {
-        const existing = state.practiceSets.subnetting;
-        if (existing && Array.isArray(existing.tasks) && existing.tasks.length) {
-            state.seededPracticeTopics.subnetting = true;
+    topics.forEach(topic => {
+        if (state.seededPracticeTopics[topic]) {
             return;
         }
 
-        const fallback = getFallbackPracticeTasks('subnetting', 1);
-        if (fallback.length) {
-            state.practiceSets.subnetting = {
-                tasks: fallback,
-                difficulty: fallback[0]?.difficulty || 3
-            };
-            state.practiceNotices.subnetting = 'Viser en lokal subnetplanlægningsopgave. Generér for at hente nye varianter.';
-            state.seededPracticeTopics.subnetting = true;
+        const existing = state.practiceSets[topic];
+        if (existing && Array.isArray(existing.tasks) && existing.tasks.length) {
+            state.seededPracticeTopics[topic] = true;
+            return;
         }
-    }
+
+        const difficulties = getAvailableDifficulties(topic);
+        if (!difficulties.length) {
+            return;
+        }
+
+        const selection = pickPrebuiltTask(topic, difficulties[0]);
+        if (selection && selection.task) {
+            state.practiceSets[topic] = {
+                tasks: [selection.task],
+                difficulty: selection.difficulty
+            };
+            state.practiceNotices[topic] = 'Viser forudbygget opgave fra biblioteket. Brug "Generér opgave" for næste variant.';
+            state.seededPracticeTopics[topic] = true;
+        }
+    });
 }
 
 function renderPracticeTopicSection(topic, options = {}) {
     const label = PRACTICE_TOPIC_LABELS[topic] || topic.toUpperCase();
-    const topicConfig = state.templates?.topics?.[topic] || {};
-    const availableDifficulties = Object.keys(topicConfig).map(Number).sort((a, b) => a - b);
+    const availableDifficulties = getAvailableDifficulties(topic);
     const stored = state.practiceSets[topic] || { tasks: [] };
     const selectedDifficulty = stored.difficulty || availableDifficulties[0] || 1;
-    const loading = Boolean(state.practiceLoading[topic]);
     const error = state.practiceErrors[topic];
     const tasks = Array.isArray(stored.tasks) ? stored.tasks : [];
     const notice = state.practiceNotices[topic];
@@ -1063,7 +1155,6 @@ function renderPracticeTopicSection(topic, options = {}) {
         ? tasks.map((task, index) => renderTaskCard(task, 'practice', { topic, index })).join('')
         : '<p class="empty">Ingen opgave endnu. Vælg sværhedsgrad og generér en opgave.</p>';
 
-    const loadingMarkup = loading ? '<p class="loading" role="status">Genererer opgaver …</p>' : '';
     const errorMarkup = error ? `<p class="error" role="alert">${error}</p>` : '';
     const noticeMarkup = notice ? `<p class="info-notice" role="status">${escapeHtml(notice)}</p>` : '';
     const description = isSubnetting
@@ -1087,8 +1178,7 @@ function renderPracticeTopicSection(topic, options = {}) {
                 <button type="submit" class="button">Generér opgave</button>
             </form>
             ${errorMarkup}
-            ${loadingMarkup}
-            <div class="task-list" data-topic="${topic}">${noticeMarkup}${!loading || tasks.length ? taskMarkup : ''}</div>
+            <div class="task-list" data-topic="${topic}">${noticeMarkup}${taskMarkup}</div>
         </article>
     `;
 }
@@ -1097,41 +1187,6 @@ function setupPracticeTopicHandlers(container) {
     container.querySelectorAll('.practice-generator').forEach(form => {
         form.addEventListener('submit', handlePracticeGenerate);
     });
-}
-
-function getFallbackPracticeTasks(topic, _count = 1) {
-    if (!Array.isArray(state.tasks) || !state.tasks.length) {
-        return [];
-    }
-
-    const normalizedTopic = String(topic || '').toLowerCase();
-    const pool = state.tasks.filter(task => {
-        const taskTopic = String(task.topic || '').toLowerCase();
-        return taskTopic === normalizedTopic;
-    });
-
-    if (!pool.length) {
-        return [];
-    }
-
-    const cloned = [];
-    const startIndex = state.practiceFallbackIndex[normalizedTopic] || 0;
-    const desiredCount = 1;
-
-    for (let i = 0; i < desiredCount; i++) {
-        const index = (startIndex + i) % pool.length;
-        const original = pool[index];
-        const copy = deepClone(original);
-        const uniqueSuffix = `${Date.now()}-${i}`;
-        const baseId = typeof copy.id === 'string' && copy.id !== '' ? copy.id : `LOCAL-${normalizedTopic}-${i}`;
-        copy.id = `FALLBACK-${normalizedTopic.toUpperCase()}-${baseId}-${uniqueSuffix}`;
-        copy.practiceTopic = topic;
-        cloned.push(copy);
-    }
-
-    state.practiceFallbackIndex[normalizedTopic] = (startIndex + desiredCount) % pool.length;
-
-    return cloned;
 }
 
 function renderTest(container) {
@@ -1181,87 +1236,446 @@ function buildTestView(session) {
     `;
 }
 
-function renderAi(container) {
-    const teacherNotice = state.teacherMode ? '' : `
-        <p class="storage-notice">
-            Du er i elevtilstand. Aktiver lærer-tilstand via knappen nederst på siden og brug PIN <code>${PIN_CODE}</code> for at generere opgaver og se prompts.
-        </p>`;
-    const topicOptions = state.templates ? Object.keys(state.templates.topics || {}).map(topic => `<option value="${topic}">${topic.toUpperCase()}</option>`).join('') : '';
+function renderTaskBuilder(container) {
+    const designer = getTaskDesignerState();
+    const topicOptions = Object.entries(PRACTICE_TOPIC_LABELS).map(([value, label]) => `<option value="${value}" ${designer.topic === value ? 'selected' : ''}>${label}</option>`).join('');
 
     container.innerHTML = `
-        <section class="ai-panel" aria-labelledby="ai-heading">
-            <h2 id="ai-heading">AI-genererede opgavesæt</h2>
-            ${teacherNotice}
-            ${state.teacherMode ? `
-            <section class="ai-settings">
-                <h3>Generér opgaver</h3>
-                <form id="ai-generator" novalidate>
-                    <fieldset ${state.teacherMode ? '' : 'disabled'}>
-                        <label>Emne
-                            <select name="topic" required>
-                                <option value="" disabled selected>Vælg emne</option>
-                                ${topicOptions}
-                            </select>
-                        </label>
-                        <label>Sværhedsgrad (1-5)
-                            <input name="difficulty" type="number" min="1" max="5" step="1" required>
-                        </label>
-                        <div class="task-controls">
-                            <button type="submit" class="button">Generér</button>
-                            <button type="button" id="ai-save" class="button secondary">Gem sæt</button>
-                            <button type="button" id="ai-load" class="button secondary">Indlæs gemte sæt</button>
-                        </div>
-                    </fieldset>
-                </form>
-                <p id="ai-storage-status" class="pin-feedback"></p>
-            </section>` : ''}
-            <section>
-                <h3>Aktuelt opgavesæt</h3>
-                <div id="ai-task-container" class="ai-tasks" role="region" aria-live="polite"></div>
+        <section class="task-designer" aria-labelledby="task-designer-heading">
+            <h2 id="task-designer-heading">Opgaveværktøj</h2>
+            <p>Udfyld felterne for at beskrive en ny subnetting-opgave. Værktøjet genererer et JSON-objekt i samme struktur som platformen bruger, samt en prompt du kan give til en anden bot for at oprette opgaven i Canvas.</p>
+            <form id="task-designer-form" class="task-designer-form" novalidate>
+                <fieldset>
+                    <legend>Grundlæggende oplysninger</legend>
+                    <label>Opgave-id
+                        <input name="id" type="text" value="${escapeAttribute(designer.id)}" placeholder="PB-..." required>
+                    </label>
+                    <label>Titel
+                        <input name="title" type="text" value="${escapeAttribute(designer.title)}" placeholder="Titel på opgaven" required>
+                    </label>
+                    <label>Emne
+                        <select name="topic">${topicOptions}</select>
+                    </label>
+                    <label>Sværhedsgrad (1-5)
+                        <input name="difficulty" type="number" min="1" max="5" step="1" value="${escapeAttribute(designer.difficulty)}">
+                    </label>
+                    <label>Opgavetype
+                        <select name="type">
+                            ${['short_answer', 'multiple_choice', 'multi_step', 'fill_in_table'].map(type => `<option value="${type}" ${designer.type === type ? 'selected' : ''}>${type}</option>`).join('')}
+                        </select>
+                    </label>
+                    <label>Spørgsmålstekst
+                        <textarea name="question" rows="3" required>${escapeHtml(designer.question)}</textarea>
+                    </label>
+                </fieldset>
+                <fieldset>
+                    <legend>Didaktiske elementer</legend>
+                    <label>Hints (ét per linje)
+                        <textarea name="hints" rows="3" placeholder="Hint 1\nHint 2">${escapeHtml(designer.hints)}</textarea>
+                    </label>
+                    <label>Trinvis guide (multi-step, ét trin per linje)
+                        <textarea name="steps" rows="3" placeholder="Trin 1\nTrin 2">${escapeHtml(designer.steps)}</textarea>
+                    </label>
+                    <label>Rubric-kriterier (ét per linje)
+                        <textarea name="rubric" rows="3" placeholder="Kriterie 1\nKriterie 2">${escapeHtml(designer.rubric)}</textarea>
+                    </label>
+                    <label>Løsningstekst
+                        <textarea name="solution" rows="3" placeholder="Forklar hvordan opgaven løses">${escapeHtml(designer.solution)}</textarea>
+                    </label>
+                    <label>Maks. forsøg før løsning
+                        <input name="maxAttempts" type="number" min="1" max="5" step="1" value="${escapeAttribute(designer.maxAttempts)}">
+                    </label>
+                </fieldset>
+                <fieldset data-type-section="short_answer">
+                    <legend>Kort svar</legend>
+                    <label>Forventet svar
+                        <input name="expected" type="text" value="${escapeAttribute(designer.expected)}" placeholder="255.255.255.0">
+                    </label>
+                    <label>Accepterede alternativer (ét per linje)
+                        <textarea name="accept" rows="2" placeholder="255 255 255 0">${escapeHtml(designer.accept)}</textarea>
+                    </label>
+                </fieldset>
+                <fieldset data-type-section="multiple_choice">
+                    <legend>Multiple choice</legend>
+                    <p class="helper-text">Skriv ét svarvalg per linje. Marker rigtige svar med stjerne (*) forrest. Eksempel: <code>*192.168.0.0</code></p>
+                    <label>Svarmuligheder
+                        <textarea name="options" rows="4" placeholder="*Rigtigt svar\nForkert svar">${escapeHtml(designer.options)}</textarea>
+                    </label>
+                </fieldset>
+                <fieldset data-type-section="fill_in_table">
+                    <legend>Tabelopgave</legend>
+                    <p class="helper-text">Angiv titel, kolonneoverskrifter og rækker. Brug <code>[input]</code> for et tomt felt eller <code>[input:korrekt svar]</code> for at foreslå både felt og facit.</p>
+                    <label>Tabeltitel
+                        <input name="tableTitle" type="text" value="${escapeAttribute(designer.tableTitle)}" placeholder="Delnetoversigt">
+                    </label>
+                    <label>Kolonneoverskrifter (adskil med komma)
+                        <input name="tableHeaders" type="text" value="${escapeAttribute(designer.tableHeaders)}" placeholder="Delnet, Netværksadresse, Første host, ...">
+                    </label>
+                    <label>Rækker (brug | som separator)
+                        <textarea name="tableRows" rows="6" placeholder="Delnet 1 | 192.168.40.0 | [input:192.168.40.1] | ...">${escapeHtml(designer.tableRows)}</textarea>
+                    </label>
+                </fieldset>
+                <fieldset data-type-section="multi_step">
+                    <legend>Multi-step svar</legend>
+                    <label>Forventet hovedsvar
+                        <input name="expectedMulti" type="text" value="${escapeAttribute(designer.expectedMulti || '')}" placeholder="Netværksadresse eller opsummering">
+                    </label>
+                </fieldset>
+            </form>
+            <section class="designer-output" aria-labelledby="designer-json-heading">
+                <h3 id="designer-json-heading">JSON-udgave</h3>
+                <pre id="task-json-preview" class="designer-json" tabindex="0"></pre>
             </section>
-            ${state.teacherMode ? `
-            <section class="debug-prompt-section" aria-labelledby="ai-debug-heading">
-                <h3 id="ai-debug-heading">Debug: Seneste prompt</h3>
-                <p class="debug-prompt-hint">Synligt kun i lærer-tilstand. Brug den til at kontrollere prompten, der sendes til AI-tjenesten.</p>
-                <pre id="ai-debug-prompt" class="debug-prompt" tabindex="0">${escapeHtml(state.debugPrompts.ai || 'Ingen prompt endnu.')}</pre>
-            </section>` : ''}
+            <section class="designer-prompt" aria-labelledby="designer-prompt-heading">
+                <h3 id="designer-prompt-heading">Prompt til Canvas-bot</h3>
+                <textarea id="task-prompt-preview" rows="10" readonly aria-label="Prompttekst"></textarea>
+            </section>
         </section>
     `;
 
-    const form = container.querySelector('#ai-generator');
-    const saveBtn = container.querySelector('#ai-save');
-    const loadBtn = container.querySelector('#ai-load');
-    const statusEl = container.querySelector('#ai-storage-status');
+    const form = container.querySelector('#task-designer-form');
+    if (!form) return;
 
-    if (form) {
-        form.addEventListener('submit', handleGenerateTasks);
-    }
+    form.addEventListener('input', () => {
+        updateDesignerStateFromForm(form);
+        updateTaskDesignerVisibility(form);
+        updateTaskDesignerPreview();
+    });
 
-    if (saveBtn) {
-        saveBtn.addEventListener('click', () => handleSaveAiSet(statusEl));
-    }
-
-    if (loadBtn) {
-        loadBtn.addEventListener('click', () => handleLoadSavedSets(statusEl));
-    }
-
-    renderAiTasks(container.querySelector('#ai-task-container'));
-    renderAiDebugPrompt();
+    updateTaskDesignerVisibility(form);
+    updateTaskDesignerPreview();
 }
 
-function renderAiDebugPrompt() {
-    if (!state.teacherMode) return;
-    const element = document.getElementById('ai-debug-prompt');
-    if (!element) return;
-    const prompt = state.debugPrompts.ai;
-    element.textContent = prompt ? prompt : 'Ingen prompt endnu.';
+function getTaskDesignerState() {
+    if (!state.taskDesigner) {
+        state.taskDesigner = {
+            id: '',
+            title: '',
+            topic: 'binary',
+            difficulty: 1,
+            type: 'short_answer',
+            question: '',
+            hints: '',
+            steps: '',
+            expected: '',
+            accept: '',
+            options: '',
+            tableTitle: '',
+            tableHeaders: '',
+            tableRows: '',
+            expectedMulti: '',
+            solution: '',
+            rubric: '',
+            maxAttempts: 3
+        };
+    }
+    return state.taskDesigner;
+}
+
+function updateDesignerStateFromForm(form) {
+    const designer = getTaskDesignerState();
+    const elements = form.elements;
+    designer.id = getControlValue(elements, 'id').trim();
+    designer.title = getControlValue(elements, 'title').trim();
+    designer.topic = getControlValue(elements, 'topic') || 'binary';
+    designer.difficulty = Number(getControlValue(elements, 'difficulty')) || 1;
+    designer.type = getControlValue(elements, 'type') || 'short_answer';
+    designer.question = getControlValue(elements, 'question').trim();
+    designer.hints = getControlValue(elements, 'hints');
+    designer.steps = getControlValue(elements, 'steps');
+    designer.rubric = getControlValue(elements, 'rubric');
+    designer.solution = getControlValue(elements, 'solution').trim();
+    designer.maxAttempts = Number(getControlValue(elements, 'maxAttempts')) || 3;
+    designer.expected = getControlValue(elements, 'expected').trim();
+    designer.accept = getControlValue(elements, 'accept');
+    designer.options = getControlValue(elements, 'options');
+    designer.tableTitle = getControlValue(elements, 'tableTitle').trim();
+    designer.tableHeaders = getControlValue(elements, 'tableHeaders');
+    designer.tableRows = getControlValue(elements, 'tableRows');
+    designer.expectedMulti = getControlValue(elements, 'expectedMulti').trim();
+}
+
+function updateTaskDesignerVisibility(form) {
+    const designer = getTaskDesignerState();
+    form.querySelectorAll('[data-type-section]').forEach(section => {
+        const sectionType = section.getAttribute('data-type-section');
+        section.hidden = sectionType !== designer.type;
+    });
+}
+
+function updateTaskDesignerPreview() {
+    const designer = getTaskDesignerState();
+    const task = buildTaskFromDesigner(designer);
+    const jsonPreview = document.getElementById('task-json-preview');
+    const promptPreview = document.getElementById('task-prompt-preview');
+
+    if (jsonPreview) {
+        jsonPreview.textContent = JSON.stringify(task, null, 2);
+    }
+    if (promptPreview) {
+        promptPreview.value = buildDesignerPrompt(task, designer);
+    }
+}
+
+function getControlValue(elements, name) {
+    const control = elements.namedItem(name);
+    if (!control || typeof control.value !== 'string') {
+        return '';
+    }
+    return control.value;
+}
+
+function buildTaskFromDesigner(designer) {
+    const hints = splitByLines(designer.hints);
+    const steps = splitByLines(designer.steps);
+    const rubricCriteria = splitByLines(designer.rubric);
+
+    const task = {
+        id: designer.id || `PB-${designer.topic.toUpperCase()}-${Date.now()}`,
+        title: designer.title || 'Ny opgave',
+        type: designer.type,
+        difficulty: Number(designer.difficulty) || 1,
+        topic: designer.topic,
+        question: designer.question || 'Beskriv opgaven her.',
+        hints,
+        rubric: {
+            max_score: 1,
+            criteria: rubricCriteria.length ? rubricCriteria : ['Beskriv kriterierne for fuldt point.'],
+            solution: designer.solution || 'Tilføj en forklaring på løsningen.'
+        },
+        max_attempts_before_solution: Number(designer.maxAttempts) || 3
+    };
+
+    if (designer.type === 'multi_step' && steps.length) {
+        task.steps = steps;
+    } else if (designer.type !== 'multi_step' && steps.length) {
+        task.steps = steps;
+    }
+
+    task.answer_schema = buildAnswerSchema(designer, task.type);
+
+    if (task.type === 'multiple_choice') {
+        const parsed = parseChoiceOptions(designer.options);
+        task.options = parsed.options;
+        if (!task.answer_schema.expected.length && parsed.correct.length) {
+            task.answer_schema.expected = parsed.correct;
+        }
+    }
+
+    if (task.type === 'fill_in_table') {
+        const table = buildDesignerTable(designer);
+        if (table.length) {
+            task.table = table;
+        }
+    }
+
+    if (task.type === 'multi_step' && designer.expectedMulti) {
+        task.answer_schema.expected = designer.expectedMulti;
+    }
+
+    return task;
+}
+
+function buildAnswerSchema(designer, type) {
+    switch (type) {
+        case 'short_answer':
+            return {
+                expected: designer.expected || '',
+                accept: splitByLines(designer.accept)
+            };
+        case 'multiple_choice':
+            return {
+                expected: [],
+                accept: []
+            };
+        case 'fill_in_table':
+            return {
+                expected: buildTableExpectations(designer)
+            };
+        case 'multi_step':
+        default:
+            return {
+                expected: designer.expectedMulti || designer.expected || '',
+                accept: splitByLines(designer.accept)
+            };
+    }
+}
+
+function parseChoiceOptions(raw) {
+    const lines = splitByLines(raw);
+    const options = [];
+    const correct = [];
+    lines.forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        if (trimmed.startsWith('*')) {
+            const value = trimmed.slice(1).trim();
+            if (value) {
+                options.push(value);
+                correct.push(value);
+            }
+        } else {
+            options.push(trimmed);
+        }
+    });
+    return { options, correct };
+}
+
+function buildDesignerTable(designer) {
+    const headers = designer.tableHeaders.split(',').map(header => header.trim()).filter(Boolean);
+    const rows = splitByLines(designer.tableRows).map(row => row.split('|').map(cell => cell.trim()));
+    if (!rows.length) return [];
+
+    const tableRows = rows.map(row => row.map((cell, index) => {
+        if (isInputCell(cell)) {
+            const parsed = parseInputCell(cell);
+            return {
+                value: parsed.placeholder || '',
+                editable: true,
+                placeholder: parsed.placeholder || ''
+            };
+        }
+        return { value: cell, editable: false, placeholder: '' };
+    }));
+
+    return [{
+        title: designer.tableTitle || 'Tabel',
+        headers,
+        rows: tableRows
+    }];
+}
+
+function buildTableExpectations(designer) {
+    const headers = designer.tableHeaders.split(',').map(header => header.trim());
+    const rows = splitByLines(designer.tableRows).map(row => row.split('|').map(cell => cell.trim()));
+    const expectations = [];
+
+    rows.forEach(row => {
+        const label = row[0] || 'Række';
+        const values = {};
+        row.forEach((cell, index) => {
+            if (index === 0) return;
+            if (isInputCell(cell)) {
+                const parsed = parseInputCell(cell);
+                const headerLabel = headers[index] || `Kolonne ${index + 1}`;
+                values[headerLabel] = parsed.placeholder || '';
+            }
+        });
+        if (Object.keys(values).length) {
+            expectations.push({ label, values });
+        }
+    });
+
+    return { rows: expectations };
+}
+
+function isInputCell(cell) {
+    return /^\[input(?::[^\]]+)?\]$/i.test(cell);
+}
+
+function parseInputCell(cell) {
+    const match = /^\[input(?::([^\]]+))?\]$/i.exec(cell);
+    return {
+        placeholder: match && match[1] ? match[1].trim() : ''
+    };
+}
+
+function splitByLines(value) {
+    return String(value || '')
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+}
+
+function buildDesignerPrompt(task, designer) {
+    const snippet = JSON.stringify(task, null, 2);
+    const topicLabel = PRACTICE_TOPIC_LABELS[designer.topic] || designer.topic.toUpperCase();
+    return [
+        'Du er læringsdesigner i Canvas. Opret en ny opgave til subnetting-undervisning med følgende specifikationer.',
+        `Emne: ${topicLabel} (intern nøgle: ${designer.topic}).`,
+        `Sværhedsgrad: niveau ${designer.difficulty}.`,
+        'Spørgsmålet skal være formuleret på dansk og matche felt- og svarstrukturen i JSON-objektet nedenfor.',
+        'Implementér hints, rubric og løsning i Canvas på passende steder (fx feedback-felter).',
+        'Hvis opgaven indeholder tabelceller markeret som [input], skal du oprette tekstfelter i Canvas med tilsvarende etiketter.',
+        'JSON-data:',
+        snippet,
+        'Svar kort på dansk og bekræft hvilke elementer der er oprettet i Canvas.'
+    ].join('\n\n');
+}
+
+function renderAi(container) {
+    if (!state.prebuiltAiTasks) {
+        container.innerHTML = `
+            <section class="ai-panel" aria-labelledby="ai-heading">
+                <h2 id="ai-heading">Forudbyggede opgavesæt</h2>
+                <p>Indlæser biblioteket med forudproducerede opgaver …</p>
+            </section>
+        `;
+        return;
+    }
+
+    ensureAiSelection();
+    const topics = Object.keys(state.prebuiltAiTasks.topics || {});
+
+    if (!topics.length) {
+        container.innerHTML = `
+            <section class="ai-panel" aria-labelledby="ai-heading">
+                <h2 id="ai-heading">Forudbyggede opgavesæt</h2>
+                <p>Der er endnu ikke defineret nogen emner i filen <code>assets/ai_prebuilt_tasks.json</code>.</p>
+                <p>Brug <a href="#/builder">Opgaveværktøjet</a> til at danne nye objekter og indsæt dem i filen.</p>
+            </section>
+        `;
+        return;
+    }
+
+    const selectedTopic = state.aiSelection?.topic || topics[0];
+    const topicOptions = topics.map(topic => {
+        const label = PRACTICE_TOPIC_LABELS[topic] || topic.toUpperCase();
+        const selected = topic === selectedTopic ? 'selected' : '';
+        return `<option value="${topic}" ${selected}>${label}</option>`;
+    }).join('');
+
+    const difficulties = getAvailableDifficulties(selectedTopic);
+    const selectedDifficulty = state.aiSelection?.difficulty || difficulties[0];
+    const difficultyOptions = difficulties.length
+        ? difficulties.map(level => `<option value="${level}" ${level === selectedDifficulty ? 'selected' : ''}>Niveau ${level}</option>`).join('')
+        : '<option value="">Ingen niveauer defineret</option>';
+
+    container.innerHTML = `
+        <section class="ai-panel" aria-labelledby="ai-heading">
+            <h2 id="ai-heading">Forudbyggede opgavesæt</h2>
+            <p>Biblioteket her viser de opgaver, der allerede er produceret. Brug <a href="#/builder">Opgaveværktøjet</a> til at skabe nye JSON-objekter og indsætte dem i filen <code>assets/ai_prebuilt_tasks.json</code>.</p>
+            <form id="ai-selector" class="ai-selector" novalidate>
+                <label>Emne
+                    <select name="topic">${topicOptions}</select>
+                </label>
+                <label>Sværhedsgrad
+                    <select name="difficulty">${difficultyOptions}</select>
+                </label>
+                <button type="submit" class="button">Vis opgaver</button>
+            </form>
+            <section>
+                <h3>Opgaver</h3>
+                <div id="ai-task-container" class="ai-tasks" role="region" aria-live="polite"></div>
+            </section>
+            <section id="ai-prompt-panel" class="ai-prompt-panel" aria-labelledby="ai-prompt-heading"></section>
+        </section>
+    `;
+
+    const form = container.querySelector('#ai-selector');
+    if (form) {
+        form.addEventListener('submit', handleAiSelectionSubmit);
+        form.addEventListener('change', handleAiSelectionSubmit);
+    }
+
+    refreshAiSelectionView();
 }
 
 function renderAiTasks(container) {
     if (!container) return;
 
     if (!state.aiSets.length) {
-        container.innerHTML = '<p>Ingen AI-opgaver endnu. Generér eller indlæs et sæt.</p>';
+        container.innerHTML = '<p>Ingen opgaver for den valgte kombination. Justér emne eller sværhedsgrad.</p>';
         return;
     }
 
@@ -1746,251 +2160,128 @@ function logAttempt(taskId, mode, result) {
     }
 }
 
-async function handleGenerateTasks(event) {
+function handleAiSelectionSubmit(event) {
     event.preventDefault();
     const form = event.target;
     const formData = new FormData(form);
-    const payload = {
-        topic: formData.get('topic'),
-        difficulty: Number(formData.get('difficulty')),
-        count: 1
-    };
+    const topic = formData.get('topic') || state.aiSelection?.topic;
+    let difficulty = Number(formData.get('difficulty'));
 
-    try {
-        state.aiNotice = null;
-        const result = await requestAiTasks(payload, { debug: state.teacherMode });
-        const tasks = Array.isArray(result.tasks) ? result.tasks.slice(0, 1) : [];
-        state.aiSets = tasks;
-        state.aiNotice = result.message;
-        state.debugPrompts.ai = state.teacherMode ? (result.debugPrompt || null) : null;
-        renderAiTasks(document.getElementById('ai-task-container'));
-        renderAiDebugPrompt();
-    } catch (error) {
-        console.error('Fejl ved generering', error);
-        state.aiNotice = null;
-        if (state.teacherMode && error?.debugPrompt) {
-            state.debugPrompts.ai = error.debugPrompt;
-            renderAiDebugPrompt();
-        }
-        const container = document.getElementById('ai-task-container');
-        if (container) {
-            container.innerHTML = '<p>Kunne ikke generere opgaver. Prøv igen senere.</p>';
-        }
+    if (!state.prebuiltAiTasks) {
+        return;
     }
+
+    if (typeof topic === 'string' && topic) {
+        state.aiSelection = state.aiSelection || { topic, difficulty: null };
+        state.aiSelection.topic = topic;
+    }
+
+    const available = getAvailableDifficulties(state.aiSelection.topic);
+    if (!Number.isFinite(difficulty) || !available.includes(difficulty)) {
+        difficulty = available[0];
+    }
+
+    state.aiSelection.difficulty = difficulty;
+    refreshAiSelectionView();
 }
 
-async function handlePracticeGenerate(event) {
+function handlePracticeGenerate(event) {
     event.preventDefault();
     const form = event.target;
     const topic = form.dataset.topic;
     if (!topic) return;
 
     const formData = new FormData(form);
-    const payload = {
-        topic,
-        difficulty: Number(formData.get('difficulty')),
-        count: 1
-    };
+    let difficulty = Number(formData.get('difficulty'));
+    const available = getAvailableDifficulties(topic);
 
-    const availableDifficulties = Object.keys(state.templates?.topics?.[topic] || {}).map(Number);
-    if (!Number.isFinite(payload.difficulty) || payload.difficulty < 1) {
-        payload.difficulty = 1;
-    }
-
-    if (!availableDifficulties.includes(payload.difficulty)) {
-        payload.difficulty = availableDifficulties[0] || 1;
-    }
-
-    state.practiceLoading[topic] = true;
-    state.practiceErrors[topic] = null;
-    state.practiceNotices[topic] = null;
-    renderPractice(document.getElementById('app'));
-
-    try {
-        const result = await requestAiTasks(payload, { debug: state.teacherMode });
-        const tasks = Array.isArray(result.tasks) ? result.tasks.slice(0, 1) : [];
-        if (!tasks.length) {
-            throw new Error('AI-sættet var tomt.');
-        }
-        state.practiceSets[topic] = {
-            tasks: tasks.map(task => ({ ...task, practiceTopic: topic })),
-            difficulty: payload.difficulty
-        };
-        state.practiceNotices[topic] = result.message;
-        state.practiceErrors[topic] = null;
-        state.practiceLoading[topic] = false;
-        if (state.teacherMode) {
-            state.debugPrompts.practice[topic] = result.debugPrompt || null;
-        } else if (state.debugPrompts.practice[topic]) {
-            delete state.debugPrompts.practice[topic];
-        }
+    if (!available.length) {
+        state.practiceErrors[topic] = 'Der findes endnu ingen forudbyggede opgaver for dette emne.';
         renderPractice(document.getElementById('app'));
-    } catch (error) {
-        console.error('Fejl ved generering af øveopgaver', error);
-        state.practiceLoading[topic] = false;
-        const fallback = getFallbackPracticeTasks(topic, payload.count);
-        if (fallback.length) {
-            state.practiceSets[topic] = {
-                tasks: fallback,
-                difficulty: payload.difficulty
-            };
-            const reason = error?.message ? ` (${error.message})` : '';
-            state.practiceNotices[topic] = `AI-tjenesten kunne ikke levere opgaver${reason}. Viser lokale øvelser.`;
-            state.practiceErrors[topic] = null;
-            if (state.teacherMode) {
-                state.debugPrompts.practice[topic] = error?.debugPrompt || null;
-            }
-        } else {
-            state.practiceNotices[topic] = null;
-            state.practiceErrors[topic] = 'Kunne ikke generere opgaver lige nu. Prøv igen lidt senere.';
-            if (!state.teacherMode) {
-                delete state.debugPrompts.practice[topic];
-            } else {
-                state.debugPrompts.practice[topic] = error?.debugPrompt || null;
-            }
-        }
-        renderPractice(document.getElementById('app'));
-    }
-}
-
-async function requestAiTasks(payload, options = {}) {
-    const requestPayload = { ...payload };
-    if (options.debug) {
-        requestPayload.debug = true;
-    }
-    const body = JSON.stringify(requestPayload);
-    const response = await fetch('server/api_generate_tasks.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body
-    });
-
-    const parseJson = async () => {
-        try {
-            return await response.clone().json();
-        } catch (error) {
-            return null;
-        }
-    };
-
-    if (!response.ok) {
-        const data = await parseJson();
-        const message = typeof data?.error === 'string' ? data.error : 'Serverfejl';
-        const error = new Error(message);
-        error.status = response.status;
-        if (typeof data?.debug_prompt === 'string') {
-            error.debugPrompt = data.debug_prompt;
-        }
-        throw error;
-    }
-
-    const data = await parseJson();
-    if (Array.isArray(data.tasks)) {
-        return {
-            tasks: data.tasks,
-            message: typeof data.message === 'string' ? data.message : null,
-            source: typeof data.source === 'string' ? data.source : 'live',
-            debugPrompt: typeof data.debug_prompt === 'string' ? data.debug_prompt : null
-        };
-    }
-
-    const message = typeof data?.message === 'string' ? data.message : 'Ugyldigt svarformat';
-    const error = new Error(message);
-    if (typeof data?.debug_prompt === 'string') {
-        error.debugPrompt = data.debug_prompt;
-    }
-    throw error;
-}
-
-async function handleSaveAiSet(statusEl) {
-    if (!state.aiSets.length) {
-        statusEl.textContent = 'Ingen opgaver at gemme endnu.';
         return;
     }
-    try {
-        const response = await fetch('server/api_generate_tasks.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'save', tasks: state.aiSets })
-        });
-        if (!response.ok) throw new Error('Serverfejl');
-        const data = await response.json();
-        if (data.status === 'saved') {
-            state.storageMode = data.storage_mode;
-            statusEl.textContent = data.message;
-        } else if (data.status === 'fallback') {
-            state.storageMode = 'localStorage';
-            statusEl.textContent = data.message;
-            saveAiSetsLocally();
-        }
-    } catch (error) {
-        console.warn('Gemning mislykkedes, bruger LocalStorage.', error);
-        state.storageMode = 'localStorage';
-        saveAiSetsLocally();
-        statusEl.textContent = 'Kunne ikke gemme på serveren. Sættet er gemt lokalt på denne enhed.';
+
+    if (!Number.isFinite(difficulty) || !available.includes(difficulty)) {
+        difficulty = available[0];
     }
+
+    const selection = pickPrebuiltTask(topic, difficulty);
+    if (!selection || !selection.task) {
+        state.practiceErrors[topic] = 'Kunne ikke hente en forudbygget opgave. Opdater filen assets/ai_prebuilt_tasks.json.';
+        renderPractice(document.getElementById('app'));
+        return;
+    }
+
+    state.practiceSets[topic] = {
+        tasks: [{ ...selection.task, practiceTopic: topic }],
+        difficulty: selection.difficulty
+    };
+    state.practiceErrors[topic] = null;
+    state.practiceNotices[topic] = 'Viser næste forudbyggede opgave fra biblioteket.';
+    renderPractice(document.getElementById('app'));
 }
 
-async function handleLoadSavedSets(statusEl) {
-    try {
-        const response = await fetch('server/api_generate_tasks.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'load' })
-        });
-        if (!response.ok) throw new Error('Serverfejl');
-        const data = await response.json();
-        if (Array.isArray(data.tasks) && data.tasks.length) {
-            state.aiSets = data.tasks;
-            state.storageMode = data.storage_mode || 'fil';
-            renderAiTasks(document.getElementById('ai-task-container'));
-            renderAiDebugPrompt();
-            statusEl.textContent = data.message || 'Gemte sæt er hentet.';
-        } else if (data.status === 'fallback') {
-            loadAiSetsLocally(statusEl);
-        } else {
-            statusEl.textContent = 'Ingen gemte sæt fundet.';
-        }
-    } catch (error) {
-        console.warn('Kunne ikke hente fra server, forsøger LocalStorage.', error);
-        loadAiSetsLocally(statusEl);
-    }
-}
-
-function saveAiSetsLocally() {
-    try {
-        localStorage.setItem(STORAGE_KEYS.AI_SETS, JSON.stringify(state.aiSets));
-    } catch (error) {
-        console.warn('Kunne ikke gemme AI-sæt i LocalStorage.', error);
-    }
-}
-
-function loadAiSetsLocally(statusEl) {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEYS.AI_SETS);
-        if (!raw) {
-            statusEl.textContent = 'Ingen lokale sæt fundet.';
-            return;
-        }
-        state.aiSets = JSON.parse(raw);
-        state.storageMode = 'localStorage';
+function refreshAiSelectionView() {
+    if (!state.prebuiltAiTasks) {
+        state.aiSets = [];
+        state.aiNotice = 'Ingen opgaver tilgængelige.';
         renderAiTasks(document.getElementById('ai-task-container'));
-        renderAiDebugPrompt();
-        statusEl.textContent = 'Indlæst fra LocalStorage (kun på denne enhed).';
-    } catch (error) {
-        statusEl.textContent = 'Kunne ikke indlæse lokale sæt.';
+        renderAiPromptPanel();
+        return;
     }
+
+    ensureAiSelection();
+    if (!state.aiSelection) {
+        state.aiSets = [];
+        state.aiNotice = 'Ingen emner defineret i biblioteket.';
+        renderAiTasks(document.getElementById('ai-task-container'));
+        renderAiPromptPanel();
+        return;
+    }
+
+    const { tasks, difficulty } = getPrebuiltTaskSet(state.aiSelection.topic, state.aiSelection.difficulty);
+    state.aiSets = tasks;
+    state.aiSelection.difficulty = difficulty;
+    state.aiNotice = tasks.length ? 'Viser forudbyggede opgaver fra biblioteket.' : 'Ingen opgaver fundet for kombinationen.';
+    renderAiTasks(document.getElementById('ai-task-container'));
+    renderAiPromptPanel();
 }
 
-function attemptLoadAiSets() {
-    const raw = localStorage.getItem(STORAGE_KEYS.AI_SETS);
-    if (raw) {
-        try {
-            state.aiSets = JSON.parse(raw);
-        } catch (error) {
-            state.aiSets = [];
-        }
+function renderAiPromptPanel() {
+    const panel = document.getElementById('ai-prompt-panel');
+    if (!panel) return;
+
+    const prompt = buildCanvasPrompt();
+    panel.innerHTML = `
+        <h3 id="ai-prompt-heading">Prompt til Canvas-oprettelse</h3>
+        <p>Brug teksten nedenfor til at instruere en skriveassistent i at oprette opgaven i Canvas. Kopiér hele prompten for at bevare strukturen.</p>
+        <textarea readonly aria-label="Prompttekst" rows="10">${escapeHtml(prompt)}</textarea>
+    `;
+}
+
+function buildCanvasPrompt() {
+    if (!state.aiSelection || !state.aiSets.length) {
+        return 'Vælg et emne og en sværhedsgrad for at generere prompten.';
     }
+
+    const topicLabel = PRACTICE_TOPIC_LABELS[state.aiSelection.topic] || state.aiSelection.topic.toUpperCase();
+    const snippet = JSON.stringify({
+        topic: state.aiSelection.topic,
+        topic_label: topicLabel,
+        difficulty: state.aiSelection.difficulty,
+        tasks: state.aiSets
+    }, null, 2);
+
+    return [
+        'Du er kursusdesigner i Canvas og skal oprette en subnetting-opgave til GF2-elever.',
+        `Emne: ${topicLabel} (intern nøgle: ${state.aiSelection.topic})`,
+        `Sværhedsgrad: niveau ${state.aiSelection.difficulty}.`,
+        'Udform én quizopgave i Canvas ud fra følgende JSON-data. Brug spørgsmålsformulering, hints og svarstruktur direkte fra objektet.',
+        'Hold dig til dansk sprogbrug og sørg for at eventuelle tabeller oprettes i Canvas med de samme kolonner og felter som beskrevet.',
+        'JSON-data:',
+        snippet,
+        'Returnér en kort bekræftelse på dansk, hvor du beskriver hvilke Canvas-elementer du oprettede (ingen kode).'
+    ].join('\n\n');
 }
 
 init();

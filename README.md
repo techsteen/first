@@ -16,22 +16,28 @@ Hvis `cacert-*.pem` mangler, returnerer API-endpoints en elevvenlig fejl om, at 
 
 ## Konfiguration af opgaver
 - `assets/tasks.json` rummer de faste testopgaver og kan bruges som fallback/eksempler. Struktur: hvert objekt har `id`, `type`, `difficulty`, `topic`, `question`, `hints`, `answer_schema`, `rubric` og `max_attempts_before_solution`.
-- `assets/templates.json` beskriver de skabeloner, som AI-generatoren må bruge. Tilføj nye skabeloner ved at følge det eksisterende format (grupperet pr. emne og sværhedsgrad).
+- `assets/ai_prebuilt_tasks.json` indeholder de opgaver, der vises på Øv- og AI-siderne. Filen er organiseret pr. emne og sværhedsgrad; redigér eller tilføj opgaver manuelt efter samme struktur.
+- `assets/templates.json` kan stadig bruges som inspirationskatalog til at skrive nye opgaver, men systemet kalder ikke længere OpenAI for at generere indhold.
 
-## Øv-siden (AI-genererede emnespor)
-- Under fanen “Øv” kan elever vælge et emne (binær, netmasker, CIDR, VLSM, subnetplanlægning) og generere én AI-opgave ad gangen inden for samme spor.
-- Eleverne vælger blot sværhedsgrad; hver forespørgsel henter én opgave via `api_generate_tasks.php`, og progressionen gemmes lokalt.
+## Øv-siden (forudbyggede emnespor)
+- Under fanen “Øv” kan elever vælge et emne (binær, netmasker, CIDR, VLSM, subnetplanlægning) og hente den næste forudbyggede opgave i samme spor.
+- Eleverne vælger blot sværhedsgrad; hvert klik viser næste opgave fra `assets/ai_prebuilt_tasks.json`, og progressionen gemmes lokalt.
 - Feedback ved fejl er hjælpende og løsningen skjules automatisk i elevtilstand, uanset antal forsøg.
 
 ## Lærer-tilstand
 - Aktiveres i klienten via knappen “Lærer-tilstand”. Standard-PIN er **4285** og kan ændres i `assets/app.js` (konstanten `PIN_CODE`).
-- Lærer-tilstand låser knapper op til at generere og gemme AI-opgaver.
+- Lærer-tilstand viser filreferencer, promptpaneler og hjælpetekster til vedligeholdelse af opgavebiblioteket.
 - **Servernøgler eksponeres aldrig** – PIN eksisterer kun i klienten.
 
 ## AI-opgaver
-- `server/api_generate_tasks.php` bruger `templates.json` til at instruere OpenAI. Resultatet valideres og tildeles ID’er med præfikset `AI-`.
-- “Gem sæt” forsøger først at skrive til `/data/ai_tasks.json`. Hvis webhotellet ikke tillader skrivning, sendes en fallback-besked, og klienten gemmer automatisk i LocalStorage.
-- “Indlæs gemte sæt” forsøger at læse fra `/data/ai_tasks.json`. Hvis filen ikke findes eller ikke kan læses, falder den tilbage til LocalStorage.
+- Fanen “AI-opgaver” viser de forudbyggede opgaver fra `assets/ai_prebuilt_tasks.json`. Vælg emne og sværhedsgrad for at gennemse opgavesættet.
+- Nederst på siden vises en færdig prompt, der kan kopieres og gives til en Canvas-bot for at oprette opgaven i læringsplatformen.
+- Endpunktet `server/api_generate_tasks.php` er sat ud af drift og returnerer nu en vejledende besked om at vedligeholde opgaverne statisk.
+
+## Opgaveværktøj
+- Fanen “Opgaveværktøj” rummer en formular, hvor du kan beskrive en opgave og straks få et JSON-objekt i korrekt struktur.
+- Formularen understøtter korte svar, multiple choice, multi-step og tabelopgaver. Brug `[input:facit]` i tabeller for at markere felter, der skal udfyldes.
+- Siden genererer samtidig en Canvas-prompt, så du kan guide en ekstern bot til at oprette opgaven i Canvas på en standardiseret måde.
 
 ## API-nøgler
 - `Config/config.php` skal definere enten konstanten `OPENAI_API_KEY` (selve nøglen) eller `OPENAI_KEY_FILE` (sti til fil med nøglen).
@@ -39,12 +45,10 @@ Hvis `cacert-*.pem` mangler, returnerer API-endpoints en elevvenlig fejl om, at 
 
 ## Rate limiting og logging
 - `api_evaluate.php`: 10 forespørgsler pr. 30 sekunder pr. IP.
-- `api_generate_tasks.php`: 6 forespørgsler pr. 30 sekunder pr. IP.
 - Logging sker til `/data/usage.log` som JSON-linjer med timestamp, route og anonyme resultatdata.
 
 ## Filsystem og rettigheder
-- Sørg for, at `/data/` er skrivbar, hvis du vil gemme AI-opgaver og logfiler server-side.
-- Hvis serveren ikke tillader skrivning, fungerer platformen stadig, men AI-sæt gemmes i browserens LocalStorage, og brugeren får tydelig besked herom.
+- Sørg for, at `/data/` er skrivbar, hvis du vil logge elevforsøg (bruges af `api_evaluate.php`).
 
 ## Fejlhåndtering
 - Alle server-endpoints returnerer JSON-fejlmeddelelser på dansk uden følsomme oplysninger.

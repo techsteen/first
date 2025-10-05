@@ -1243,35 +1243,57 @@ menu button[value="confirm"] {
     gap: 1.5rem;
 }
 
-.ai-settings {
+.ai-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
     background: rgba(15, 23, 42, 0.7);
     border-radius: var(--radius);
-    padding: 1.5rem;
+    padding: 1.25rem;
     border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
-.ai-settings fieldset {
-    border: none;
-    padding: 0;
-    margin: 0;
-    display: grid;
-    gap: 1rem;
-}
-
-.ai-settings label {
+.ai-selector label {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
     font-weight: 600;
+    color: var(--color-muted);
 }
 
-.ai-settings select,
-.ai-settings input[type="number"] {
+.ai-selector select {
+    min-width: 180px;
     padding: 0.6rem;
     border-radius: 8px;
     border: 1px solid rgba(148, 163, 184, 0.4);
     background: rgba(15, 23, 42, 0.9);
     color: var(--color-text);
+}
+
+.ai-selector .button {
+    align-self: flex-end;
+    margin-left: auto;
+}
+
+.ai-prompt-panel {
+    background: rgba(15, 23, 42, 0.7);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    display: grid;
+    gap: 0.75rem;
+}
+
+.ai-prompt-panel textarea[readonly] {
+    width: 100%;
+    min-height: 200px;
+    resize: vertical;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: rgba(15, 23, 42, 0.9);
+    color: var(--color-text);
+    font-family: 'Fira Code', 'Source Code Pro', monospace;
 }
 
 .ai-tasks {
@@ -1284,6 +1306,91 @@ menu button[value="confirm"] {
     border-radius: 8px;
     background: rgba(248, 113, 113, 0.12);
     border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.task-designer {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.task-designer-form {
+    display: grid;
+    gap: 1rem;
+}
+
+.task-designer-form fieldset {
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    display: grid;
+    gap: 1rem;
+    background: rgba(15, 23, 42, 0.65);
+}
+
+.task-designer-form legend {
+    padding: 0 0.5rem;
+    font-weight: 700;
+    color: var(--color-muted);
+}
+
+.task-designer-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-weight: 600;
+}
+
+.task-designer-form input,
+.task-designer-form textarea,
+.task-designer-form select {
+    padding: 0.6rem;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: rgba(15, 23, 42, 0.9);
+    color: var(--color-text);
+}
+
+.task-designer-form textarea {
+    resize: vertical;
+}
+
+.task-designer .helper-text {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--color-muted);
+}
+
+.designer-output,
+.designer-prompt {
+    background: rgba(15, 23, 42, 0.7);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.designer-json {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: rgba(15, 23, 42, 0.9);
+    border-radius: 8px;
+    padding: 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    font-family: 'Fira Code', 'Source Code Pro', monospace;
+    max-height: 420px;
+    overflow: auto;
+}
+
+.designer-prompt textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 220px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 8px;
+    color: var(--color-text);
+    font-family: 'Fira Code', 'Source Code Pro', monospace;
+    padding: 0.75rem;
 }
 
 @media (max-width: 720px) {
