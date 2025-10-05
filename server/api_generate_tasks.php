@@ -52,13 +52,13 @@ function handleGenerate(array $input): void
         }
     }
 
-    if (!isset($input['topic'], $input['difficulty'], $input['count'])) {
-        sendResponse(['error' => 'Felterne topic, difficulty og count er påkrævet.'], 400);
+    if (!isset($input['topic'], $input['difficulty'])) {
+        sendResponse(['error' => 'Felterne topic og difficulty er påkrævet.'], 400);
     }
 
     $topic = $input['topic'];
     $difficulty = (int) $input['difficulty'];
-    $count = (int) $input['count'];
+    $count = isset($input['count']) ? (int) $input['count'] : 1;
 
     if (!is_string($topic) || $topic === '') {
         sendResponse(['error' => 'Ugyldigt emne.'], 400);
@@ -68,9 +68,7 @@ function handleGenerate(array $input): void
         sendResponse(['error' => 'Sværhedsgrad skal være mellem 1 og 5.'], 400);
     }
 
-    if ($count < 1 || $count > 10) {
-        sendResponse(['error' => 'Antal opgaver skal være mellem 1 og 10.'], 400);
-    }
+    $count = 1;
 
     if (!checkRateLimit('generate', 6, 30)) {
         sendResponse(['error' => 'For mange forespørgsler. Vent lidt før du prøver igen.'], 429);

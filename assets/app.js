@@ -952,13 +952,23 @@ function renderPractice(container) {
         return;
     }
 
+    const regularTopics = topics.filter(topic => topic !== 'subnetting');
+    const hasSubnetting = topics.includes('subnetting');
+
+    const gridMarkup = regularTopics.length
+        ? `<div class="practice-topic-grid">${regularTopics.map(topic => renderPracticeTopicSection(topic)).join('')}</div>`
+        : '';
+
+    const subnetMarkup = hasSubnetting
+        ? `<div class="practice-subnet-row" aria-labelledby="practice-subnetting-heading">${renderPracticeTopicSection('subnetting', { variant: 'subnet' })}</div>`
+        : '';
+
     container.innerHTML = `
         <section aria-labelledby="practice-heading" class="practice-section">
             <h2 id="practice-heading">Øv dig med AI-genererede opgaver</h2>
-            <p>Vælg et emne, generér et sæt opgaver og træn flere opgaver i samme spor. Alle besvarelser evalueres automatisk, og du får hjælpende feedback når der er fejl.</p>
-            <div class="practice-topic-grid">
-                ${topics.map(topic => renderPracticeTopicSection(topic)).join('')}
-            </div>
+            <p>Vælg et emne, generér en opgave og gentag efter behov for at træne flere opgaver i samme spor. Alle besvarelser evalueres automatisk, og du får hjælpende feedback når der er fejl.</p>
+            ${gridMarkup || '<p class="empty">Ingen emner tilgængelige.</p>'}
+            ${subnetMarkup}
         </section>
     `;
 
@@ -966,17 +976,18 @@ function renderPractice(container) {
     bindTaskEvents(container);
 }
 
-function renderPracticeTopicSection(topic) {
+function renderPracticeTopicSection(topic, options = {}) {
     const label = PRACTICE_TOPIC_LABELS[topic] || topic.toUpperCase();
     const topicConfig = state.templates?.topics?.[topic] || {};
     const availableDifficulties = Object.keys(topicConfig).map(Number).sort((a, b) => a - b);
     const stored = state.practiceSets[topic] || { tasks: [] };
     const selectedDifficulty = stored.difficulty || availableDifficulties[0] || 1;
-    const selectedCount = Math.min(10, Math.max(1, stored.count || 3));
     const loading = Boolean(state.practiceLoading[topic]);
     const error = state.practiceErrors[topic];
     const tasks = Array.isArray(stored.tasks) ? stored.tasks : [];
     const notice = state.practiceNotices[topic];
+    const variant = options.variant || 'default';
+    const isSubnetting = variant === 'subnet' || topic === 'subnetting';
 
     const difficultyOptions = (availableDifficulties.length ? availableDifficulties : [selectedDifficulty]).map(value => `
         <option value="${value}" ${value === selectedDifficulty ? 'selected' : ''}>Niveau ${value}</option>
@@ -984,25 +995,30 @@ function renderPracticeTopicSection(topic) {
 
     const taskMarkup = tasks.length
         ? tasks.map((task, index) => renderTaskCard(task, 'practice', { topic, index })).join('')
-        : '<p class="empty">Ingen opgaver endnu. Vælg sværhedsgrad og generér et sæt.</p>';
+        : '<p class="empty">Ingen opgave endnu. Vælg sværhedsgrad og generér en opgave.</p>';
 
     const loadingMarkup = loading ? '<p class="loading" role="status">Genererer opgaver …</p>' : '';
     const errorMarkup = error ? `<p class="error" role="alert">${error}</p>` : '';
     const noticeMarkup = notice ? `<p class="info-notice" role="status">${escapeHtml(notice)}</p>` : '';
+    const description = isSubnetting
+        ? '<p class="practice-topic-description">Subnetplanlægning vises i fuld bredde, så du får god plads til at udfylde tabellerne for net- og broadcastadresser.</p>'
+        : '';
+    const topicClasses = ['practice-topic'];
+    if (isSubnetting) {
+        topicClasses.push('practice-topic--subnetting');
+    }
 
     return `
-        <article class="practice-topic" data-topic="${topic}">
+        <article class="${topicClasses.join(' ')}" data-topic="${topic}">
             <header>
-                <h3>${label}</h3>
+                <h3 id="practice-${topic}-heading">${label}</h3>
             </header>
-            <form class="practice-generator" data-topic="${topic}" novalidate>
+            ${description}
+            <form class="practice-generator" data-topic="${topic}" novalidate aria-labelledby="practice-${topic}-heading">
                 <label>Vælg sværhedsgrad
                     <select name="difficulty">${difficultyOptions}</select>
                 </label>
-                <label>Antal opgaver
-                    <input type="number" name="count" min="1" max="10" step="1" value="${selectedCount}">
-                </label>
-                <button type="submit" class="button">Generér opgaver</button>
+                <button type="submit" class="button">Generér opgave</button>
             </form>
             ${errorMarkup}
             ${loadingMarkup}
@@ -1017,7 +1033,7 @@ function setupPracticeTopicHandlers(container) {
     });
 }
 
-function getFallbackPracticeTasks(topic, count) {
+function getFallbackPracticeTasks(topic, _count = 1) {
     if (!Array.isArray(state.tasks) || !state.tasks.length) {
         return [];
     }
@@ -1034,8 +1050,9 @@ function getFallbackPracticeTasks(topic, count) {
 
     const cloned = [];
     const startIndex = state.practiceFallbackIndex[normalizedTopic] || 0;
+    const desiredCount = 1;
 
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < desiredCount; i++) {
         const index = (startIndex + i) % pool.length;
         const original = pool[index];
         const copy = deepClone(original);
@@ -1046,7 +1063,7 @@ function getFallbackPracticeTasks(topic, count) {
         cloned.push(copy);
     }
 
-    state.practiceFallbackIndex[normalizedTopic] = (startIndex + count) % pool.length;
+    state.practiceFallbackIndex[normalizedTopic] = (startIndex + desiredCount) % pool.length;
 
     return cloned;
 }
@@ -1119,9 +1136,6 @@ function renderAi(container) {
                         </label>
                         <label>Sværhedsgrad (1-5)
                             <input name="difficulty" type="number" min="1" max="5" step="1" required>
-                        </label>
-                        <label>Antal opgaver (1-10)
-                            <input name="count" type="number" min="1" max="10" step="1" required>
                         </label>
                         <div class="task-controls">
                             <button type="submit" class="button">Generér</button>
@@ -1655,13 +1669,14 @@ async function handleGenerateTasks(event) {
     const payload = {
         topic: formData.get('topic'),
         difficulty: Number(formData.get('difficulty')),
-        count: Number(formData.get('count'))
+        count: 1
     };
 
     try {
         state.aiNotice = null;
         const result = await requestAiTasks(payload);
-        state.aiSets = result.tasks;
+        const tasks = Array.isArray(result.tasks) ? result.tasks.slice(0, 1) : [];
+        state.aiSets = tasks;
         state.aiNotice = result.message;
         renderAiTasks(document.getElementById('ai-task-container'));
     } catch (error) {
@@ -1684,17 +1699,13 @@ async function handlePracticeGenerate(event) {
     const payload = {
         topic,
         difficulty: Number(formData.get('difficulty')),
-        count: Number(formData.get('count'))
+        count: 1
     };
 
     const availableDifficulties = Object.keys(state.templates?.topics?.[topic] || {}).map(Number);
     if (!Number.isFinite(payload.difficulty) || payload.difficulty < 1) {
         payload.difficulty = 1;
     }
-    if (!Number.isFinite(payload.count) || payload.count < 1) {
-        payload.count = 1;
-    }
-    payload.count = Math.min(10, Math.round(payload.count));
 
     if (!availableDifficulties.includes(payload.difficulty)) {
         payload.difficulty = availableDifficulties[0] || 1;
@@ -1707,14 +1718,13 @@ async function handlePracticeGenerate(event) {
 
     try {
         const result = await requestAiTasks(payload);
-        const tasks = Array.isArray(result.tasks) ? result.tasks : [];
+        const tasks = Array.isArray(result.tasks) ? result.tasks.slice(0, 1) : [];
         if (!tasks.length) {
             throw new Error('AI-sættet var tomt.');
         }
         state.practiceSets[topic] = {
             tasks: tasks.map(task => ({ ...task, practiceTopic: topic })),
-            difficulty: payload.difficulty,
-            count: payload.count
+            difficulty: payload.difficulty
         };
         state.practiceNotices[topic] = result.message;
         state.practiceErrors[topic] = null;
@@ -1727,8 +1737,7 @@ async function handlePracticeGenerate(event) {
         if (fallback.length) {
             state.practiceSets[topic] = {
                 tasks: fallback,
-                difficulty: payload.difficulty,
-                count: payload.count
+                difficulty: payload.difficulty
             };
             const reason = error?.message ? ` (${error.message})` : '';
             state.practiceNotices[topic] = `AI-tjenesten kunne ikke levere opgaver${reason}. Viser lokale øvelser.`;

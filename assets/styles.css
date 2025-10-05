@@ -673,10 +673,23 @@ section h3 {
     max-width: 70ch;
 }
 
+.practice-section > .empty {
+    color: var(--color-muted);
+    font-style: italic;
+}
+
 .practice-topic-grid {
     display: grid;
     gap: 1.5rem;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.practice-subnet-row {
+    margin-top: 2rem;
+}
+
+.practice-subnet-row .practice-topic {
+    width: 100%;
 }
 
 .practice-topic {
@@ -709,6 +722,12 @@ section h3 {
     color: var(--color-muted);
 }
 
+.practice-topic-description {
+    margin: 0.5rem 0 0;
+    color: var(--color-muted);
+    max-width: 70ch;
+}
+
 .practice-generator select,
 .practice-generator input[type="number"] {
     background: rgba(15, 23, 42, 0.85);
@@ -737,6 +756,22 @@ section h3 {
 
 .practice-topic .error {
     color: #fca5a5;
+}
+
+.practice-topic--subnetting {
+    max-width: none;
+}
+
+.practice-topic--subnetting .practice-generator {
+    gap: 1.25rem;
+}
+
+.practice-topic--subnetting .task-list {
+    display: block;
+}
+
+.practice-topic--subnetting .task-card {
+    max-width: none;
 }
 
 .info-notice {

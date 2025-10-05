@@ -19,8 +19,8 @@ Hvis `cacert-*.pem` mangler, returnerer API-endpoints en elevvenlig fejl om, at 
 - `assets/templates.json` beskriver de skabeloner, som AI-generatoren må bruge. Tilføj nye skabeloner ved at følge det eksisterende format (grupperet pr. emne og sværhedsgrad).
 
 ## Øv-siden (AI-genererede emnespor)
-- Under fanen “Øv” kan elever vælge et emne (binær, netmasker, CIDR, VLSM) og generere et sæt AI-opgaver inden for samme spor.
-- Sværhedsgrad og antal opgaver kan justeres pr. emne. Nye opgaver hentes via `api_generate_tasks.php`, og progressionen gemmes lokalt.
+- Under fanen “Øv” kan elever vælge et emne (binær, netmasker, CIDR, VLSM, subnetplanlægning) og generere én AI-opgave ad gangen inden for samme spor.
+- Eleverne vælger blot sværhedsgrad; hver forespørgsel henter én opgave via `api_generate_tasks.php`, og progressionen gemmes lokalt.
 - Feedback ved fejl er hjælpende og løsningen skjules automatisk i elevtilstand, uanset antal forsøg.
 
 ## Lærer-tilstand
