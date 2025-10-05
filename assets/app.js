@@ -16,7 +16,8 @@ const state = {
     debugPrompts: {
         ai: null,
         practice: {}
-    }
+    },
+    seededPracticeTopics: {}
 };
 
 const answerExpansionState = {
@@ -957,6 +958,8 @@ function renderPractice(container) {
         return;
     }
 
+    ensureDefaultPracticeContent(topics);
+
     const regularTopics = topics.filter(topic => topic !== 'subnetting');
     const hasSubnetting = topics.includes('subnetting');
 
@@ -969,6 +972,10 @@ function renderPractice(container) {
         : '';
 
     const debugMarkup = renderPracticeDebugSection();
+    const teacherHint = state.teacherMode ? '' : `
+        <section class="teacher-hint" aria-label="Lærerhjælp">
+            <p><strong>Undervisere:</strong> Aktiver lærer-tilstand via knappen nederst på siden. Standard-PIN er <code>${PIN_CODE}</code>. Herefter vises prompts og ekstra værktøjer.</p>
+        </section>`;
 
     container.innerHTML = `
         <section aria-labelledby="practice-heading" class="practice-section">
@@ -977,6 +984,7 @@ function renderPractice(container) {
             ${gridMarkup || '<p class="empty">Ingen emner tilgængelige.</p>'}
             ${subnetMarkup}
             ${debugMarkup}
+            ${teacherHint}
         </section>
     `;
 
@@ -991,11 +999,7 @@ function renderPracticeDebugSection() {
 
     const prompts = state.debugPrompts?.practice || {};
     const entries = Object.entries(prompts).filter(([, prompt]) => typeof prompt === 'string' && prompt.trim() !== '');
-    if (!entries.length) {
-        return '';
-    }
-
-    const items = entries.map(([topic, prompt]) => {
+    const items = entries.length ? entries.map(([topic, prompt]) => {
         const label = PRACTICE_TOPIC_LABELS[topic] || topic.toUpperCase();
         return `
             <article class="debug-prompt-entry">
@@ -1003,7 +1007,7 @@ function renderPracticeDebugSection() {
                 <pre class="debug-prompt" tabindex="0">${escapeHtml(prompt)}</pre>
             </article>
         `;
-    }).join('');
+    }).join('') : '<p class="debug-prompt-empty">Ingen prompts registreret endnu. Generér en opgave for at se prompten.</p>';
 
     return `
         <section class="debug-prompt-section" aria-labelledby="practice-debug-heading">
@@ -1012,6 +1016,30 @@ function renderPracticeDebugSection() {
             <div class="debug-prompt-list">${items}</div>
         </section>
     `;
+}
+
+function ensureDefaultPracticeContent(topics) {
+    if (!Array.isArray(topics) || !topics.length) {
+        return;
+    }
+
+    if (topics.includes('subnetting') && !state.practiceLoading.subnetting && !state.seededPracticeTopics.subnetting) {
+        const existing = state.practiceSets.subnetting;
+        if (existing && Array.isArray(existing.tasks) && existing.tasks.length) {
+            state.seededPracticeTopics.subnetting = true;
+            return;
+        }
+
+        const fallback = getFallbackPracticeTasks('subnetting', 1);
+        if (fallback.length) {
+            state.practiceSets.subnetting = {
+                tasks: fallback,
+                difficulty: fallback[0]?.difficulty || 3
+            };
+            state.practiceNotices.subnetting = 'Viser en lokal subnetplanlægningsopgave. Generér for at hente nye varianter.';
+            state.seededPracticeTopics.subnetting = true;
+        }
+    }
 }
 
 function renderPracticeTopicSection(topic, options = {}) {
@@ -1154,7 +1182,10 @@ function buildTestView(session) {
 }
 
 function renderAi(container) {
-    const teacherNotice = state.teacherMode ? '' : '<p class="storage-notice">Du er i elevtilstand. Kun visning af opgaver er mulig.</p>';
+    const teacherNotice = state.teacherMode ? '' : `
+        <p class="storage-notice">
+            Du er i elevtilstand. Aktiver lærer-tilstand via knappen nederst på siden og brug PIN <code>${PIN_CODE}</code> for at generere opgaver og se prompts.
+        </p>`;
     const topicOptions = state.templates ? Object.keys(state.templates.topics || {}).map(topic => `<option value="${topic}">${topic.toUpperCase()}</option>`).join('') : '';
 
     container.innerHTML = `
