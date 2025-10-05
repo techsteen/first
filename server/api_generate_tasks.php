@@ -150,6 +150,13 @@ function handleGenerate(array $input): void
     $validated = validateGeneratedTasks($decoded['tasks'], $topic, $difficulty);
 
     if (!count($validated)) {
+        $manualTasks = buildTasksFromTemplates($selected, $topic, $difficulty);
+        if (count($manualTasks)) {
+            $validated = validateGeneratedTasks($manualTasks, $topic, $difficulty);
+        }
+    }
+
+    if (!count($validated)) {
         $fallback = loadCachedTasksFor($topic, $difficulty);
         if ($fallback) {
             logEvent([
@@ -170,18 +177,27 @@ function handleGenerate(array $input): void
 
     cacheGeneratedTasks($topic, $difficulty, $validated);
 
+    $logRoute = (isset($manualTasks) && count($manualTasks)) ? 'generate_template' : 'generate';
+
     logEvent([
         'timestamp' => date('c'),
-        'route' => 'generate',
+        'route' => $logRoute,
         'task_count' => count($validated),
         'topic' => $topic,
         'difficulty' => $difficulty
     ]);
 
-    sendResponse([
+    $response = [
         'tasks' => $validated,
         'source' => 'live'
-    ], 200, $debugPrompt);
+    ];
+
+    if (isset($manualTasks) && count($manualTasks)) {
+        $response['source'] = 'template';
+        $response['message'] = 'AI-svaret kunne ikke bruges, så opgaven er bygget direkte ud fra skabelonen.';
+    }
+
+    sendResponse($response, 200, $debugPrompt);
 }
 
 function handleSave(array $input): void
@@ -383,6 +399,166 @@ function validateGeneratedTasks(array $tasks, string $topic, int $difficulty): a
     }
 
     return $validated;
+}
+
+function buildTasksFromTemplates(array $templates, string $topic, int $difficulty): array
+{
+    $built = [];
+    foreach ($templates as $index => $template) {
+        if (!is_array($template)) {
+            continue;
+        }
+
+        $type = $template['type'] ?? 'short_answer';
+
+        if ($topic === 'subnetting' && $type === 'fill_in_table') {
+            $task = buildSubnetPlanTaskFromTemplate($template, $index, $difficulty);
+            if ($task) {
+                $built[] = $task;
+            }
+        }
+    }
+
+    return $built;
+}
+
+function buildSubnetPlanTaskFromTemplate(array $template, int $index, int $difficulty): ?array
+{
+    $variables = $template['variables'] ?? [];
+    $scenarios = $variables['scenarios'] ?? [];
+    if (!is_array($scenarios) || !count($scenarios)) {
+        return null;
+    }
+
+    $scenario = $scenarios[$index % count($scenarios)];
+    $network = $scenario['network'] ?? null;
+    $class = $scenario['class'] ?? null;
+    $borrowedBits = $scenario['borrowed_bits'] ?? null;
+    $subnetMask = $scenario['subnet_mask'] ?? null;
+    $hostsPerSubnet = $scenario['hosts_per_subnet'] ?? null;
+    $subnetCount = $scenario['subnet_count'] ?? null;
+    $tableSubnets = $scenario['table_subnets'] ?? [];
+
+    if (!$network || !$class || !$subnetMask || !$hostsPerSubnet || !$subnetCount || !is_array($tableSubnets) || count($tableSubnets) < 4) {
+        return null;
+    }
+
+    $title = 'Subnetplanlægning af klasse ' . strtoupper((string) $class) . ' netværk';
+    $question = sprintf(
+        'Du er netværksadministrator for %s. Del netværket op i %d lige store subnet og udfyld tabellerne med netadresse, broadcast og brugbare værter.',
+        $network,
+        (int) $subnetCount
+    );
+
+    $summaryRows = [
+        [
+            ['value' => 'Basenetværk', 'editable' => false],
+            ['value' => $network, 'editable' => false]
+        ],
+        [
+            ['value' => 'Netværksklasse', 'editable' => false],
+            ['value' => '', 'editable' => true, 'placeholder' => 'fx Klasse ' . strtoupper((string) $class)]
+        ],
+        [
+            ['value' => 'Antal lånte bits', 'editable' => false],
+            ['value' => '', 'editable' => true, 'placeholder' => 'fx ' . (int) $borrowedBits]
+        ],
+        [
+            ['value' => 'Subnetmaske', 'editable' => false],
+            ['value' => '', 'editable' => true, 'placeholder' => 'fx ' . $subnetMask]
+        ],
+        [
+            ['value' => 'Brugbare værter pr. delnet', 'editable' => false],
+            ['value' => '', 'editable' => true, 'placeholder' => 'fx ' . (int) $hostsPerSubnet]
+        ],
+        [
+            ['value' => 'Antal subnet', 'editable' => false],
+            ['value' => '', 'editable' => true, 'placeholder' => 'fx ' . (int) $subnetCount]
+        ]
+    ];
+
+    $tableRows = [];
+    $expected = [];
+
+    $expected[] = 'Klasse ' . strtoupper((string) $class);
+    $expected[] = (string) $borrowedBits;
+    $expected[] = $subnetMask;
+    $expected[] = (string) $hostsPerSubnet;
+    $expected[] = (string) $subnetCount;
+
+    foreach ($tableSubnets as $subnet) {
+        $label = $subnet['label'] ?? null;
+        $net = $subnet['network'] ?? null;
+        $broadcast = $subnet['broadcast'] ?? null;
+        $firstHost = $subnet['first_host'] ?? null;
+        $lastHost = $subnet['last_host'] ?? null;
+
+        if (!$label || !$net || !$broadcast || !$firstHost || !$lastHost) {
+            continue;
+        }
+
+        $tableRows[] = [
+            ['value' => $label, 'editable' => false],
+            ['value' => '', 'editable' => true, 'placeholder' => $net],
+            ['value' => '', 'editable' => true, 'placeholder' => $broadcast],
+            ['value' => '', 'editable' => true, 'placeholder' => $firstHost . '-' . $lastHost]
+        ];
+
+        $expected[] = $net;
+        $expected[] = $broadcast;
+        $expected[] = $firstHost . '-' . $lastHost;
+    }
+
+    if (count($tableRows) < 4) {
+        return null;
+    }
+
+    $hints = [
+        sprintf('Start med at beregne hvor mange bits der skal lånes fra hostdelen for at få %d delnet.', (int) $subnetCount),
+        sprintf('Kontrollér at hvert delnet giver %d brugbare værter og at net- og broadcastadresserne følger blokstørrelsen.', (int) $hostsPerSubnet)
+    ];
+
+    $rubric = [
+        'max_score' => 1,
+        'criteria' => [
+            'Alle opsummeringsfelter skal udfyldes korrekt ud fra scenariet.',
+            'Hvert delnet skal have den rigtige netadresse, broadcastadresse og interval af brugbare værter.'
+        ],
+        'solution' => sprintf(
+            'Klasse %s-nettet %s låner %d bit og bruger masken %s. Hvert delnet giver %d brugbare værter. Delnettene udfyldes som angivet i tabellen.',
+            strtoupper((string) $class),
+            $network,
+            (int) $borrowedBits,
+            $subnetMask,
+            (int) $hostsPerSubnet
+        )
+    ];
+
+    return [
+        'title' => $title,
+        'type' => 'fill_in_table',
+        'difficulty' => $template['difficulty'] ?? $difficulty,
+        'topic' => 'subnetting',
+        'question' => $question,
+        'table' => [
+            [
+                'title' => 'Opsummering',
+                'headers' => ['Felt', 'Svar'],
+                'rows' => $summaryRows
+            ],
+            [
+                'title' => 'Delnetoversigt',
+                'headers' => ['Delnet', 'Netadresse', 'Broadcastadresse', 'Brugbart værtsinterval'],
+                'rows' => $tableRows
+            ]
+        ],
+        'hints' => $hints,
+        'answer_schema' => [
+            'expected' => $expected
+        ],
+        'rubric' => $rubric,
+        'max_attempts_before_solution' => 3
+    ];
 }
 
 function sendResponse(array $data, int $status = 200, ?string $debugPrompt = null): void
