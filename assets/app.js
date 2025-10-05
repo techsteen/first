@@ -11,6 +11,7 @@ const state = {
     practiceLoading: {},
     practiceErrors: {},
     practiceNotices: {},
+    practiceFallbackIndex: {},
     aiNotice: null
 };
 
@@ -71,6 +72,14 @@ async function loadTasks() {
         refreshActiveRoute();
     } catch (error) {
         console.error('Fejl ved hentning af tasks.json', error);
+    }
+}
+
+function deepClone(value) {
+    try {
+        return structuredClone(value);
+    } catch (error) {
+        return JSON.parse(JSON.stringify(value));
     }
 }
 
@@ -1008,6 +1017,40 @@ function setupPracticeTopicHandlers(container) {
     });
 }
 
+function getFallbackPracticeTasks(topic, count) {
+    if (!Array.isArray(state.tasks) || !state.tasks.length) {
+        return [];
+    }
+
+    const normalizedTopic = String(topic || '').toLowerCase();
+    const pool = state.tasks.filter(task => {
+        const taskTopic = String(task.topic || '').toLowerCase();
+        return taskTopic === normalizedTopic;
+    });
+
+    if (!pool.length) {
+        return [];
+    }
+
+    const cloned = [];
+    const startIndex = state.practiceFallbackIndex[normalizedTopic] || 0;
+
+    for (let i = 0; i < count; i++) {
+        const index = (startIndex + i) % pool.length;
+        const original = pool[index];
+        const copy = deepClone(original);
+        const uniqueSuffix = `${Date.now()}-${i}`;
+        const baseId = typeof copy.id === 'string' && copy.id !== '' ? copy.id : `LOCAL-${normalizedTopic}-${i}`;
+        copy.id = `FALLBACK-${normalizedTopic.toUpperCase()}-${baseId}-${uniqueSuffix}`;
+        copy.practiceTopic = topic;
+        cloned.push(copy);
+    }
+
+    state.practiceFallbackIndex[normalizedTopic] = (startIndex + count) % pool.length;
+
+    return cloned;
+}
+
 function renderTest(container) {
     const existing = state.progress.testSession;
     if (!existing) {
@@ -1664,21 +1707,36 @@ async function handlePracticeGenerate(event) {
 
     try {
         const result = await requestAiTasks(payload);
-        const tasks = result.tasks;
+        const tasks = Array.isArray(result.tasks) ? result.tasks : [];
+        if (!tasks.length) {
+            throw new Error('AI-sættet var tomt.');
+        }
         state.practiceSets[topic] = {
             tasks: tasks.map(task => ({ ...task, practiceTopic: topic })),
             difficulty: payload.difficulty,
             count: payload.count
         };
         state.practiceNotices[topic] = result.message;
-        state.practiceErrors[topic] = tasks.length ? null : 'Der kom ingen opgaver retur. Prøv med en anden sværhedsgrad.';
+        state.practiceErrors[topic] = null;
         state.practiceLoading[topic] = false;
         renderPractice(document.getElementById('app'));
     } catch (error) {
         console.error('Fejl ved generering af øveopgaver', error);
         state.practiceLoading[topic] = false;
-        state.practiceNotices[topic] = null;
-        state.practiceErrors[topic] = 'Kunne ikke generere opgaver lige nu. Prøv igen lidt senere.';
+        const fallback = getFallbackPracticeTasks(topic, payload.count);
+        if (fallback.length) {
+            state.practiceSets[topic] = {
+                tasks: fallback,
+                difficulty: payload.difficulty,
+                count: payload.count
+            };
+            const reason = error?.message ? ` (${error.message})` : '';
+            state.practiceNotices[topic] = `AI-tjenesten kunne ikke levere opgaver${reason}. Viser lokale øvelser.`;
+            state.practiceErrors[topic] = null;
+        } else {
+            state.practiceNotices[topic] = null;
+            state.practiceErrors[topic] = 'Kunne ikke generere opgaver lige nu. Prøv igen lidt senere.';
+        }
         renderPractice(document.getElementById('app'));
     }
 }
@@ -1691,11 +1749,23 @@ async function requestAiTasks(payload) {
         body
     });
 
+    const parseJson = async () => {
+        try {
+            return await response.clone().json();
+        } catch (error) {
+            return null;
+        }
+    };
+
     if (!response.ok) {
-        throw new Error('Serverfejl');
+        const data = await parseJson();
+        const message = typeof data?.error === 'string' ? data.error : 'Serverfejl';
+        const error = new Error(message);
+        error.status = response.status;
+        throw error;
     }
 
-    const data = await response.json();
+    const data = await parseJson();
     if (Array.isArray(data.tasks)) {
         return {
             tasks: data.tasks,
@@ -1704,7 +1774,7 @@ async function requestAiTasks(payload) {
         };
     }
 
-    const message = typeof data.message === 'string' ? data.message : 'Ugyldigt svarformat';
+    const message = typeof data?.message === 'string' ? data.message : 'Ugyldigt svarformat';
     throw new Error(message);
 }
 

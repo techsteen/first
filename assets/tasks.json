@@ -189,6 +189,101 @@
         "solution": "A: 10.10.0.0/26 (62 hosts), B: 10.10.0.64/27 (30 hosts), C: 10.10.0.96/28 (14 hosts)."
       },
       "max_attempts_before_solution": 4
+    },
+    {
+      "id": "SUB-PLAN-1",
+      "title": "Subnetplanlægning af klasse C netværk",
+      "type": "fill_in_table",
+      "difficulty": 3,
+      "topic": "subnetting",
+      "question": "Beskriv kort base-netværket og udfyld de fire delnet for et /24 netværk der skal opdeles i fire lige store subnet.",
+      "table": [
+        {
+          "title": "Opsummering",
+          "headers": ["Felt", "Værdi"],
+          "rows": [
+            [
+              {"value": "Basenetværk", "editable": false},
+              {"value": "192.168.20.0/24", "editable": false}
+            ],
+            [
+              {"value": "Valgt prefix", "editable": false},
+              {"value": "", "editable": true, "placeholder": "fx /26"}
+            ],
+            [
+              {"value": "Antal delnet", "editable": false},
+              {"value": "", "editable": true, "placeholder": "fx 4"}
+            ],
+            [
+              {"value": "Brugbare værter pr. delnet", "editable": false},
+              {"value": "", "editable": true, "placeholder": "fx 62"}
+            ]
+          ]
+        },
+        {
+          "title": "Delnet (skriv net- og broadcastadresser)",
+          "headers": ["Delnet", "Netadresse", "Broadcastadresse", "Brugbart værtsinterval"],
+          "rows": [
+            [
+              {"value": "Delnet 1", "editable": false},
+              {"value": "", "editable": true, "placeholder": "192.168.20.?"},
+              {"value": "", "editable": true, "placeholder": "192.168.20.?"},
+              {"value": "", "editable": true, "placeholder": "Start-slut"}
+            ],
+            [
+              {"value": "Delnet 2", "editable": false},
+              {"value": "", "editable": true, "placeholder": "192.168.20.?"},
+              {"value": "", "editable": true, "placeholder": "192.168.20.?"},
+              {"value": "", "editable": true, "placeholder": "Start-slut"}
+            ],
+            [
+              {"value": "Delnet 3", "editable": false},
+              {"value": "", "editable": true, "placeholder": "192.168.20.?"},
+              {"value": "", "editable": true, "placeholder": "192.168.20.?"},
+              {"value": "", "editable": true, "placeholder": "Start-slut"}
+            ],
+            [
+              {"value": "Delnet 4", "editable": false},
+              {"value": "", "editable": true, "placeholder": "192.168.20.?"},
+              {"value": "", "editable": true, "placeholder": "192.168.20.?"},
+              {"value": "", "editable": true, "placeholder": "Start-slut"}
+            ]
+          ]
+        }
+      ],
+      "hints": [
+        "Lån to bits fra hostdelen for at få fire delnet.",
+        "Husk at hvert delnet har 64 adresser i alt og 62 brugbare værter."
+      ],
+      "answer_schema": {
+        "expected": [
+          "/26",
+          "4",
+          "62",
+          "192.168.20.0",
+          "192.168.20.63",
+          "192.168.20.1-62",
+          "192.168.20.64",
+          "192.168.20.127",
+          "192.168.20.65-126",
+          "192.168.20.128",
+          "192.168.20.191",
+          "192.168.20.129-190",
+          "192.168.20.192",
+          "192.168.20.255",
+          "192.168.20.193-254"
+        ]
+      },
+      "rubric": {
+        "max_score": 1,
+        "criteria": [
+          "Eleven identificerer korrekt prefix, antal delnet og værtsantal.",
+          "Alle net- og broadcastadresser skal passe til /26-intervallerne.",
+          "Værtsintervallerne må ikke inkludere net- eller broadcastadresser."
+        ],
+        "solution": "Et /26 prefix giver fire delnet. De spænder over adresserne 192.168.20.0-63, 64-127, 128-191 og 192-255 med 62 brugbare værter i hvert."
+      },
+      "max_attempts_before_solution": 3
     }
   ]
 }
