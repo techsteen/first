@@ -12,7 +12,11 @@ const state = {
     practiceErrors: {},
     practiceNotices: {},
     practiceFallbackIndex: {},
-    aiNotice: null
+    aiNotice: null,
+    debugPrompts: {
+        ai: null,
+        practice: {}
+    }
 };
 
 const answerExpansionState = {
@@ -160,6 +164,7 @@ function setupTeacherControls() {
             saveTeacherMode();
             updateTeacherButton(toggle);
             dialog.close();
+            refreshActiveRoute();
         } else {
             feedback.textContent = 'Forkert PIN. Prøv igen eller spørg underviseren.';
         }
@@ -963,17 +968,50 @@ function renderPractice(container) {
         ? `<div class="practice-subnet-row" aria-labelledby="practice-subnetting-heading">${renderPracticeTopicSection('subnetting', { variant: 'subnet' })}</div>`
         : '';
 
+    const debugMarkup = renderPracticeDebugSection();
+
     container.innerHTML = `
         <section aria-labelledby="practice-heading" class="practice-section">
             <h2 id="practice-heading">Øv dig med AI-genererede opgaver</h2>
             <p>Vælg et emne, generér en opgave og gentag efter behov for at træne flere opgaver i samme spor. Alle besvarelser evalueres automatisk, og du får hjælpende feedback når der er fejl.</p>
             ${gridMarkup || '<p class="empty">Ingen emner tilgængelige.</p>'}
             ${subnetMarkup}
+            ${debugMarkup}
         </section>
     `;
 
     setupPracticeTopicHandlers(container);
     bindTaskEvents(container);
+}
+
+function renderPracticeDebugSection() {
+    if (!state.teacherMode) {
+        return '';
+    }
+
+    const prompts = state.debugPrompts?.practice || {};
+    const entries = Object.entries(prompts).filter(([, prompt]) => typeof prompt === 'string' && prompt.trim() !== '');
+    if (!entries.length) {
+        return '';
+    }
+
+    const items = entries.map(([topic, prompt]) => {
+        const label = PRACTICE_TOPIC_LABELS[topic] || topic.toUpperCase();
+        return `
+            <article class="debug-prompt-entry">
+                <h4>${escapeHtml(label)}</h4>
+                <pre class="debug-prompt" tabindex="0">${escapeHtml(prompt)}</pre>
+            </article>
+        `;
+    }).join('');
+
+    return `
+        <section class="debug-prompt-section" aria-labelledby="practice-debug-heading">
+            <h3 id="practice-debug-heading">Debug: Seneste prompts pr. emne</h3>
+            <p class="debug-prompt-hint">Synligt kun i lærer-tilstand. Brug teksten til at fejlfinde AI-generering.</p>
+            <div class="debug-prompt-list">${items}</div>
+        </section>
+    `;
 }
 
 function renderPracticeTopicSection(topic, options = {}) {
@@ -1150,6 +1188,12 @@ function renderAi(container) {
                 <h3>Aktuelt opgavesæt</h3>
                 <div id="ai-task-container" class="ai-tasks" role="region" aria-live="polite"></div>
             </section>
+            ${state.teacherMode ? `
+            <section class="debug-prompt-section" aria-labelledby="ai-debug-heading">
+                <h3 id="ai-debug-heading">Debug: Seneste prompt</h3>
+                <p class="debug-prompt-hint">Synligt kun i lærer-tilstand. Brug den til at kontrollere prompten, der sendes til AI-tjenesten.</p>
+                <pre id="ai-debug-prompt" class="debug-prompt" tabindex="0">${escapeHtml(state.debugPrompts.ai || 'Ingen prompt endnu.')}</pre>
+            </section>` : ''}
         </section>
     `;
 
@@ -1171,6 +1215,15 @@ function renderAi(container) {
     }
 
     renderAiTasks(container.querySelector('#ai-task-container'));
+    renderAiDebugPrompt();
+}
+
+function renderAiDebugPrompt() {
+    if (!state.teacherMode) return;
+    const element = document.getElementById('ai-debug-prompt');
+    if (!element) return;
+    const prompt = state.debugPrompts.ai;
+    element.textContent = prompt ? prompt : 'Ingen prompt endnu.';
 }
 
 function renderAiTasks(container) {
@@ -1674,14 +1727,20 @@ async function handleGenerateTasks(event) {
 
     try {
         state.aiNotice = null;
-        const result = await requestAiTasks(payload);
+        const result = await requestAiTasks(payload, { debug: state.teacherMode });
         const tasks = Array.isArray(result.tasks) ? result.tasks.slice(0, 1) : [];
         state.aiSets = tasks;
         state.aiNotice = result.message;
+        state.debugPrompts.ai = state.teacherMode ? (result.debugPrompt || null) : null;
         renderAiTasks(document.getElementById('ai-task-container'));
+        renderAiDebugPrompt();
     } catch (error) {
         console.error('Fejl ved generering', error);
         state.aiNotice = null;
+        if (state.teacherMode && error?.debugPrompt) {
+            state.debugPrompts.ai = error.debugPrompt;
+            renderAiDebugPrompt();
+        }
         const container = document.getElementById('ai-task-container');
         if (container) {
             container.innerHTML = '<p>Kunne ikke generere opgaver. Prøv igen senere.</p>';
@@ -1717,7 +1776,7 @@ async function handlePracticeGenerate(event) {
     renderPractice(document.getElementById('app'));
 
     try {
-        const result = await requestAiTasks(payload);
+        const result = await requestAiTasks(payload, { debug: state.teacherMode });
         const tasks = Array.isArray(result.tasks) ? result.tasks.slice(0, 1) : [];
         if (!tasks.length) {
             throw new Error('AI-sættet var tomt.');
@@ -1729,6 +1788,11 @@ async function handlePracticeGenerate(event) {
         state.practiceNotices[topic] = result.message;
         state.practiceErrors[topic] = null;
         state.practiceLoading[topic] = false;
+        if (state.teacherMode) {
+            state.debugPrompts.practice[topic] = result.debugPrompt || null;
+        } else if (state.debugPrompts.practice[topic]) {
+            delete state.debugPrompts.practice[topic];
+        }
         renderPractice(document.getElementById('app'));
     } catch (error) {
         console.error('Fejl ved generering af øveopgaver', error);
@@ -1742,16 +1806,28 @@ async function handlePracticeGenerate(event) {
             const reason = error?.message ? ` (${error.message})` : '';
             state.practiceNotices[topic] = `AI-tjenesten kunne ikke levere opgaver${reason}. Viser lokale øvelser.`;
             state.practiceErrors[topic] = null;
+            if (state.teacherMode) {
+                state.debugPrompts.practice[topic] = error?.debugPrompt || null;
+            }
         } else {
             state.practiceNotices[topic] = null;
             state.practiceErrors[topic] = 'Kunne ikke generere opgaver lige nu. Prøv igen lidt senere.';
+            if (!state.teacherMode) {
+                delete state.debugPrompts.practice[topic];
+            } else {
+                state.debugPrompts.practice[topic] = error?.debugPrompt || null;
+            }
         }
         renderPractice(document.getElementById('app'));
     }
 }
 
-async function requestAiTasks(payload) {
-    const body = JSON.stringify(payload);
+async function requestAiTasks(payload, options = {}) {
+    const requestPayload = { ...payload };
+    if (options.debug) {
+        requestPayload.debug = true;
+    }
+    const body = JSON.stringify(requestPayload);
     const response = await fetch('server/api_generate_tasks.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1771,6 +1847,9 @@ async function requestAiTasks(payload) {
         const message = typeof data?.error === 'string' ? data.error : 'Serverfejl';
         const error = new Error(message);
         error.status = response.status;
+        if (typeof data?.debug_prompt === 'string') {
+            error.debugPrompt = data.debug_prompt;
+        }
         throw error;
     }
 
@@ -1779,12 +1858,17 @@ async function requestAiTasks(payload) {
         return {
             tasks: data.tasks,
             message: typeof data.message === 'string' ? data.message : null,
-            source: typeof data.source === 'string' ? data.source : 'live'
+            source: typeof data.source === 'string' ? data.source : 'live',
+            debugPrompt: typeof data.debug_prompt === 'string' ? data.debug_prompt : null
         };
     }
 
     const message = typeof data?.message === 'string' ? data.message : 'Ugyldigt svarformat';
-    throw new Error(message);
+    const error = new Error(message);
+    if (typeof data?.debug_prompt === 'string') {
+        error.debugPrompt = data.debug_prompt;
+    }
+    throw error;
 }
 
 async function handleSaveAiSet(statusEl) {
@@ -1829,6 +1913,7 @@ async function handleLoadSavedSets(statusEl) {
             state.aiSets = data.tasks;
             state.storageMode = data.storage_mode || 'fil';
             renderAiTasks(document.getElementById('ai-task-container'));
+            renderAiDebugPrompt();
             statusEl.textContent = data.message || 'Gemte sæt er hentet.';
         } else if (data.status === 'fallback') {
             loadAiSetsLocally(statusEl);
@@ -1859,6 +1944,7 @@ function loadAiSetsLocally(statusEl) {
         state.aiSets = JSON.parse(raw);
         state.storageMode = 'localStorage';
         renderAiTasks(document.getElementById('ai-task-container'));
+        renderAiDebugPrompt();
         statusEl.textContent = 'Indlæst fra LocalStorage (kun på denne enhed).';
     } catch (error) {
         statusEl.textContent = 'Kunne ikke indlæse lokale sæt.';

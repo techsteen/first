@@ -45,7 +45,7 @@ switch ($action) {
 function handleGenerate(array $input): void
 {
     global $configValues, $configDir;
-    $allowed = ['topic', 'difficulty', 'count'];
+    $allowed = ['topic', 'difficulty', 'count', 'debug'];
     foreach ($input as $key => $value) {
         if (!in_array($key, $allowed, true)) {
             sendResponse(['error' => 'Ugyldige felter i forespørgslen.'], 400);
@@ -59,6 +59,7 @@ function handleGenerate(array $input): void
     $topic = $input['topic'];
     $difficulty = (int) $input['difficulty'];
     $count = isset($input['count']) ? (int) $input['count'] : 1;
+    $debug = !empty($input['debug']);
 
     if (!is_string($topic) || $topic === '') {
         sendResponse(['error' => 'Ugyldigt emne.'], 400);
@@ -93,6 +94,7 @@ function handleGenerate(array $input): void
         . 'Returnér JSON med feltet "tasks" som en liste af opgaver.';
 
     $userPrompt = buildGeneratorPrompt($selected, $topic, $difficulty, $count);
+    $debugPrompt = $debug ? $userPrompt : null;
 
     $payload = [
         'model' => 'gpt-4o-mini',
@@ -119,9 +121,9 @@ function handleGenerate(array $input): void
                 'tasks' => $fallback,
                 'source' => 'cache',
                 'message' => 'AI-tjenesten svarede ikke. Viser det senest gemte sæt for dette emne.'
-            ]);
+            ], 200, $debugPrompt);
         }
-        sendResponse(['error' => $result['error']], $result['status'] ?? 500);
+        sendResponse(['error' => $result['error']], $result['status'] ?? 500, $debugPrompt);
     }
 
     $content = $result['content'] ?? '';
@@ -140,9 +142,9 @@ function handleGenerate(array $input): void
                 'tasks' => $fallback,
                 'source' => 'cache',
                 'message' => 'AI-svaret kunne ikke læses. Viser seneste fungerende sæt i stedet.'
-            ]);
+            ], 200, $debugPrompt);
         }
-        sendResponse(['error' => 'AI-svaret havde ikke gyldigt task-format.'], 502);
+        sendResponse(['error' => 'AI-svaret havde ikke gyldigt task-format.'], 502, $debugPrompt);
     }
 
     $validated = validateGeneratedTasks($decoded['tasks'], $topic, $difficulty);
@@ -161,9 +163,9 @@ function handleGenerate(array $input): void
                 'tasks' => $fallback,
                 'source' => 'cache',
                 'message' => 'AI-svaret indeholdt ingen gyldige opgaver. Viser et tidligere sæt.'
-            ]);
+            ], 200, $debugPrompt);
         }
-        sendResponse(['error' => 'AI-svaret indeholdt ingen gyldige opgaver.'], 502);
+        sendResponse(['error' => 'AI-svaret indeholdt ingen gyldige opgaver.'], 502, $debugPrompt);
     }
 
     cacheGeneratedTasks($topic, $difficulty, $validated);
@@ -179,7 +181,7 @@ function handleGenerate(array $input): void
     sendResponse([
         'tasks' => $validated,
         'source' => 'live'
-    ]);
+    ], 200, $debugPrompt);
 }
 
 function handleSave(array $input): void
@@ -328,6 +330,44 @@ function validateGeneratedTasks(array $tasks, string $topic, int $difficulty): a
         $task['type'] = $task['type'] ?? 'short_answer';
         $task['title'] = $task['title'] ?? 'AI-opgave';
 
+        if (!isset($task['question']) || trim((string) $task['question']) === '') {
+            continue;
+        }
+
+        if (!isset($task['answer_schema']['expected']) || !is_array($task['answer_schema']['expected'])) {
+            continue;
+        }
+
+        if ($task['type'] === 'fill_in_table') {
+            $tables = [];
+            if (isset($task['table'])) {
+                $tables = is_array($task['table']) ? $task['table'] : [$task['table']];
+            }
+            if (!count($tables)) {
+                continue;
+            }
+
+            if ($topic === 'subnetting') {
+                $subnetTable = null;
+                foreach ($tables as $tableCandidate) {
+                    $title = isset($tableCandidate['title']) ? strtolower((string) $tableCandidate['title']) : '';
+                    if (strpos($title, 'delnet') !== false) {
+                        $subnetTable = $tableCandidate;
+                        break;
+                    }
+                }
+                if (!$subnetTable) {
+                    continue;
+                }
+                $rows = $subnetTable['rows'] ?? [];
+                if (!is_array($rows) || count($rows) < 4) {
+                    continue;
+                }
+            }
+
+            $task['table'] = $tables;
+        }
+
         $id = $task['id'] ?? null;
         if (!is_string($id) || $id === '' || isset($usedIds[$id])) {
             $id = 'AI-' . $timestamp . '-' . ($index + 1);
@@ -345,8 +385,11 @@ function validateGeneratedTasks(array $tasks, string $topic, int $difficulty): a
     return $validated;
 }
 
-function sendResponse(array $data, int $status = 200): void
+function sendResponse(array $data, int $status = 200, ?string $debugPrompt = null): void
 {
+    if ($debugPrompt !== null && !isset($data['debug_prompt'])) {
+        $data['debug_prompt'] = $debugPrompt;
+    }
     http_response_code($status);
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
