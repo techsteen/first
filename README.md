@@ -38,6 +38,7 @@ Hvis `cacert-*.pem` mangler, returnerer API-endpoints en elevvenlig fejl om, at 
 - Fanen “Opgaveværktøj” rummer en formular, hvor du kan beskrive en opgave og straks få et JSON-objekt i korrekt struktur.
 - Formularen understøtter korte svar, multiple choice, multi-step og tabelopgaver. Brug `[input:facit]` i tabeller for at markere felter, der skal udfyldes.
 - Siden genererer samtidig en Canvas-prompt, så du kan guide en ekstern bot til at oprette opgaven i Canvas på en standardiseret måde.
+- Brug knapperne “Importer JSON” og “Eksporter JSON” til at hente eksisterende opgaver ind i værktøjet eller downloade nye opgaver direkte som fil.
 
 ## API-nøgler
 - `Config/config.php` skal definere enten konstanten `OPENAI_API_KEY` (selve nøglen) eller `OPENAI_KEY_FILE` (sti til fil med nøglen).

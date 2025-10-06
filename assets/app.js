@@ -13,7 +13,8 @@ const state = {
     practiceNotices: {},
     aiNotice: null,
     seededPracticeTopics: {},
-    taskDesigner: null
+    taskDesigner: null,
+    designerNotice: null
 };
 
 const answerExpansionState = {
@@ -1244,6 +1245,7 @@ function renderTaskBuilder(container) {
         <section class="task-designer" aria-labelledby="task-designer-heading">
             <h2 id="task-designer-heading">Opgaveværktøj</h2>
             <p>Udfyld felterne for at beskrive en ny subnetting-opgave. Værktøjet genererer et JSON-objekt i samme struktur som platformen bruger, samt en prompt du kan give til en anden bot for at oprette opgaven i Canvas.</p>
+            ${state.designerNotice ? `<p id="task-designer-notice" class="info-notice" role="status">${escapeHtml(state.designerNotice)}</p>` : `<p id="task-designer-notice" class="info-notice" role="status" hidden></p>`}
             <form id="task-designer-form" class="task-designer-form" novalidate>
                 <fieldset>
                     <legend>Grundlæggende oplysninger</legend>
@@ -1323,7 +1325,14 @@ function renderTaskBuilder(container) {
                 </fieldset>
             </form>
             <section class="designer-output" aria-labelledby="designer-json-heading">
-                <h3 id="designer-json-heading">JSON-udgave</h3>
+                <div class="designer-output-header">
+                    <h3 id="designer-json-heading">JSON-udgave</h3>
+                    <div class="designer-actions" role="group" aria-label="Import og eksport">
+                        <button type="button" class="button secondary" id="designer-import-btn">Importer JSON</button>
+                        <button type="button" class="button" id="designer-export-btn">Eksporter JSON</button>
+                    </div>
+                </div>
+                <input id="designer-import-input" type="file" accept="application/json" hidden>
                 <pre id="task-json-preview" class="designer-json" tabindex="0"></pre>
             </section>
             <section class="designer-prompt" aria-labelledby="designer-prompt-heading">
@@ -1337,13 +1346,29 @@ function renderTaskBuilder(container) {
     if (!form) return;
 
     form.addEventListener('input', () => {
+        setDesignerNotice(null);
         updateDesignerStateFromForm(form);
         updateTaskDesignerVisibility(form);
         updateTaskDesignerPreview();
     });
 
+    const exportButton = container.querySelector('#designer-export-btn');
+    if (exportButton) {
+        exportButton.addEventListener('click', handleDesignerExport);
+    }
+
+    const importButton = container.querySelector('#designer-import-btn');
+    const importInput = container.querySelector('#designer-import-input');
+    if (importButton && importInput) {
+        importButton.addEventListener('click', () => importInput.click());
+    }
+    if (importInput) {
+        importInput.addEventListener('change', handleDesignerImport);
+    }
+
     updateTaskDesignerVisibility(form);
     updateTaskDesignerPreview();
+    updateDesignerNotice();
 }
 
 function getTaskDesignerState() {
@@ -1417,12 +1442,225 @@ function updateTaskDesignerPreview() {
     }
 }
 
+function setDesignerNotice(message) {
+    const trimmed = typeof message === 'string' ? message.trim() : '';
+    state.designerNotice = trimmed ? trimmed : null;
+    updateDesignerNotice();
+}
+
+function updateDesignerNotice() {
+    const notice = document.getElementById('task-designer-notice');
+    if (!notice) return;
+    if (state.designerNotice) {
+        notice.textContent = state.designerNotice;
+        notice.hidden = false;
+    } else {
+        notice.textContent = '';
+        notice.hidden = true;
+    }
+}
+
+function handleDesignerExport() {
+    try {
+        const task = buildTaskFromDesigner(getTaskDesignerState());
+        const data = JSON.stringify(task, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        const safeId = typeof task.id === 'string' && task.id
+            ? task.id.replace(/[^a-z0-9-_]+/gi, '_')
+            : 'opgave';
+        anchor.href = url;
+        anchor.download = `${safeId}.json`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        setTimeout(() => {
+            document.body.removeChild(anchor);
+            URL.revokeObjectURL(url);
+        }, 0);
+        const label = typeof task.id === 'string' && task.id ? `Eksporterede opgaven ${task.id} som download.` : 'Eksporterede opgaven som download.';
+        setDesignerNotice(label);
+    } catch (error) {
+        console.error('Designer export error', error);
+        setDesignerNotice('Kunne ikke eksportere opgaven. Prøv igen.');
+    }
+}
+
+function handleDesignerImport(event) {
+    const input = event.target;
+    if (!input || !input.files || !input.files.length) {
+        return;
+    }
+
+    const file = input.files[0];
+    file.text().then(text => {
+        try {
+            const parsed = JSON.parse(text);
+            const task = extractTaskFromImport(parsed);
+            if (!task) {
+                throw new Error('No task found');
+            }
+            applyImportedTask(task);
+            const form = document.getElementById('task-designer-form');
+            if (form) {
+                applyDesignerStateToForm(form);
+                updateTaskDesignerVisibility(form);
+                updateTaskDesignerPreview();
+            }
+            const label = typeof task.id === 'string' && task.id ? `Importerede opgaven ${task.id} fra fil.` : 'Importerede opgaven fra fil.';
+            setDesignerNotice(label);
+        } catch (error) {
+            console.error('Designer import error', error);
+            setDesignerNotice('Kunne ikke importere filen. Kontrollér at JSON-strukturen følger skabelonen.');
+        }
+    }).catch(error => {
+        console.error('Designer import read error', error);
+        setDesignerNotice('Filen kunne ikke læses. Prøv igen.');
+    }).finally(() => {
+        input.value = '';
+    });
+}
+
+function extractTaskFromImport(parsed) {
+    if (Array.isArray(parsed)) {
+        return parsed.find(item => item && typeof item === 'object');
+    }
+    if (parsed && typeof parsed === 'object') {
+        if (parsed.task && typeof parsed.task === 'object') {
+            return parsed.task;
+        }
+        if (parsed.tasks && Array.isArray(parsed.tasks)) {
+            return parsed.tasks.find(item => item && typeof item === 'object');
+        }
+        if (parsed.id || parsed.question) {
+            return parsed;
+        }
+    }
+    return null;
+}
+
+function applyImportedTask(task) {
+    const designer = getTaskDesignerState();
+    designer.id = toStringValue(task.id);
+    designer.title = toStringValue(task.title);
+    designer.topic = normaliseDesignerTopic(task.topic);
+    designer.difficulty = Number.isFinite(Number(task.difficulty)) ? Number(task.difficulty) : 1;
+    designer.type = normaliseDesignerType(task.type);
+    designer.question = toStringValue(task.question);
+    designer.hints = Array.isArray(task.hints) ? task.hints.map(toStringValue).join('\n') : '';
+    designer.steps = Array.isArray(task.steps) ? task.steps.map(toStringValue).join('\n') : '';
+    const rubric = task.rubric && typeof task.rubric === 'object' ? task.rubric : {};
+    designer.rubric = Array.isArray(rubric.criteria) ? rubric.criteria.map(toStringValue).join('\n') : '';
+    designer.solution = toStringValue(rubric.solution || task.solution);
+    designer.maxAttempts = Number.isFinite(Number(task.max_attempts_before_solution)) ? Number(task.max_attempts_before_solution) : 3;
+
+    designer.expected = '';
+    designer.accept = '';
+    designer.options = '';
+    designer.tableTitle = '';
+    designer.tableHeaders = '';
+    designer.tableRows = '';
+    designer.expectedMulti = '';
+
+    const schema = task.answer_schema && typeof task.answer_schema === 'object' ? task.answer_schema : {};
+
+    if (designer.type === 'short_answer') {
+        designer.expected = toStringValue(schema.expected);
+        designer.accept = Array.isArray(schema.accept) ? schema.accept.map(toStringValue).join('\n') : '';
+    } else if (designer.type === 'multiple_choice') {
+        const options = Array.isArray(task.options) ? task.options.map(toStringValue) : [];
+        const expected = Array.isArray(schema.expected) ? schema.expected.map(toStringValue) : [];
+        designer.options = options.map(option => expected.includes(option) ? `*${option}` : option).join('\n');
+    } else if (designer.type === 'fill_in_table') {
+        const table = Array.isArray(task.table) ? task.table.find(item => item && typeof item === 'object') : null;
+        if (table) {
+            designer.tableTitle = toStringValue(table.title);
+            designer.tableHeaders = Array.isArray(table.headers) ? table.headers.map(toStringValue).join(', ') : '';
+            if (Array.isArray(table.rows)) {
+                const rowStrings = table.rows
+                    .filter(row => Array.isArray(row))
+                    .map(row => row.map(serializeDesignerTableCell).join(' | '))
+                    .filter(Boolean);
+                designer.tableRows = rowStrings.join('\n');
+            }
+        }
+    } else if (designer.type === 'multi_step') {
+        designer.expectedMulti = toStringValue(schema.expected);
+        designer.accept = Array.isArray(schema.accept) ? schema.accept.map(toStringValue).join('\n') : '';
+    }
+}
+
+function applyDesignerStateToForm(form) {
+    const designer = getTaskDesignerState();
+    const elements = form.elements;
+    setControlValue(elements, 'id', designer.id);
+    setControlValue(elements, 'title', designer.title);
+    setControlValue(elements, 'topic', designer.topic);
+    setControlValue(elements, 'difficulty', designer.difficulty);
+    setControlValue(elements, 'type', designer.type);
+    setControlValue(elements, 'question', designer.question);
+    setControlValue(elements, 'hints', designer.hints);
+    setControlValue(elements, 'steps', designer.steps);
+    setControlValue(elements, 'rubric', designer.rubric);
+    setControlValue(elements, 'solution', designer.solution);
+    setControlValue(elements, 'maxAttempts', designer.maxAttempts);
+    setControlValue(elements, 'expected', designer.expected);
+    setControlValue(elements, 'accept', designer.accept);
+    setControlValue(elements, 'options', designer.options);
+    setControlValue(elements, 'tableTitle', designer.tableTitle);
+    setControlValue(elements, 'tableHeaders', designer.tableHeaders);
+    setControlValue(elements, 'tableRows', designer.tableRows);
+    setControlValue(elements, 'expectedMulti', designer.expectedMulti);
+}
+
+function serializeDesignerTableCell(cell) {
+    if (typeof cell === 'string') {
+        return cell;
+    }
+    if (cell && typeof cell === 'object') {
+        const value = toStringValue(cell.value);
+        if (cell.editable) {
+            const placeholder = toStringValue(cell.placeholder || value);
+            return placeholder ? `[input:${placeholder}]` : '[input]';
+        }
+        return value;
+    }
+    return '';
+}
+
+function toStringValue(value) {
+    return typeof value === 'string' ? value : '';
+}
+
+function normaliseDesignerTopic(topic) {
+    if (typeof topic === 'string' && topic in PRACTICE_TOPIC_LABELS) {
+        return topic;
+    }
+    return 'binary';
+}
+
+function normaliseDesignerType(type) {
+    const allowed = ['short_answer', 'multiple_choice', 'multi_step', 'fill_in_table'];
+    if (typeof type === 'string' && allowed.includes(type)) {
+        return type;
+    }
+    return 'short_answer';
+}
+
 function getControlValue(elements, name) {
     const control = elements.namedItem(name);
     if (!control || typeof control.value !== 'string') {
         return '';
     }
     return control.value;
+}
+
+function setControlValue(elements, name, value) {
+    const control = elements.namedItem(name);
+    if (!control || typeof control.value !== 'string') {
+        return;
+    }
+    control.value = value == null ? '' : String(value);
 }
 
 function buildTaskFromDesigner(designer) {
