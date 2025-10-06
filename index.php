@@ -341,9 +341,9 @@ $exercises = [
                         <button type="button" id="tutorial-button" class="secondary ghost">AI-tutorial</button>
                     </div>
                 </form>
+                <div id="feedback-box" class="feedback" aria-live="polite"></div>
                 <div id="hint-box" class="hint hidden" aria-live="polite"></div>
                 <div id="tutorial-box" class="tutorial-box hidden" aria-live="polite"></div>
-                <div id="feedback-box" class="feedback" aria-live="polite"></div>
             </div>
         </div>
     </div>
