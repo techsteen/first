@@ -21,7 +21,12 @@ function generateAiFeedback(string $userAnswer, $solution, string $responseType 
         $messages = [
             [
                 'role' => 'system',
-                'content' => 'Du vurderer elevsvar i matematik (procentregning). Vær anerkendende, men ærlig.',
+                'content' => implode("\n", [
+                    'Du vurderer elevsvar i matematik (procentregning). Vær anerkendende, men ærlig.',
+                    'Svar altid i JSON-format med felterne:',
+                    '{"status": "correct|try_again|incomplete", "feedback": ["punkt 1", "punkt 2", ...]}',
+                    'Hver feedback-besked skal være en kort, handlingsrettet sætning på dansk. Brug mindst to punkter.',
+                ]),
             ],
             [
                 'role' => 'user',
@@ -38,10 +43,11 @@ function generateAiFeedback(string $userAnswer, $solution, string $responseType 
             $raw = callOpenAiChat($messages, [
                 'temperature' => 0.4,
                 'max_tokens' => 350,
+                'response_format' => ['type' => 'json_object'],
             ]);
             $ai = json_decode($raw, true);
-            if (!is_array($ai) || !isset($ai['feedback'])) {
-                throw new RuntimeException('Uventet AI-svar.');
+            if (!is_array($ai)) {
+                throw new RuntimeException('AI-svaret kunne ikke tolkes som JSON.');
             }
 
             $status = $ai['status'] ?? 'try_again';
@@ -49,7 +55,10 @@ function generateAiFeedback(string $userAnswer, $solution, string $responseType 
                 $status = 'try_again';
             }
 
-            $messagesOut = $ai['feedback'];
+            $messagesOut = $ai['feedback'] ?? [];
+            if (is_string($messagesOut) && $messagesOut !== '') {
+                $messagesOut = [$messagesOut];
+            }
             if (!is_array($messagesOut) || empty($messagesOut)) {
                 $messagesOut = ['Godt forsøg! Overvej at forklare alle trin tydeligt.'];
             }
