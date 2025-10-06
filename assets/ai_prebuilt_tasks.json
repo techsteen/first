@@ -1,0 +1,288 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "generated": "2024-06-01",
+    "notes": "Forudbyggede AI-opgaver uden runtime-generering"
+  },
+  "topics": {
+    "binary": {
+      "1": [
+        {
+          "id": "PB-BINARY-1A",
+          "title": "Konverter oktet til decimal",
+          "type": "short_answer",
+          "difficulty": 1,
+          "topic": "binary",
+          "question": "Hvad er den decimale værdi af det binære oktet 11000000?",
+          "hints": [
+            "Skriv værdierne for de tændte bits: 128, 64, 32, 16, 8, 4, 2, 1.",
+            "Læg de værdier sammen som svarer til bittene der er 1." 
+          ],
+          "answer_schema": {
+            "expected": "192",
+            "accept": ["192"]
+          },
+          "rubric": {
+            "max_score": 1,
+            "criteria": [
+              "Eleven summerer de tændte bits korrekt og svarer 192.",
+              "Små formateringsvariationer (fx ekstra mellemrum) accepteres."
+            ],
+            "solution": "11000000 har bitværdierne 128 + 64 = 192."
+          },
+          "max_attempts_before_solution": 3
+        },
+        {
+          "id": "PB-BINARY-1B",
+          "title": "Binært til decimal IP",
+          "type": "short_answer",
+          "difficulty": 1,
+          "topic": "binary",
+          "question": "Hvilken decimalt IP-adresse svarer til det binære mønster 11000000.10101000.00000001.00000001?",
+          "hints": [
+            "Konverter hver oktet for sig og saml resultatet med punktummer.",
+            "11000000 er 192, 10101000 er 168, 00000001 er 1." 
+          ],
+          "answer_schema": {
+            "expected": "192.168.1.1",
+            "accept": ["192.168.1.1", "192 168 1 1"]
+          },
+          "rubric": {
+            "max_score": 1,
+            "criteria": [
+              "Alle fire oktetter konverteres korrekt fra binært til decimal.",
+              "Resultatet præsenteres som en gyldig IPv4-adresse."
+            ],
+            "solution": "Oktetterne giver 192.168.1.1 i decimalnotation."
+          },
+          "max_attempts_before_solution": 3
+        }
+      ],
+      "2": [
+        {
+          "id": "PB-BINARY-2A",
+          "title": "Identificér bitværdier",
+          "type": "short_answer",
+          "difficulty": 2,
+          "topic": "binary",
+          "question": "Hvilke decimalværdier er slået til i oktettet 10101100?",
+          "hints": [
+            "Marker hvilke positionsværdier (128, 64, 32, …) der svarer til bittene sat til 1.",
+            "Skriv tallene i faldende orden adskilt af komma." 
+          ],
+          "answer_schema": {
+            "expected": "128, 32, 8, 4",
+            "accept": ["128,32,8,4", "128 32 8 4"]
+          },
+          "rubric": {
+            "max_score": 1,
+            "criteria": [
+              "Eleven udpeger korrekt alle bitværdier med 1 i oktettet.",
+              "Svar kan stå med komma eller mellemrum, men tallene skal være korrekte."
+            ],
+            "solution": "Bitværdierne med 1 er 128 + 32 + 8 + 4."
+          },
+          "max_attempts_before_solution": 3
+        }
+      ]
+    },
+    "cidr": {
+      "2": [
+        {
+          "id": "PB-CIDR-2A",
+          "title": "Netmaske fra prefix",
+          "type": "short_answer",
+          "difficulty": 2,
+          "topic": "cidr",
+          "question": "Hvilken decimalt netmaske svarer til prefixlængden /23?",
+          "hints": [
+            "Tænk i to hele oktetter plus 7 ekstra bits i tredje oktet.",
+            "Konverter 11111110 i tredje oktet til decimal." 
+          ],
+          "answer_schema": {
+            "expected": "255.255.254.0",
+            "accept": ["255.255.254.0", "255 255 254 0"]
+          },
+          "rubric": {
+            "max_score": 1,
+            "criteria": [
+              "Netmasken gengives korrekt med de første to oktetter sat til 255 og tredje til 254.",
+              "Små formateringsfejl tolereres, men talværdierne skal være præcise."
+            ],
+            "solution": "/23 giver 11111111.11111111.11111110.00000000 som decimal 255.255.254.0."
+          },
+          "max_attempts_before_solution": 3
+        }
+      ],
+      "3": [
+        {
+          "id": "PB-CIDR-3A",
+          "title": "Hosts i et /26 net",
+          "type": "short_answer",
+          "difficulty": 3,
+          "topic": "cidr",
+          "question": "Hvor mange brugbare værter er der i et netværk med prefix /26?",
+          "hints": [
+            "Hvor mange bits er tilbage til værter i et /26 net?",
+            "Brug formlen 2^(hostbits) - 2." 
+          ],
+          "answer_schema": {
+            "expected": "62",
+            "accept": ["62"]
+          },
+          "rubric": {
+            "max_score": 1,
+            "criteria": [
+              "Eleven identificerer 6 værtsbits og bruger formlen korrekt.",
+              "Resultatet skal være 62 brugbare adresser."
+            ],
+            "solution": "/26 efterlader 6 værtsbits, så 2^6 - 2 = 62 hosts."
+          },
+          "max_attempts_before_solution": 3
+        }
+      ]
+    },
+    "netmask": {
+      "2": [
+        {
+          "id": "PB-NETMASK-2A",
+          "title": "Anvend netmasken",
+          "type": "multi_step",
+          "difficulty": 2,
+          "topic": "netmask",
+          "question": "Givet IP-adressen 172.16.34.77 og netmasken 255.255.255.0, hvad er netværksadressen?",
+          "steps": [
+            "Omsæt IP-adressen til binært for at se værtsdelen.",
+            "Sæt værtsbits til 0 for at finde netværksadressen.",
+            "Konverter resultatet tilbage til decimal." 
+          ],
+          "hints": [
+            "Tredje oktet bliver stående, fjerde nulstilles.",
+            "Netværksadressen ender på .0." 
+          ],
+          "answer_schema": {
+            "expected": "172.16.34.0",
+            "accept": ["172.16.34.0"]
+          },
+          "rubric": {
+            "max_score": 1,
+            "criteria": [
+              "Eleven anvender netmasken korrekt og nulstiller værtsdelen.",
+              "Resultatet er en gyldig netværksadresse for /24 subnettet." 
+            ],
+            "solution": "Masken 255.255.255.0 nulstiller sidste oktet, så adressen bliver 172.16.34.0."
+          },
+          "max_attempts_before_solution": 3
+        }
+      ]
+    },
+    "subnetting": {
+      "3": [
+        {
+          "id": "PB-SUBNET-3A",
+          "title": "Subnetplan med fire delnet",
+          "type": "fill_in_table",
+          "difficulty": 3,
+          "topic": "subnetting",
+          "question": "Planlæg fire lige store delnet ud fra netværket 192.168.40.0/24. Lån to bits til subnet-ID.",
+          "hints": [
+            "Et /26 net giver 4 delnet og 62 værter per net.",
+            "Øg fjerde oktet med 64 for hvert nyt net." 
+          ],
+          "table": [
+            {
+              "title": "Delnetoversigt",
+              "headers": ["Delnet", "Netværksadresse", "Første host", "Sidste host", "Broadcast"],
+              "rows": [
+                ["Delnet 1", {"value": "192.168.40.0"}, {"value": "", "editable": true, "placeholder": "192.168.40.1"}, {"value": "", "editable": true, "placeholder": "192.168.40.62"}, {"value": "", "editable": true, "placeholder": "192.168.40.63"}],
+                ["Delnet 2", {"value": "192.168.40.64"}, {"value": "", "editable": true, "placeholder": "192.168.40.65"}, {"value": "", "editable": true, "placeholder": "192.168.40.126"}, {"value": "", "editable": true, "placeholder": "192.168.40.127"}],
+                ["Delnet 3", {"value": "192.168.40.128"}, {"value": "", "editable": true, "placeholder": "192.168.40.129"}, {"value": "", "editable": true, "placeholder": "192.168.40.190"}, {"value": "", "editable": true, "placeholder": "192.168.40.191"}],
+                ["Delnet 4", {"value": "192.168.40.192"}, {"value": "", "editable": true, "placeholder": "192.168.40.193"}, {"value": "", "editable": true, "placeholder": "192.168.40.254"}, {"value": "", "editable": true, "placeholder": "192.168.40.255"}]
+              ]
+            }
+          ],
+          "answer_schema": {
+            "expected": {
+              "delnets": [
+                {
+                  "network": "192.168.40.0",
+                  "first_host": "192.168.40.1",
+                  "last_host": "192.168.40.62",
+                  "broadcast": "192.168.40.63"
+                },
+                {
+                  "network": "192.168.40.64",
+                  "first_host": "192.168.40.65",
+                  "last_host": "192.168.40.126",
+                  "broadcast": "192.168.40.127"
+                },
+                {
+                  "network": "192.168.40.128",
+                  "first_host": "192.168.40.129",
+                  "last_host": "192.168.40.190",
+                  "broadcast": "192.168.40.191"
+                },
+                {
+                  "network": "192.168.40.192",
+                  "first_host": "192.168.40.193",
+                  "last_host": "192.168.40.254",
+                  "broadcast": "192.168.40.255"
+                }
+              ]
+            }
+          },
+          "rubric": {
+            "max_score": 1,
+            "criteria": [
+              "Alle fire delnet anvender spring på 64 adresser.",
+              "Første og sidste værtsadresser ligger inden for hvert delnets rækkevidde.",
+              "Broadcastadresserne svarer til sidste adresse i hvert delnet." 
+            ],
+            "solution": "Fire /26 delnet: 192.168.40.0/26, 192.168.40.64/26, 192.168.40.128/26 og 192.168.40.192/26."
+          },
+          "max_attempts_before_solution": 3
+        }
+      ]
+    },
+    "vlsm": {
+      "4": [
+        {
+          "id": "PB-VLSM-4A",
+          "title": "VLSM-planlægning",
+          "type": "multi_step",
+          "difficulty": 4,
+          "topic": "vlsm",
+          "question": "Ud fra startnettet 10.10.0.0/24 skal du lave tre delnet til 100, 50 og 20 værter. Hvilke prefixlængder vælger du, og hvad bliver netværksadresserne?",
+          "steps": [
+            "Sortér behovet efter størst antal værter.",
+            "Find mindste prefix der rummer hver gruppe (tilføj 2 adresser til net og broadcast).",
+            "Tildel delnet i rækkefølge uden overlap." 
+          ],
+          "hints": [
+            "100 værter kræver mindst /25, 50 kræver /26, 20 kræver /27.",
+            "Husk at lægge næste blok oven i forrige broadcasts + 1." 
+          ],
+          "answer_schema": {
+            "expected": {
+              "allocations": [
+                {"network": "10.10.0.0/25", "hosts": 126},
+                {"network": "10.10.0.128/26", "hosts": 62},
+                {"network": "10.10.0.192/27", "hosts": 30}
+              ]
+            }
+          },
+          "rubric": {
+            "max_score": 1,
+            "criteria": [
+              "Delnet tildeles uden overlap og i faldende størrelse.",
+              "Prefixlængderne passer til værtskravene.",
+              "Netværksadresserne starter på 10.10.0.0 og følger efter hinanden." 
+            ],
+            "solution": "Tildel /25 til 100 værter (10.10.0.0/25), /26 til 50 (10.10.0.128/26) og /27 til 20 (10.10.0.192/27)."
+          },
+          "max_attempts_before_solution": 3
+        }
+      ]
+    }
+  }
+}

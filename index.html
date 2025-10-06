@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subnetting Tutor</title>
+    <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="branding">
+            <h1>Subnetting Tutor</h1>
+            <p>GF2-netværk · læring, øvelse og AI-feedback</p>
+        </div>
+        <nav aria-label="Hovednavigation">
+            <ul class="nav-list">
+                <li><a href="#/" data-route>Forside</a></li>
+                <li><a href="#/learn" data-route>Start med teorien</a></li>
+                <li><a href="#/practice" data-route>Øv</a></li>
+                <li><a href="#/test" data-route>Test</a></li>
+                <li><a href="#/ai" data-route>AI-opgaver</a></li>
+                <li><a href="#/builder" data-route>Opgaveværktøj</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main id="app" class="app" tabindex="-1"></main>
+    <footer class="site-footer">
+        <p>Subnetting Tutor &middot; Udviklet til GF2-elever og undervisere.</p>
+        <button id="toggle-teacher" type="button" class="link-button" aria-expanded="false">Lærer-tilstand</button>
+    </footer>
+    <dialog id="teacher-dialog" aria-labelledby="teacher-dialog-title">
+        <form method="dialog">
+            <h2 id="teacher-dialog-title">Aktivér lærer-tilstand</h2>
+            <p>Indtast PIN-kode fra underviseren for at låse lærerfunktioner op.</p>
+            <label for="teacher-pin" class="sr-only">PIN-kode</label>
+            <input id="teacher-pin" name="teacher-pin" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="off" required>
+            <menu>
+                <button value="cancel">Annuller</button>
+                <button id="teacher-confirm" value="confirm">Bekræft</button>
+            </menu>
+            <p class="pin-feedback" role="status" aria-live="polite"></p>
+        </form>
+    </dialog>
+    <template id="frontpage-template">
+        <section class="hero">
+            <h2>Velkommen</h2>
+            <p>
+                Denne platform hjælper dig med at forstå subnetting gennem teori, øvelser og automatiseret feedback.
+                Brug navigationen til at komme i gang, og følg din progression undervejs.
+            </p>
+            <div class="hero-actions">
+                <a class="button" href="#/learn">Start med teorien</a>
+                <a class="button secondary" href="#/practice">Tag en øvelse</a>
+            </div>
+        </section>
+        <section class="info-grid" aria-label="Oversigt">
+            <article>
+                <h3>Start med teorien</h3>
+                <p>Få styr på IP-adresser, net- og broadcastadresser samt de vigtigste subnetting-begreber.</p>
+            </article>
+            <article>
+                <h3>Øv</h3>
+                <p>Træn med opgaver i flere sværhedsgrader og få feedback med det samme.</p>
+            </article>
+            <article>
+                <h3>Test</h3>
+                <p>Besvar 10 blandede spørgsmål og se din samlede score.</p>
+            </article>
+            <article>
+                <h3>AI-opgaver</h3>
+                <p>Gennemse de forudbyggede sæt og kopiér en Canvas-prompt til deling.</p>
+            </article>
+            <article>
+                <h3>Opgaveværktøj</h3>
+                <p>Design nye opgaver med korrekt JSON-struktur og klar Canvas-brief.</p>
+            </article>
+        </section>
+    </template>
+    <script type="module" src="assets/router.js"></script>
+    <script type="module" src="assets/app.js"></script>
+</body>
+</html>
