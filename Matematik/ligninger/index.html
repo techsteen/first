@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ligninger &amp; Ligningssystemer · Matematik D</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Spring til indhold</a>
+  <header class="site-header" role="banner">
+    <div class="site-header__content">
+      <div>
+        <p class="subject">Matematik D · EUD</p>
+        <h1>Ligninger &amp; ligningssystemer</h1>
+        <p class="subtitle">Selvforklarende læringsforløb med fokus på datarelaterede anvendelser.</p>
+      </div>
+      <div class="header-controls" role="group" aria-label="Visningsvalg">
+        <button id="toggle-text" class="chip" aria-pressed="false">Stor tekst</button>
+        <button id="toggle-detail" class="chip" aria-pressed="false">Detaljeret forklaring</button>
+        <button id="toggle-llm" class="chip" aria-pressed="false">LLM-feedback: fra</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <nav class="main-nav" aria-label="Hovednavigation">
+      <ul>
+        <li><a href="#tutorial">Tutorial</a></li>
+        <li><a href="#visualisering">Visualisering</a></li>
+        <li><a href="#simulationer">Simulationer</a></li>
+        <li><a href="#opgaver">Opgaver</a></li>
+        <li><a href="#fejlbank">Fejlbank</a></li>
+        <li><a href="#progression">Progression</a></li>
+      </ul>
+    </nav>
+
+    <section id="tutorial" class="card" aria-labelledby="tutorial-title">
+      <div class="card__header">
+        <h2 id="tutorial-title">Guidet tutorial – I Do → We Do → You Do</h2>
+        <p>Følg forløbet trin for trin. Hold musen over <span class="gloss" data-term="koefficient">fagord</span> for forklaringer.</p>
+      </div>
+
+      <ol class="tutorial-steps" role="list">
+        <li id="tutorial-single-equation" class="tutorial-step" data-stage="i-do">
+          <header>
+            <h3>I Do · Enkeltligninger</h3>
+            <p data-detail="Husk at gøre det samme på begge sider for at bevare lighed." class="lead">En ligning som <code>ax + b = c</code> løses ved at isolere <span class="gloss" data-term="variabel">variablen</span>.</p>
+          </header>
+          <ol>
+            <li>Flyt konstanter væk fra venstresiden ved at lægge det modsatte tal til på begge sider.</li>
+            <li>Divider eller gang for at få <em>x</em> alene.</li>
+            <li>Kontrollér løsningen ved indsættelse.</li>
+          </ol>
+          <button class="graph-link" data-graph="single" data-preset='{"a":2,"b":3,"c":11}'>Se det på grafen</button>
+        </li>
+
+        <li id="tutorial-parentheses" class="tutorial-step" data-stage="we-do">
+          <header>
+            <h3>We Do · Parenteser og brøker</h3>
+            <p data-detail="Brug distributiv lov og fællesnævner før isolering." class="lead">Parenteser og brøker håndteres, før variablen isoleres.</p>
+          </header>
+          <ol>
+            <li>Udvid parenteser (fx <code>k(a + b) = ka + kb</code>).</li>
+            <li>Saml brøker med fællesnævner.</li>
+            <li>Løs den nye enkeltligning.</li>
+          </ol>
+          <button class="graph-link" data-graph="single" data-preset='{"a":1.5,"b":-4,"c":5}'>Se det på grafen</button>
+        </li>
+
+        <li id="tutorial-two-equations" class="tutorial-step" data-stage="you-do">
+          <header>
+            <h3>You Do · Systemer med substitution</h3>
+            <p data-detail="Vælg den letteste ligning at isolere først." class="lead">Erstat én variabel med et udtryk fra en anden ligning.</p>
+          </header>
+          <ol>
+            <li>Isolér en variabel i den ene ligning.</li>
+            <li>Indsæt udtrykket i den anden ligning.</li>
+            <li>Regn løsningen og indsæt tilbage.</li>
+          </ol>
+          <button class="graph-link" data-graph="system" data-preset='{"a1":1,"b1":2,"c1":8,"a2":2,"b2":-1,"c2":3}'>Se det på grafen</button>
+        </li>
+
+        <li id="tutorial-elimination" class="tutorial-step" data-stage="we-do">
+          <header>
+            <h3>We Do · Elimination</h3>
+            <p data-detail="Multiplicér så koefficienterne bliver ens (evt. med fortegn)." class="lead">Fjern en variabel ved at lægge ligninger sammen eller trække fra.</p>
+          </header>
+          <ol>
+            <li>Gør koefficienterne ens.</li>
+            <li>Plus/minus ligningerne for at eliminere variablen.</li>
+            <li>Løs den tilbageværende ligning.</li>
+          </ol>
+          <button class="graph-link" data-graph="system" data-preset='{"a1":3,"b1":-2,"c1":4,"a2":2,"b2":1,"c2":9}'>Se det på grafen</button>
+        </li>
+
+        <li id="tutorial-graph" class="tutorial-step" data-stage="i-do">
+          <header>
+            <h3>I Do · Grafisk løsning</h3>
+            <p data-detail="Skriv ligningen som y = ax + b for at aflæse hældning og skæring." class="lead">Skæringspunktet viser løsningen. Parallelle linjer ⇒ ingen løsning.</p>
+          </header>
+          <button class="graph-link" data-graph="system" data-preset='{"a1":1,"b1":-3,"c1":6,"a2":1,"b2":-3,"c2":2}'>Se det på grafen</button>
+        </li>
+
+        <li id="tutorial-models" class="tutorial-step" data-stage="we-do">
+          <header>
+            <h3>We Do · Proportionale &amp; lineære modeller</h3>
+            <p data-detail="Break-even findes hvor to funktioner har samme værdi." class="lead">Brug modeller til at sammenligne løsninger i data-scenarier.</p>
+          </header>
+          <button class="graph-link" data-graph="model" data-preset='{"a":15,"b":200,"a2":10,"b2":400}'>Se det på grafen</button>
+        </li>
+
+        <li id="tutorial-pitfalls" class="tutorial-step" data-stage="you-do">
+          <header>
+            <h3>You Do · Typiske fejl</h3>
+          </header>
+          <ul class="pitfalls">
+            <li><strong>Fortegn:</strong> skift fortegn ved at gange med −1.</li>
+            <li><strong>Brøker:</strong> divider ikke med brøk – gang med den omvendte.</li>
+            <li><strong>Parallelle linjer:</strong> samme hældning, forskellig skæring ⇒ ingen løsning.</li>
+            <li><strong>Sammenfaldende linjer:</strong> samme hældning og skæring ⇒ uendeligt mange løsninger.</li>
+          </ul>
+          <button class="graph-link" data-graph="system" data-preset='{"a1":2,"b1":-4,"c1":6,"a2":1,"b2":-2,"c2":3}'>Se det på grafen</button>
+        </li>
+      </ol>
+
+      <aside id="glossary" aria-label="Gloseliste" class="card__aside">
+        <h3>Gloser</h3>
+        <dl>
+          <dt id="gloss-koefficient">Koefficient</dt>
+          <dd>Tallet foran variablen, fx 3 i 3x.</dd>
+          <dt id="gloss-variabel">Variabel</dt>
+          <dd>Det symbol (oftest x eller y) vi skal bestemme.</dd>
+          <dt id="gloss-break-even">Break-even</dt>
+          <dd>Det punkt hvor to modeller giver samme resultat.</dd>
+          <dt>Elimination</dt>
+          <dd>Metode hvor én variabel fjernes ved addition/subtraktion.</dd>
+        </dl>
+      </aside>
+    </section>
+
+    <section id="visualisering" class="card" aria-labelledby="visualisering-title">
+      <div class="card__header">
+        <h2 id="visualisering-title">Visualisering – tegn og undersøg</h2>
+        <p>Justér skydeknapperne. Snap-til-heltal aktiveres automatisk for skæringer.</p>
+      </div>
+      <div class="visual-panel">
+        <div class="visual-panel__controls" role="group" aria-label="Koefficienter for linjer">
+          <label for="line1-slope">Hældning a₁
+            <input type="range" id="line1-slope" min="-5" max="5" step="0.1" value="1" aria-valuetext="Hældning for første linje">
+          </label>
+          <label for="line1-intercept">Skæring b₁
+            <input type="range" id="line1-intercept" min="-10" max="10" step="1" value="0" aria-valuetext="Skæring for første linje">
+          </label>
+          <label for="line2-slope">Hældning a₂
+            <input type="range" id="line2-slope" min="-5" max="5" step="0.1" value="-1" aria-valuetext="Hældning for anden linje">
+          </label>
+          <label for="line2-intercept">Skæring b₂
+            <input type="range" id="line2-intercept" min="-10" max="10" step="1" value="4" aria-valuetext="Skæring for anden linje">
+          </label>
+          <div class="visual-panel__actions">
+            <button id="snap-integers" class="chip">Snap til heltal</button>
+            <button id="reset-graph" class="chip">Nulstil</button>
+          </div>
+        </div>
+        <div class="visual-panel__output">
+          <canvas id="graph" width="640" height="420" role="img" aria-label="Koordinatsystem for to linjer"></canvas>
+          <div class="graph-info" role="status" aria-live="polite">
+            <p id="intersection">Skæringspunkt vises her.</p>
+            <p id="diagnostic">Status vises her.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="simulationer" class="card" aria-labelledby="simulation-title">
+      <div class="card__header">
+        <h2 id="simulation-title">Simulationer fra IT-arbejdet</h2>
+        <p>Virkelighedsnære cases med mulighed for at udforske <button class="inline-link" data-sim-math>matematikken bag</button>.</p>
+      </div>
+      <div class="simulation-layout">
+        <div class="simulation-layout__selector">
+          <label for="scenario-select">Scenarie</label>
+          <select id="scenario-select" aria-describedby="scenario-help">
+            <option value="cloud">Cloud-priser</option>
+            <option value="bandwidth">Netværksbåndbredde</option>
+            <option value="server">Serverkapacitet</option>
+            <option value="backup">Backup-vindue</option>
+            <option value="helpdesk">Helpdesk-plan</option>
+          </select>
+          <p id="scenario-help" class="small">Brug tab for at skifte parameter, enter for at vise matematikken.</p>
+        </div>
+        <div class="simulation-layout__controls" role="group" aria-label="Parametre for scenarie">
+          <div class="control-field">
+            <label for="param-a" id="param-a-label">Parameter A</label>
+            <input type="range" id="param-a" min="0" max="600" step="10" value="200">
+          </div>
+          <div class="control-field">
+            <label for="param-b" id="param-b-label">Parameter B</label>
+            <input type="range" id="param-b" min="0" max="600" step="10" value="120">
+          </div>
+          <div class="control-field">
+            <label for="param-c" id="param-c-label">Parameter C</label>
+            <input type="range" id="param-c" min="0" max="600" step="10" value="60">
+          </div>
+          <button id="show-math" class="chip">Vis matematikken bag</button>
+        </div>
+        <div class="simulation-layout__details">
+          <h3 id="scenario-title">Vælg scenarie</h3>
+          <p id="scenario-description">Skift scenarie for at se, hvordan lineære modeller bruges i praksis.</p>
+          <pre id="scenario-math" aria-live="polite"></pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="opgaver" class="card" aria-labelledby="opgaver-title">
+      <div class="card__header">
+        <h2 id="opgaver-title">Opgaver – øv dig og få feedback</h2>
+        <p>Filtrér efter niveau og færdigheder. Feedback gives i tre dele hver gang.</p>
+      </div>
+      <div class="task-toolbar">
+        <label for="filter-difficulty">Niveau</label>
+        <select id="filter-difficulty">
+          <option value="alle">Alle</option>
+          <option value="R">Rød (let)</option>
+          <option value="G">Gul (mellem)</option>
+          <option value="Gr">Grøn (udfordrende)</option>
+        </select>
+        <label for="filter-skill">Færdighed</label>
+        <select id="filter-skill">
+          <option value="alle">Alle</option>
+        </select>
+        <span class="task-count" id="task-count" aria-live="polite"></span>
+      </div>
+      <div id="task-grid" role="list" aria-label="Tilgængelige opgaver"></div>
+
+      <article id="task-player" class="task-player" aria-labelledby="task-title" hidden>
+        <header>
+          <h3 id="task-title">Vælg en opgave</h3>
+          <p id="task-meta" class="small"></p>
+        </header>
+        <div id="task-prompt" class="task-prompt"></div>
+        <nav id="task-links" class="task-links" hidden aria-label="Hjælpemenu"></nav>
+        <form id="task-form" novalidate>
+          <label for="task-answer" id="task-answer-label">Skriv dit svar</label>
+          <input id="task-answer" name="task-answer" type="text" autocomplete="off" required aria-describedby="task-format">
+          <p id="task-format" class="small"></p>
+          <div class="task-actions">
+            <button type="submit" class="primary">Tjek svar</button>
+            <button type="button" id="hint-button" class="secondary">Få hint</button>
+            <button type="button" id="solution-button" class="secondary">Vis løsning</button>
+          </div>
+        </form>
+        <div id="task-feedback" class="task-feedback" role="alert" aria-live="assertive"></div>
+        <div id="task-hints" class="task-hints" aria-live="polite"></div>
+      </article>
+    </section>
+
+    <section id="fejlbank" class="card" aria-labelledby="fejlbank-title">
+      <div class="card__header">
+        <h2 id="fejlbank-title">Fejlbank – kend de klassiske faldgruber</h2>
+      </div>
+      <ul class="error-list">
+        <li><strong>Fejl:</strong> Flytter tal uden at ændre fortegn. <strong>Råd:</strong> Gør det modsatte på begge sider.</li>
+        <li><strong>Fejl:</strong> Dividerer direkte med en brøk. <strong>Råd:</strong> Gang med den omvendte brøk.</li>
+        <li><strong>Fejl:</strong> Antar en løsning for parallelle linjer. <strong>Råd:</strong> Tjek hældningerne.</li>
+        <li><strong>Fejl:</strong> Bytter rundt på koordinater. <strong>Råd:</strong> Skriv altid (x; y).</li>
+      </ul>
+    </section>
+
+    <section id="progression" class="card" aria-labelledby="progression-title">
+      <div class="card__header">
+        <h2 id="progression-title">Din progression</h2>
+        <p>Gemmes kun i din browser. Nulstil når du vil starte forfra.</p>
+      </div>
+      <div class="progress-wrapper" role="img" aria-label="Fuldførte opgaver i procent">
+        <div id="progress-bar" class="progress-bar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+      </div>
+      <div class="progress-actions">
+        <button id="reset-progress" class="chip">Nulstil progression</button>
+        <button id="download-log" class="chip">Download anonym log</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer" role="contentinfo">
+    <p>Udviklet til Matematik D · EUD. Del og tilpas gerne.</p>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
