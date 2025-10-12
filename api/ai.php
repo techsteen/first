@@ -13,35 +13,96 @@ if (!$input) {
     exit;
 }
 
-function loadConfigData(): array
+function cleanPath($path)
 {
-    $candidates = [];
+    return rtrim(str_replace('\\', '/', (string) $path), '/');
+}
+
+function candidateConfigPaths()
+{
+    $candidates = array();
+
     $envPath = getenv('OPENAI_CONFIG_PATH');
-    if ($envPath) {
+    if (is_string($envPath) && $envPath !== '') {
         $candidates[] = $envPath;
     }
 
-    $searchRoots = array_filter([
+    $envDir = getenv('OPENAI_CONFIG_DIR');
+    if (is_string($envDir) && $envDir !== '') {
+        $candidates[] = rtrim($envDir, "/\\");
+    }
+
+    $configDir = getenv('CONFIG_DIR');
+    if (is_string($configDir) && $configDir !== '') {
+        $candidates[] = rtrim($configDir, "/\\");
+    }
+
+    $roots = array(
         __DIR__,
         dirname(__DIR__),
-        dirname(__DIR__, 2),
-        isset($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') : null
-    ]);
+        dirname(__DIR__, 2)
+    );
+    if (!empty($_SERVER['DOCUMENT_ROOT'])) {
+        $roots[] = rtrim($_SERVER['DOCUMENT_ROOT'], "/\\");
+    }
 
-    foreach ($searchRoots as $root) {
+    foreach ($roots as $root) {
+        if (!$root) {
+            continue;
+        }
+        $root = rtrim($root, "/\\");
         $candidates[] = $root . '/config/config.php';
         $candidates[] = $root . '/Config/config.php';
         $candidates[] = $root . '/config.php';
         $candidates[] = $root . '/Config.php';
+        $candidates[] = $root . '/config';
+        $candidates[] = $root . '/Config';
     }
 
+    return $candidates;
+}
+
+function loadConfigData()
+{
+    $candidates = candidateConfigPaths();
+    $seen = array();
+
     foreach ($candidates as $candidate) {
-        if (!$candidate || !is_file($candidate)) {
+        if (!is_string($candidate) || $candidate === '') {
+            continue;
+        }
+
+        $candidate = cleanPath($candidate);
+        if (isset($seen[$candidate])) {
+            continue;
+        }
+        $seen[$candidate] = true;
+
+        $file = null;
+        if (is_file($candidate)) {
+            $file = $candidate;
+        } elseif (is_dir($candidate)) {
+            $dir = $candidate;
+            $options = array(
+                $dir . '/config.php',
+                $dir . '/Config.php',
+                $dir . '/openai.php',
+                $dir . '/config/config.php'
+            );
+            foreach ($options as $option) {
+                if (is_file($option)) {
+                    $file = $option;
+                    break;
+                }
+            }
+        }
+
+        if (!$file) {
             continue;
         }
 
         unset($config, $loaded);
-        $loaded = require $candidate;
+        $loaded = require $file;
 
         $data = null;
         if (is_array($loaded)) {
@@ -53,11 +114,11 @@ function loadConfigData(): array
         }
 
         if (is_array($data) && !empty($data)) {
-            return ['data' => $data, 'source' => $candidate];
+            return array('data' => $data, 'source' => $file);
         }
     }
 
-    return ['data' => [], 'source' => null];
+    return array('data' => array(), 'source' => null);
 }
 
 function resolveConfigValue(array $config, array $keys)
@@ -68,14 +129,20 @@ function resolveConfigValue(array $config, array $keys)
         }
     }
 
-    if (isset($config['openai']) && is_array($config['openai'])) {
+    $sectionNames = array('openai', 'OPENAI');
+    foreach ($sectionNames as $sectionName) {
+        if (!isset($config[$sectionName]) || !is_array($config[$sectionName])) {
+            continue;
+        }
+        $section = $config[$sectionName];
+        $sectionLower = array_change_key_case($section, CASE_LOWER);
         foreach ($keys as $key) {
             $normalized = strtolower($key);
-            if (array_key_exists($key, $config['openai']) && $config['openai'][$key] !== null) {
-                return $config['openai'][$key];
+            if (array_key_exists($key, $section) && $section[$key] !== null && $section[$key] !== '') {
+                return $section[$key];
             }
-            if (array_key_exists($normalized, $config['openai']) && $config['openai'][$normalized] !== null) {
-                return $config['openai'][$normalized];
+            if (array_key_exists($normalized, $sectionLower) && $sectionLower[$normalized] !== null && $sectionLower[$normalized] !== '') {
+                return $sectionLower[$normalized];
             }
         }
     }
