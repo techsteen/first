@@ -22,7 +22,8 @@
       identifier: /^[A-Za-z_][A-Za-z0-9_]*/
     };
     const operators = ['<=','>=','==','!=','&&','||','++','--'];
-    const singles = ['{','}','(',')',';','+','-','*','/','%','<','>','=','!','&','|',',','.'];
+    const punctuators = new Set(['{','}','(',')',';',',']);
+    const singleOperators = new Set(['+','-','*','/','%','<','>','=','!','&','|']);
     let i = 0;
     while (i < cleaned.length){
       const char = cleaned[i];
@@ -37,8 +38,18 @@
         }
       }
       if (matched) continue;
-      if (singles.includes(char)){
+      if (punctuators.has(char)){
         tokens.push({type: char, value: char});
+        i++;
+        continue;
+      }
+      if (char === '.'){
+        tokens.push({type:'.', value:'.'});
+        i++;
+        continue;
+      }
+      if (singleOperators.has(char)){
+        tokens.push({type:'operator', value:char});
         i++;
         continue;
       }
@@ -480,14 +491,14 @@
   function parseStudentCode(code){
     const cleaned = stripComments(code);
     const {code: withoutGlobals, globals} = extractGlobalConstants(cleaned);
-    const setupMatch = withoutGlobals.match(/public\s+static\s+void\s+Setup\s*\(\s*\)\s*\{([\s\S]*?)\}/);
-    const tickMatch = withoutGlobals.match(/public\s+static\s+void\s+Tick\s*\(\s*int\s+\w+\s*\)\s*\{([\s\S]*?)\}/);
-    if (!setupMatch) throw new Error('Kunne ikke finde Setup().');
-    if (!tickMatch) throw new Error('Kunne ikke finde Tick(int dt).');
+    const setupSection = extractFunctionBody(withoutGlobals, /public\s+static\s+void\s+Setup\s*\(\s*\)\s*\{/i);
+    const tickSection = extractFunctionBody(withoutGlobals, /public\s+static\s+void\s+Tick\s*\(\s*int\s+\w+\s*\)\s*\{/i);
+    if (!setupSection) throw new Error('Kunne ikke finde Setup().');
+    if (!tickSection) throw new Error('Kunne ikke finde Tick(int dt).');
 
     const globalInject = globals.map(g => `${g.varType} ${g.name} = ${g.value};`).join('\n');
-    const setupTokens = tokenize(globalInject + '\n' + setupMatch[1]);
-    const tickTokens = tokenize(globalInject + '\n' + tickMatch[1]);
+    const setupTokens = tokenize(globalInject + (globalInject ? '\n' : '') + setupSection.body);
+    const tickTokens = tokenize(globalInject + (globalInject ? '\n' : '') + tickSection.body);
     const setupAst = new Parser(setupTokens).parseProgram();
     const tickAst = new Parser(tickTokens).parseProgram();
 
@@ -503,6 +514,27 @@
       return '';
     });
     return {code: cleaned, globals};
+  }
+
+  function extractFunctionBody(code, signatureRegex){
+    const match = signatureRegex.exec(code);
+    if (!match) return null;
+    let index = match.index + match[0].length;
+    const bodyStart = index;
+    let depth = 1;
+    while (index < code.length){
+      const char = code[index];
+      if (char === '{'){
+        depth++;
+      } else if (char === '}'){
+        depth--;
+        if (depth === 0){
+          return {body: code.slice(bodyStart, index)};
+        }
+      }
+      index++;
+    }
+    throw new Error('Manglede afsluttende } for funktion.');
   }
 
   function simulate(parsed, task){
