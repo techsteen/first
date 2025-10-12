@@ -75,6 +75,8 @@
     const desc = document.getElementById('taskDescription');
     desc.textContent = currentTask.description;
     renderCriteria(currentTask.criteria);
+    renderConcepts(currentTask.concepts);
+    renderResults([]);
     renderChecklist([]);
     document.getElementById('aiFeedback').textContent = '';
     updatePseudocode(currentTask.pseudocode);
@@ -91,6 +93,21 @@
     });
   }
 
+  function renderConcepts(concepts){
+    const list = document.getElementById('conceptList');
+    list.innerHTML = '';
+    const defaults = [
+      'RotateTo(vinkel) sætter et mål. Simulatoren drejer stille og roligt mod målet med den hastighed, du sidst satte med SetSpeed.',
+      'Overshoot er hvor mange grader vi glider forbi målet efter vi første gang rammer det. Mindre overshoot betyder roligere stop.'
+    ];
+    const items = Array.isArray(concepts) && concepts.length ? concepts : defaults;
+    items.forEach(text => {
+      const li = document.createElement('li');
+      li.textContent = text;
+      list.appendChild(li);
+    });
+  }
+
   function renderChecklist(results){
     const list = document.getElementById('checklist');
     list.innerHTML = '';
@@ -98,7 +115,9 @@
       const result = results.find(r => r.name === test.name);
       const li = document.createElement('li');
       li.textContent = test.label;
-      if (result?.pass){
+      if (!result){
+        li.classList.add('check-pending');
+      } else if (result.pass){
         li.classList.add('check-pass');
       } else {
         li.classList.add('check-fail');

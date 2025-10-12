@@ -2,11 +2,16 @@
   {
     "id": "task1",
     "title": "Roter til 90°",
-    "description": "Få kranarmen til at rotere stabilt til 90° ved hjælp af Setup/Tick.",
+    "description": "Før armen roligt fra udgangspositionen op til 90°. Brug små justeringer tæt på målet.",
     "criteria": [
-      "Brug SetSpeed til at sætte passende hastighed.",
-      "Rotér armen til 90° uden at overskride tolerancen.",
-      "Hold armen stabil efter målet er nået."
+      "Brug SetSpeed til at styre hvor hurtigt armen må køre.",
+      "Kald RotateTo(90) for at sigte mod målvinklen.",
+      "Sørg for et blødt stop så overshoot forbliver lavt."
+    ],
+    "concepts": [
+      "RotateTo(90) betyder: \"styr armen mod 90°\". Simulatoren bevæger sig automatisk i den retning indtil du vælger et nyt mål.",
+      "SetSpeed(n) sætter en maksimal hastighed. Lavere tal gør det lettere at ramme målet uden hop.",
+      "Overshoot måler hvor mange grader vi glider forbi 90° efter første ramt mål. Målet er under 3°."
     ],
     "pseudocode": "// Start hastighed\npublic static void Setup() {\n  SetSpeed(15);\n}\n\n// Kørsel: Bevæg mod 90° og stop når målet er nået\npublic static void Tick(int dt) {\n  if (GetAngle() < 88) {\n    RotateTo(90);\n  } else if (GetAngle() > 92) {\n    RotateTo(90);\n  } else {\n    SetSpeed(4);\n  }\n}",
     "maxDurationMs": 7000,
@@ -19,11 +24,16 @@
   {
     "id": "task2",
     "title": "Løft til 2.0 m",
-    "description": "Brug løfte-API'et til at hæve krogen til 2 meter uden at gå i rød zone.",
+    "description": "Løft krogen støt op til 2.0 meter og hold den stille uden at ramme rød sikkerhed.",
     "criteria": [
-      "Sæt en moderat hastighed i Setup().",
-      "Løft krogen til 2.0 m i Tick().",
-      "Undgå at sikkerhedsindikatoren bliver rød."
+      "Vælg en rolig hastighed i Setup().",
+      "Brug LiftTo(2.0) til at bede simulatoren om målhøjden.",
+      "Hold farten nede så sikkerhedslyset forbliver grønt eller gult."
+    ],
+    "concepts": [
+      "LiftTo(højde) fungerer ligesom RotateTo men for krogens højde.",
+      "Du kan ændre hastigheden undervejs ved at kalde SetSpeed igen, fx lavere hastighed tæt på 2.0 m.",
+      "Sikkerhedsindikatoren bliver gul ved hurtige bevægelser og rød hvis det går alt for stærkt."
     ],
     "pseudocode": "public static void Setup() {\n  SetSpeed(10);\n}\n\npublic static void Tick(int dt) {\n  double h = GetHeight();\n  if (h < 1.95) {\n    LiftTo(2.0);\n  } else {\n    SetSpeed(5);\n  }\n}",
     "maxDurationMs": 8000,
@@ -36,11 +46,16 @@
   {
     "id": "task3",
     "title": "Sekvens: 135°/45° + løft",
-    "description": "Roter til 135°, løft 1.5 m, hold en kort pause, roter til 45° og løft til 2.0 m.",
+    "description": "Lav en trinvis plan: først 135°, derefter løft til 1.5 m, og til sidst 45° samt 2.0 m.",
     "criteria": [
-      "Håndter flere mål i rækkefølge.",
-      "Undgå overshoot og hold steady.",
-      "Sørg for sikker kørsel gennem hele sekvensen."
+      "Brug if-else til at tjekke hvad der mangler i rækkefølgen.",
+      "Sænk hastigheden før hvert mål for at undgå store overshoots.",
+      "Hold øje med sikkerhedsfarven gennem hele forløbet."
+    ],
+    "concepts": [
+      "Du kan opdele logikken i små \"trin\" ved at returnere tidligt i Tick, så kun ét mål styres ad gangen.",
+      "Når du har nået en vinkel eller højde, så sæt et nyt mål – simulatoren husker ikke gamle ønsker.",
+      "Hvis sikkerheden bliver gul eller rød, kan du prøve at sænke hastigheden inden næste bevægelse."
     ],
     "pseudocode": "public static void Setup() {\n  SetSpeed(14);\n}\n\npublic static void Tick(int dt) {\n  if (GetAngle() < 134) {\n    RotateTo(135);\n    return;\n  }\n  if (GetHeight() < 1.5) {\n    LiftTo(1.5);\n    return;\n  }\n  if (GetAngle() > 46) {\n    RotateTo(45);\n    return;\n  }\n  if (GetHeight() < 2.0) {\n    LiftTo(2.0);\n  }\n}",
     "maxDurationMs": 12000,

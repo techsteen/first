@@ -40,11 +40,44 @@
   }
 
   function overshoot(timeline, spec){
-    const target = spec.target || 0;
+    if (!timeline.length){
+      return {pass:false, detail:'Ingen data til overshoot-måling.'};
+    }
+    const target = spec.target ?? 0;
     const maxDeg = spec.maxDeg ?? 5;
-    const max = timeline.reduce((m, sample) => Math.max(m, Math.abs(sample.angle - target)), 0);
-    const pass = max <= maxDeg;
-    return {pass, detail: `Maks afvigelse ${max.toFixed(2)}° (grænse ${maxDeg}°).`};
+    const hitTol = spec.hitTolerance ?? 2;
+    const startAngle = timeline[0]?.angle ?? target;
+    const expectingIncrease = startAngle <= target;
+
+    let firstHitIndex = timeline.findIndex(sample => Math.abs(sample.angle - target) <= hitTol);
+    if (firstHitIndex === -1){
+      return {pass:false, detail:'Målet blev ikke ramt, så overshoot kan ikke vurderes.'};
+    }
+
+    let overshootAmount = 0;
+    for (let i = firstHitIndex; i < timeline.length; i++){
+      const sample = timeline[i];
+      const diff = sample.angle - target;
+      if (expectingIncrease){
+        if (diff > overshootAmount){
+          overshootAmount = diff;
+        }
+      } else {
+        const below = target - sample.angle;
+        if (below > overshootAmount){
+          overshootAmount = below;
+        }
+      }
+    }
+
+    const pass = overshootAmount <= maxDeg + 1e-6;
+    const overshootText = overshootAmount.toFixed(2);
+    return {
+      pass,
+      detail: pass
+        ? `Overshoot ${overshootText}° (grænse ${maxDeg}°).`
+        : `Overshoot ${overshootText}° overskrider grænsen på ${maxDeg}°.`
+    };
   }
 
   function steadyState(timeline, spec){
