@@ -14,14 +14,14 @@ if (!$input) {
 }
 
 $candidateConfigs = [
-    __DIR__ . '/../config/OPENAI_KEY.php',
-    __DIR__ . '/../Config/OPENAI_KEY.php',
     __DIR__ . '/../config/config.php',
     __DIR__ . '/../Config/config.php',
-    __DIR__ . '/../../config/OPENAI_KEY.php',
-    __DIR__ . '/../../Config/OPENAI_KEY.php',
     __DIR__ . '/../../config/config.php',
-    __DIR__ . '/../../Config/config.php'
+    __DIR__ . '/../../Config/config.php',
+    __DIR__ . '/../config/OPENAI_KEY.php',
+    __DIR__ . '/../Config/OPENAI_KEY.php',
+    __DIR__ . '/../../config/OPENAI_KEY.php',
+    __DIR__ . '/../../Config/OPENAI_KEY.php'
 ];
 
 $configPath = null;
@@ -36,23 +36,24 @@ if ($configPath) {
     $loaded = require $configPath;
 }
 
+$configData = [];
+if (isset($loaded) && is_array($loaded)) {
+    $configData = $loaded;
+} elseif (isset($config) && is_array($config)) {
+    $configData = $config;
+}
+
 $apiKey = null;
 if (defined('OPENAI_API_KEY')) {
     $apiKey = OPENAI_API_KEY;
-} elseif (isset($loaded) && is_array($loaded)) {
-    $apiKey = $loaded['OPENAI_API_KEY']
-        ?? $loaded['openai_api_key']
-        ?? $loaded['OPENAI_KEY']
-        ?? $loaded['openai_key']
-        ?? null;
-} elseif (isset($config) && is_array($config)) {
-    $apiKey = $config['OPENAI_API_KEY']
-        ?? $config['openai_api_key']
-        ?? $config['OPENAI_KEY']
-        ?? $config['openai_key']
+}
+if (!$apiKey && !empty($configData)) {
+    $apiKey = $configData['OPENAI_API_KEY']
+        ?? $configData['openai_api_key']
+        ?? $configData['OPENAI_KEY']
+        ?? $configData['openai_key']
         ?? null;
 }
-
 if (!$apiKey) {
     $envKey = getenv('OPENAI_API_KEY');
     if ($envKey) {
@@ -62,8 +63,31 @@ if (!$apiKey) {
 
 if (!$apiKey) {
     http_response_code(500);
-    echo json_encode(['error' => 'API-nøglen er ikke sat. Placer OPENAI_KEY.php eller config.php med OPENAI_API_KEY i config/ eller Config/, eller angiv miljøvariablen OPENAI_API_KEY.']);
+    echo json_encode(['error' => 'API-nøglen er ikke sat. Tilføj config/config.php med OPENAI_API_KEY eller sæt miljøvariablen OPENAI_API_KEY.']);
     exit;
+}
+
+$model = $configData['OPENAI_MODEL']
+    ?? getenv('OPENAI_MODEL')
+    ?? 'gpt-4.1-mini';
+
+$baseUrl = $configData['OPENAI_BASE']
+    ?? getenv('OPENAI_BASE')
+    ?? 'https://api.openai.com/v1';
+
+$timeout = $configData['TIMEOUT']
+    ?? getenv('OPENAI_TIMEOUT')
+    ?? 20;
+$timeout = (int) $timeout;
+if ($timeout <= 0) {
+    $timeout = 20;
+}
+
+$caBundle = $configData['CA_BUNDLE']
+    ?? getenv('OPENAI_CA_BUNDLE')
+    ?? null;
+if ($caBundle && !is_string($caBundle)) {
+    $caBundle = null;
 }
 
 $executionMode = $input['execution_mode'] ?? 'deterministic';
@@ -86,7 +110,7 @@ $userContent = json_encode([
 ], JSON_PRETTY_PRINT);
 
 $payload = [
-    'model' => 'gpt-4.1-mini',
+    'model' => $model,
     'messages' => [
         ['role' => 'system', 'content' => $systemPrompt],
         ['role' => 'user', 'content' => $userContent]
@@ -98,7 +122,8 @@ $payload = [
 ];
 
 try {
-    $ch = curl_init('https://api.openai.com/v1/chat/completions');
+    $endpoint = rtrim($baseUrl, '/') . '/chat/completions';
+    $ch = curl_init($endpoint);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER => [
@@ -107,8 +132,11 @@ try {
         ],
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => json_encode($payload),
-        CURLOPT_TIMEOUT => 20
+        CURLOPT_TIMEOUT => $timeout
     ]);
+    if ($caBundle && is_file($caBundle)) {
+        curl_setopt($ch, CURLOPT_CAINFO, $caBundle);
+    }
     $response = curl_exec($ch);
     if ($response === false) {
         throw new Exception('Ingen svar fra OpenAI.');
