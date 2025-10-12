@@ -53,6 +53,7 @@
         <button id="runButton" type="button">KØR</button>
         <button id="stopButton" type="button">STOP</button>
         <button id="resetButton" type="button">NULSTIL</button>
+        <button id="pseudoButton" type="button">PSEUDOKODE</button>
         <label class="toggle">
           <input type="checkbox" id="aiToggle">
           <span>AI-Emulation</span>
@@ -72,5 +73,14 @@
   <script src="assets/sim.js"></script>
   <script src="assets/anim.js"></script>
   <script src="assets/tests.js"></script>
+  <div id="pseudoModal" class="modal" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="pseudoTitle">
+      <div class="modal-header">
+        <h2 id="pseudoTitle">Pseudokode eksempel</h2>
+        <button id="pseudoClose" type="button" aria-label="Luk">×</button>
+      </div>
+      <pre id="pseudoBody"></pre>
+    </div>
+  </div>
 </body>
 </html>

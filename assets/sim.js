@@ -1,5 +1,10 @@
 (function(){
   const API_FUNCTIONS = ['SetSpeed','Rotate','RotateTo','Lift','LiftTo','GetAngle','GetHeight','IsSafe'];
+  const MATH_FUNCTIONS = {
+    'Math.Abs': Math.abs,
+    'Math.Max': Math.max,
+    'Math.Min': Math.min
+  };
   const LOOP_LIMIT = 2048;
 
   function stripComments(code){
@@ -12,12 +17,12 @@
     const tokens = [];
     const cleaned = code;
     const patterns = {
-      whitespace: /\s+/, 
+      whitespace: /\s+/,
       number: /^(?:\d+\.\d+|\d+\.\d*|\d*\.\d+|\d+)/,
       identifier: /^[A-Za-z_][A-Za-z0-9_]*/
     };
     const operators = ['<=','>=','==','!=','&&','||','++','--'];
-    const singles = ['{','}','(',')',';','+','-','*','/','%','<','>','=','!','&','|',','];
+    const singles = ['{','}','(',')',';','+','-','*','/','%','<','>','=','!','&','|',',','.'];
     let i = 0;
     while (i < cleaned.length){
       const char = cleaned[i];
@@ -296,7 +301,11 @@
         return expr;
       }
       if (token.type === 'identifier'){
-        const name = token.value;
+        let name = token.value;
+        while (this.match('.')){
+          const next = this.expect('identifier');
+          name += '.' + next.value;
+        }
         if (this.match('(')){
           const args = [];
           if (!this.match(')')){
@@ -305,7 +314,7 @@
             } while (this.match(','));
             this.expect(')');
           }
-          if (!API_FUNCTIONS.includes(name)){
+          if (!API_FUNCTIONS.includes(name) && !Object.prototype.hasOwnProperty.call(MATH_FUNCTIONS, name)){
             throw new Error('Ukendt funktionskald: ' + name);
           }
           return {type:'call', name, args};
@@ -383,7 +392,7 @@
         }
       }
       case 'call': {
-        const fn = ctx.api[expr.name];
+        const fn = ctx.api[expr.name] || (ctx.math && ctx.math[expr.name]);
         if (!fn) throw new Error('Ikke tilladt API: ' + expr.name);
         const args = expr.args.map(arg => evaluate(arg, env, ctx));
         return fn.apply(null, args);
@@ -470,17 +479,30 @@
 
   function parseStudentCode(code){
     const cleaned = stripComments(code);
-    const setupMatch = cleaned.match(/public\s+static\s+void\s+Setup\s*\(\s*\)\s*\{([\s\S]*?)\}/);
-    const tickMatch = cleaned.match(/public\s+static\s+void\s+Tick\s*\(\s*int\s+\w+\s*\)\s*\{([\s\S]*?)\}/);
+    const {code: withoutGlobals, globals} = extractGlobalConstants(cleaned);
+    const setupMatch = withoutGlobals.match(/public\s+static\s+void\s+Setup\s*\(\s*\)\s*\{([\s\S]*?)\}/);
+    const tickMatch = withoutGlobals.match(/public\s+static\s+void\s+Tick\s*\(\s*int\s+\w+\s*\)\s*\{([\s\S]*?)\}/);
     if (!setupMatch) throw new Error('Kunne ikke finde Setup().');
     if (!tickMatch) throw new Error('Kunne ikke finde Tick(int dt).');
 
-    const setupTokens = tokenize(setupMatch[1]);
-    const tickTokens = tokenize(tickMatch[1]);
+    const globalInject = globals.map(g => `${g.varType} ${g.name} = ${g.value};`).join('\n');
+    const setupTokens = tokenize(globalInject + '\n' + setupMatch[1]);
+    const tickTokens = tokenize(globalInject + '\n' + tickMatch[1]);
     const setupAst = new Parser(setupTokens).parseProgram();
     const tickAst = new Parser(tickTokens).parseProgram();
 
-    return {setup: setupAst, tick: tickAst};
+    return {setup: setupAst, tick: tickAst, globals};
+  }
+
+  function extractGlobalConstants(code){
+    const globals = [];
+    const pattern = /(const|static\s+readonly)\s+(int|double|bool)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^;]+);/gi;
+    const cleaned = code.replace(pattern, (_, __, type, name, value) => {
+      const varType = String(type).toLowerCase();
+      globals.push({varType, name, value: value.trim()});
+      return '';
+    });
+    return {code: cleaned, globals};
   }
 
   function simulate(parsed, task){
@@ -503,8 +525,9 @@
     const api = createApi(state, commandLog);
     const globalEnv = new Environment();
     globalEnv.define('dt', dt);
+    const ctxBase = {api, math: MATH_FUNCTIONS};
     try {
-      executeBlock(parsed.setup, globalEnv, {api}, true);
+      executeBlock(parsed.setup, globalEnv, ctxBase, true);
     } catch (err){
       throw new Error('Setup-fejl: ' + err.message);
     }
@@ -514,7 +537,7 @@
       const tickEnv = new Environment(globalEnv);
       tickEnv.define('dt', dt);
       try {
-        execute(parsed.tick, tickEnv, {api});
+        execute(parsed.tick, tickEnv, ctxBase);
       } catch (err){
         throw new Error('Tick-fejl ved ' + t + ' ms: ' + err.message);
       }
@@ -532,8 +555,9 @@
     return {
       SetSpeed(value){
         const speed = clampNumber(value, -720, 720);
-        state.rotationSpeed = Math.max(1, Math.abs(speed));
-        state.liftSpeed = Math.max(0.05, state.rotationSpeed / 40);
+        const absSpeed = Math.abs(speed);
+        state.rotationSpeed = absSpeed;
+        state.liftSpeed = absSpeed > 0 ? Math.max(0.05, absSpeed / 40) : state.liftSpeed;
         log.push({time: state.time, op:'SetSpeed', value: state.rotationSpeed});
       },
       Rotate(value){

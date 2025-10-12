@@ -28,6 +28,11 @@
     document.getElementById('resetButton').addEventListener('click', () => setEditor(defaultCode));
     document.getElementById('taskSelect').addEventListener('change', onTaskChange);
     document.getElementById('hintButton').addEventListener('click', requestHint);
+    document.getElementById('pseudoButton').addEventListener('click', showPseudocode);
+    document.getElementById('pseudoClose').addEventListener('click', hidePseudocode);
+    document.getElementById('pseudoModal').addEventListener('click', evt => {
+      if (evt.target.id === 'pseudoModal') hidePseudocode();
+    });
   }
 
   function setEditor(text){
@@ -72,6 +77,7 @@
     renderCriteria(currentTask.criteria);
     renderChecklist([]);
     document.getElementById('aiFeedback').textContent = '';
+    updatePseudocode(currentTask.pseudocode);
     setStatus('Opgave valgt: ' + currentTask.title);
   }
 
@@ -156,6 +162,12 @@
   function renderResults(results){
     const container = document.getElementById('results');
     container.innerHTML = '';
+    if (!results || results.length === 0){
+      const empty = document.createElement('div');
+      empty.textContent = 'Ingen testresultater tilgængelige.';
+      container.appendChild(empty);
+      return;
+    }
     results.forEach(result => {
       const div = document.createElement('div');
       div.className = result.pass ? 'result-pass' : 'result-fail';
@@ -295,6 +307,27 @@
 
   function setStatus(text){
     document.getElementById('status').textContent = text;
+  }
+
+  function showPseudocode(){
+    const modal = document.getElementById('pseudoModal');
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function hidePseudocode(){
+    const modal = document.getElementById('pseudoModal');
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function updatePseudocode(text){
+    const body = document.getElementById('pseudoBody');
+    if (!text){
+      body.textContent = 'Ingen pseudokode tilgængelig for denne opgave endnu.';
+    } else {
+      body.textContent = text;
+    }
   }
 
 })();

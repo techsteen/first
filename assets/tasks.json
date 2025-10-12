@@ -8,6 +8,7 @@
       "Rotér armen til 90° uden at overskride tolerancen.",
       "Hold armen stabil efter målet er nået."
     ],
+    "pseudocode": "// Start hastighed\npublic static void Setup() {\n  SetSpeed(15);\n}\n\n// Kørsel: Bevæg mod 90° og stop når målet er nået\npublic static void Tick(int dt) {\n  if (GetAngle() < 88) {\n    RotateTo(90);\n  } else if (GetAngle() > 92) {\n    RotateTo(90);\n  } else {\n    SetSpeed(4);\n  }\n}",
     "maxDurationMs": 7000,
     "tests": [
       {"name": "AngleReached90", "label": "90° nået inden 5s", "type": "AngleReached", "target": 90, "tol": 1, "withinMs": 5000},
@@ -24,6 +25,7 @@
       "Løft krogen til 2.0 m i Tick().",
       "Undgå at sikkerhedsindikatoren bliver rød."
     ],
+    "pseudocode": "public static void Setup() {\n  SetSpeed(10);\n}\n\npublic static void Tick(int dt) {\n  double h = GetHeight();\n  if (h < 1.95) {\n    LiftTo(2.0);\n  } else {\n    SetSpeed(5);\n  }\n}",
     "maxDurationMs": 8000,
     "tests": [
       {"name": "LiftReached2m", "label": "Nå 2.0 m med ±0.02", "type": "LiftReached", "target": 2.0, "tol": 0.02, "steadyMs": 800},
@@ -40,6 +42,7 @@
       "Undgå overshoot og hold steady.",
       "Sørg for sikker kørsel gennem hele sekvensen."
     ],
+    "pseudocode": "public static void Setup() {\n  SetSpeed(14);\n}\n\npublic static void Tick(int dt) {\n  if (GetAngle() < 134) {\n    RotateTo(135);\n    return;\n  }\n  if (GetHeight() < 1.5) {\n    LiftTo(1.5);\n    return;\n  }\n  if (GetAngle() > 46) {\n    RotateTo(45);\n    return;\n  }\n  if (GetHeight() < 2.0) {\n    LiftTo(2.0);\n  }\n}",
     "maxDurationMs": 12000,
     "tests": [
       {"name": "AngleReached135", "label": "135° nås", "type": "AngleReached", "target": 135, "tol": 2, "withinMs": 4000},

@@ -203,6 +203,7 @@ section {
 #runButton { background: var(--accent); color: #012026; }
 #stopButton { background: var(--warning); color: #212121; }
 #resetButton { background: var(--panel-light); color: var(--text); }
+#pseudoButton { background: #2d9bf0; color: #011627; }
 
 .toggle {
   display: flex;
@@ -231,6 +232,54 @@ section {
   border-radius: 8px;
   padding: 0.75rem;
   color: var(--warning);
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal-content {
+  background: var(--panel);
+  border-radius: 12px;
+  max-width: 640px;
+  width: 100%;
+  padding: 1rem;
+  box-shadow: 0 16px 32px rgba(0,0,0,0.4);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+#pseudoBody {
+  background: #091526;
+  border-radius: 8px;
+  padding: 1rem;
+  color: var(--text);
+  overflow: auto;
+  max-height: 60vh;
+}
+
+#pseudoClose {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 1.5rem;
+  cursor: pointer;
 }
 
 @media (max-width: 1200px) {
