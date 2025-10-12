@@ -13,17 +13,30 @@ if (!$input) {
     exit;
 }
 
-$configPath = __DIR__ . '/../config/OPENAI_KEY.php';
-if (!file_exists($configPath)) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Manglende API-nøglekonfiguration']);
-    exit;
-}
-require_once $configPath;
+$candidateConfigs = [
+    __DIR__ . '/../config/OPENAI_KEY.php',
+    __DIR__ . '/../Config/OPENAI_KEY.php',
+    __DIR__ . '/../../config/OPENAI_KEY.php',
+    __DIR__ . '/../../Config/OPENAI_KEY.php'
+];
 
-if (!defined('OPENAI_API_KEY') || !OPENAI_API_KEY) {
+$configPath = null;
+foreach ($candidateConfigs as $candidate) {
+    if (is_file($candidate)) {
+        $configPath = $candidate;
+        break;
+    }
+}
+
+if ($configPath) {
+    require_once $configPath;
+}
+
+$apiKey = defined('OPENAI_API_KEY') ? OPENAI_API_KEY : getenv('OPENAI_API_KEY');
+
+if (!$apiKey) {
     http_response_code(500);
-    echo json_encode(['error' => 'API-nøglen er ikke sat.']);
+    echo json_encode(['error' => 'API-nøglen er ikke sat. Placer OPENAI_KEY.php i config/ eller Config/ eller angiv miljøvariablen OPENAI_API_KEY.']);
     exit;
 }
 
@@ -64,7 +77,7 @@ try {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER => [
             'Content-Type: application/json',
-            'Authorization: Bearer ' . OPENAI_API_KEY
+            'Authorization: Bearer ' . $apiKey
         ],
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => json_encode($payload),
