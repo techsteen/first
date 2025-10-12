@@ -18,107 +18,92 @@ function cleanPath($path)
     return rtrim(str_replace('\\', '/', (string) $path), '/');
 }
 
-function candidateConfigPaths()
+function candidateConfigFiles()
 {
-    $candidates = array();
+    $fileCandidates = array();
+    $directoryCandidates = array();
 
-    $envPath = getenv('OPENAI_CONFIG_PATH');
-    if (is_string($envPath) && $envPath !== '') {
-        $candidates[] = $envPath;
+    $fileHints = array('OPENAI_CONFIG_PATH', 'CONFIG_FILE');
+    foreach ($fileHints as $envVar) {
+        $value = getenv($envVar);
+        if (is_string($value) && $value !== '') {
+            $fileCandidates[] = $value;
+        }
     }
 
-    $envDir = getenv('OPENAI_CONFIG_DIR');
-    if (is_string($envDir) && $envDir !== '') {
-        $candidates[] = rtrim($envDir, "/\\");
-    }
-
-    $configDir = getenv('CONFIG_DIR');
-    if (is_string($configDir) && $configDir !== '') {
-        $candidates[] = rtrim($configDir, "/\\");
+    $dirHints = array('OPENAI_CONFIG_DIR', 'CONFIG_DIR');
+    foreach ($dirHints as $envVar) {
+        $value = getenv($envVar);
+        if (is_string($value) && $value !== '') {
+            $directoryCandidates[] = cleanPath($value);
+        }
     }
 
     $roots = array(
         __DIR__,
         dirname(__DIR__),
-        dirname(__DIR__, 2)
+        dirname(__DIR__, 2),
+        dirname(__DIR__, 3)
     );
     if (!empty($_SERVER['DOCUMENT_ROOT'])) {
-        $roots[] = rtrim($_SERVER['DOCUMENT_ROOT'], "/\\");
+        $roots[] = $_SERVER['DOCUMENT_ROOT'];
     }
+
+    $roots = array_filter(array_map(function ($root) {
+        if ($root === false || $root === null) {
+            return null;
+        }
+        return cleanPath($root);
+    }, $roots));
+
+    $fileNames = array('config.php', 'Config.php', 'openai.php', 'settings.php', 'credentials.php');
+    $dirNames = array('config', 'Config');
 
     foreach ($roots as $root) {
-        if (!$root) {
-            continue;
+        foreach ($fileNames as $fileName) {
+            $fileCandidates[] = $root . '/' . $fileName;
         }
-        $root = rtrim($root, "/\\");
-        $candidates[] = $root . '/config/config.php';
-        $candidates[] = $root . '/Config/config.php';
-        $candidates[] = $root . '/config.php';
-        $candidates[] = $root . '/Config.php';
-        $candidates[] = $root . '/config';
-        $candidates[] = $root . '/Config';
-    }
-
-    return $candidates;
-}
-
-function loadConfigData()
-{
-    $candidates = candidateConfigPaths();
-    $seen = array();
-
-    foreach ($candidates as $candidate) {
-        if (!is_string($candidate) || $candidate === '') {
-            continue;
-        }
-
-        $candidate = cleanPath($candidate);
-        if (isset($seen[$candidate])) {
-            continue;
-        }
-        $seen[$candidate] = true;
-
-        $file = null;
-        if (is_file($candidate)) {
-            $file = $candidate;
-        } elseif (is_dir($candidate)) {
-            $dir = $candidate;
-            $options = array(
-                $dir . '/config.php',
-                $dir . '/Config.php',
-                $dir . '/openai.php',
-                $dir . '/config/config.php'
-            );
-            foreach ($options as $option) {
-                if (is_file($option)) {
-                    $file = $option;
-                    break;
-                }
+        foreach ($dirNames as $dirName) {
+            $directoryCandidates[] = $root . '/' . $dirName;
+            foreach ($fileNames as $fileName) {
+                $fileCandidates[] = $root . '/' . $dirName . '/' . $fileName;
             }
         }
+    }
 
-        if (!$file) {
+    $directories = array();
+    foreach ($directoryCandidates as $dir) {
+        if (!is_string($dir) || $dir === '') {
             continue;
         }
-
-        unset($config, $loaded);
-        $loaded = require $file;
-
-        $data = null;
-        if (is_array($loaded)) {
-            $data = $loaded;
-        } elseif (isset($config) && is_array($config)) {
-            $data = $config;
-        } elseif (isset($GLOBALS['config']) && is_array($GLOBALS['config'])) {
-            $data = $GLOBALS['config'];
+        $dir = cleanPath($dir);
+        if (!is_dir($dir)) {
+            continue;
         }
+        $directories[] = $dir;
+    }
 
-        if (is_array($data) && !empty($data)) {
-            return array('data' => $data, 'source' => $file);
+    foreach ($directories as $dir) {
+        foreach ($fileNames as $fileName) {
+            $fileCandidates[] = $dir . '/' . $fileName;
         }
     }
 
-    return array('data' => array(), 'source' => null);
+    $unique = array();
+    $result = array();
+    foreach ($fileCandidates as $file) {
+        if (!is_string($file) || $file === '') {
+            continue;
+        }
+        $file = cleanPath($file);
+        if (isset($unique[$file])) {
+            continue;
+        }
+        $unique[$file] = true;
+        $result[] = $file;
+    }
+
+    return $result;
 }
 
 function resolveConfigValue(array $config, array $keys)
@@ -150,16 +135,59 @@ function resolveConfigValue(array $config, array $keys)
     return null;
 }
 
-$configMeta = loadConfigData();
+function findConfigData(array $keyNames)
+{
+    $paths = candidateConfigFiles();
+    $seen = array();
+    $fallback = null;
+
+    foreach ($paths as $path) {
+        if (!is_file($path)) {
+            continue;
+        }
+
+        $real = realpath($path) ?: $path;
+        if (isset($seen[$real])) {
+            continue;
+        }
+        $seen[$real] = true;
+
+        unset($config, $loaded);
+        $loaded = require $path;
+
+        $data = null;
+        if (is_array($loaded)) {
+            $data = $loaded;
+        } elseif (isset($config) && is_array($config)) {
+            $data = $config;
+        } elseif (isset($GLOBALS['config']) && is_array($GLOBALS['config'])) {
+            $data = $GLOBALS['config'];
+        }
+
+        if (!is_array($data) || empty($data)) {
+            continue;
+        }
+
+        $value = resolveConfigValue($data, $keyNames);
+        if ($value) {
+            return array('data' => $data, 'source' => $real);
+        }
+
+        if ($fallback === null) {
+            $fallback = array('data' => $data, 'source' => $real);
+        }
+    }
+
+    return $fallback ?: array('data' => array(), 'source' => null);
+}
+
+$keyCandidates = array('OPENAI_API_KEY', 'openai_api_key', 'OPENAI_KEY', 'openai_key');
+
+$configMeta = findConfigData($keyCandidates);
 $configData = $configMeta['data'];
 $configSource = $configMeta['source'];
 
-$apiKey = resolveConfigValue($configData, [
-    'OPENAI_API_KEY',
-    'openai_api_key',
-    'OPENAI_KEY',
-    'openai_key'
-]);
+$apiKey = resolveConfigValue($configData, $keyCandidates);
 
 if (!$apiKey && defined('OPENAI_API_KEY')) {
     $apiKey = OPENAI_API_KEY;
