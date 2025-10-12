@@ -16,8 +16,12 @@ if (!$input) {
 $candidateConfigs = [
     __DIR__ . '/../config/OPENAI_KEY.php',
     __DIR__ . '/../Config/OPENAI_KEY.php',
+    __DIR__ . '/../config/config.php',
+    __DIR__ . '/../Config/config.php',
     __DIR__ . '/../../config/OPENAI_KEY.php',
-    __DIR__ . '/../../Config/OPENAI_KEY.php'
+    __DIR__ . '/../../Config/OPENAI_KEY.php',
+    __DIR__ . '/../../config/config.php',
+    __DIR__ . '/../../Config/config.php'
 ];
 
 $configPath = null;
@@ -29,14 +33,36 @@ foreach ($candidateConfigs as $candidate) {
 }
 
 if ($configPath) {
-    require_once $configPath;
+    $loaded = require $configPath;
 }
 
-$apiKey = defined('OPENAI_API_KEY') ? OPENAI_API_KEY : getenv('OPENAI_API_KEY');
+$apiKey = null;
+if (defined('OPENAI_API_KEY')) {
+    $apiKey = OPENAI_API_KEY;
+} elseif (isset($loaded) && is_array($loaded)) {
+    $apiKey = $loaded['OPENAI_API_KEY']
+        ?? $loaded['openai_api_key']
+        ?? $loaded['OPENAI_KEY']
+        ?? $loaded['openai_key']
+        ?? null;
+} elseif (isset($config) && is_array($config)) {
+    $apiKey = $config['OPENAI_API_KEY']
+        ?? $config['openai_api_key']
+        ?? $config['OPENAI_KEY']
+        ?? $config['openai_key']
+        ?? null;
+}
+
+if (!$apiKey) {
+    $envKey = getenv('OPENAI_API_KEY');
+    if ($envKey) {
+        $apiKey = $envKey;
+    }
+}
 
 if (!$apiKey) {
     http_response_code(500);
-    echo json_encode(['error' => 'API-nøglen er ikke sat. Placer OPENAI_KEY.php i config/ eller Config/ eller angiv miljøvariablen OPENAI_API_KEY.']);
+    echo json_encode(['error' => 'API-nøglen er ikke sat. Placer OPENAI_KEY.php eller config.php med OPENAI_API_KEY i config/ eller Config/, eller angiv miljøvariablen OPENAI_API_KEY.']);
     exit;
 }
 
