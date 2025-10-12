@@ -13,43 +13,91 @@ if (!$input) {
     exit;
 }
 
-$candidateConfigs = [
-    __DIR__ . '/../config/config.php',
-    __DIR__ . '/../Config/config.php',
-    __DIR__ . '/../../config/config.php',
-    __DIR__ . '/../../Config/config.php'
-];
-
-$configPath = null;
-foreach ($candidateConfigs as $candidate) {
-    if (is_file($candidate)) {
-        $configPath = $candidate;
-        break;
+function loadConfigData(): array
+{
+    $candidates = [];
+    $envPath = getenv('OPENAI_CONFIG_PATH');
+    if ($envPath) {
+        $candidates[] = $envPath;
     }
+
+    $searchRoots = array_filter([
+        __DIR__,
+        dirname(__DIR__),
+        dirname(__DIR__, 2),
+        isset($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') : null
+    ]);
+
+    foreach ($searchRoots as $root) {
+        $candidates[] = $root . '/config/config.php';
+        $candidates[] = $root . '/Config/config.php';
+        $candidates[] = $root . '/config.php';
+        $candidates[] = $root . '/Config.php';
+    }
+
+    foreach ($candidates as $candidate) {
+        if (!$candidate || !is_file($candidate)) {
+            continue;
+        }
+
+        unset($config, $loaded);
+        $loaded = require $candidate;
+
+        $data = null;
+        if (is_array($loaded)) {
+            $data = $loaded;
+        } elseif (isset($config) && is_array($config)) {
+            $data = $config;
+        } elseif (isset($GLOBALS['config']) && is_array($GLOBALS['config'])) {
+            $data = $GLOBALS['config'];
+        }
+
+        if (is_array($data) && !empty($data)) {
+            return ['data' => $data, 'source' => $candidate];
+        }
+    }
+
+    return ['data' => [], 'source' => null];
 }
 
-if ($configPath) {
-    $loaded = require $configPath;
+function resolveConfigValue(array $config, array $keys)
+{
+    foreach ($keys as $key) {
+        if (array_key_exists($key, $config) && $config[$key] !== '' && $config[$key] !== null) {
+            return $config[$key];
+        }
+    }
+
+    if (isset($config['openai']) && is_array($config['openai'])) {
+        foreach ($keys as $key) {
+            $normalized = strtolower($key);
+            if (array_key_exists($key, $config['openai']) && $config['openai'][$key] !== null) {
+                return $config['openai'][$key];
+            }
+            if (array_key_exists($normalized, $config['openai']) && $config['openai'][$normalized] !== null) {
+                return $config['openai'][$normalized];
+            }
+        }
+    }
+
+    return null;
 }
 
-$configData = [];
-if (isset($loaded) && is_array($loaded)) {
-    $configData = $loaded;
-} elseif (isset($config) && is_array($config)) {
-    $configData = $config;
-}
+$configMeta = loadConfigData();
+$configData = $configMeta['data'];
+$configSource = $configMeta['source'];
 
-$apiKey = null;
-if (defined('OPENAI_API_KEY')) {
+$apiKey = resolveConfigValue($configData, [
+    'OPENAI_API_KEY',
+    'openai_api_key',
+    'OPENAI_KEY',
+    'openai_key'
+]);
+
+if (!$apiKey && defined('OPENAI_API_KEY')) {
     $apiKey = OPENAI_API_KEY;
 }
-if (!$apiKey && !empty($configData)) {
-    $apiKey = $configData['OPENAI_API_KEY']
-        ?? $configData['openai_api_key']
-        ?? $configData['OPENAI_KEY']
-        ?? $configData['openai_key']
-        ?? null;
-}
+
 if (!$apiKey) {
     $envKey = getenv('OPENAI_API_KEY');
     if ($envKey) {
@@ -58,20 +106,23 @@ if (!$apiKey) {
 }
 
 if (!$apiKey) {
+    if ($configSource) {
+        error_log('[ai.php] Konfigurationsfil uden OPENAI_API_KEY: ' . $configSource);
+    }
     http_response_code(500);
-    echo json_encode(['error' => 'API-nøglen er ikke sat. Tilføj config/config.php med OPENAI_API_KEY eller sæt miljøvariablen OPENAI_API_KEY.']);
+    echo json_encode(['error' => 'API-nøglen blev ikke fundet. Tilføj OPENAI_API_KEY til config/config.php (eller angiv OPENAI_API_KEY som miljøvariabel).']);
     exit;
 }
 
-$model = $configData['OPENAI_MODEL']
+$model = resolveConfigValue($configData, ['OPENAI_MODEL', 'openai_model'])
     ?? getenv('OPENAI_MODEL')
     ?? 'gpt-4.1-mini';
 
-$baseUrl = $configData['OPENAI_BASE']
+$baseUrl = resolveConfigValue($configData, ['OPENAI_BASE', 'openai_base'])
     ?? getenv('OPENAI_BASE')
     ?? 'https://api.openai.com/v1';
 
-$timeout = $configData['TIMEOUT']
+$timeout = resolveConfigValue($configData, ['TIMEOUT', 'timeout'])
     ?? getenv('OPENAI_TIMEOUT')
     ?? 20;
 $timeout = (int) $timeout;
@@ -79,7 +130,7 @@ if ($timeout <= 0) {
     $timeout = 20;
 }
 
-$caBundle = $configData['CA_BUNDLE']
+$caBundle = resolveConfigValue($configData, ['CA_BUNDLE', 'ca_bundle'])
     ?? getenv('OPENAI_CA_BUNDLE')
     ?? null;
 if ($caBundle && !is_string($caBundle)) {
