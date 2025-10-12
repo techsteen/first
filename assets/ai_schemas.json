@@ -1,0 +1,38 @@
+{
+  "ai_output": {
+    "type": "object",
+    "required": ["explanations", "micro_hints", "timeline"],
+    "properties": {
+      "explanations": {
+        "type": "array",
+        "items": {"type": "string"},
+        "maxItems": 2
+      },
+      "micro_hints": {
+        "type": "array",
+        "items": {"type": "string"},
+        "maxItems": 2
+      },
+      "timeline": {
+        "type": "array",
+        "items": {"$ref": "#/definitions/timelineItem"}
+      }
+    },
+    "definitions": {
+      "timelineItem": {
+        "type": "object",
+        "required": ["t", "angle", "height", "safe"],
+        "properties": {
+          "t": {"type": "integer", "minimum": 0},
+          "angle": {"type": "number"},
+          "height": {"type": "number"},
+          "safe": {"type": "string", "enum": ["green", "yellow", "red"]}
+        }
+      }
+    }
+  },
+  "notes": {
+    "safe_enum": ["green", "yellow", "red"],
+    "description": "Schema brugt af ai.php til at validere output."
+  }
+}

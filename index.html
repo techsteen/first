@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <title>Kran Træner</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header>
+    <h1>Kran Træner</h1>
+    <p>Programmer kranen med C#-lignende kode og opnå målene.</p>
+  </header>
+  <main id="layout">
+    <section id="panel-tasks" aria-label="Opgaver og status">
+      <div class="panel-header">
+        <h2>Opgaver</h2>
+        <select id="taskSelect" aria-label="Vælg opgave"></select>
+      </div>
+      <article id="taskDescription"></article>
+      <section>
+        <h3>Succeskriterier</h3>
+        <ul id="taskCriteria"></ul>
+      </section>
+      <section>
+        <h3>Tjekliste</h3>
+        <ul id="checklist"></ul>
+      </section>
+      <section id="historySection">
+        <h3>Kørselslog</h3>
+        <div id="runHistory" aria-live="polite"></div>
+      </section>
+      <button id="hintButton" type="button">Hint fra AI</button>
+      <div id="aiFeedback"></div>
+    </section>
+
+    <section id="panel-canvas" aria-label="Kran animation">
+      <div id="canvasWrapper">
+        <canvas id="simCanvas" width="900" height="520">Din browser understøtter ikke canvas.</canvas>
+        <div id="hud">
+          <span>Vinkel: <strong id="hudAngle">0°</strong></span>
+          <span>Højde: <strong id="hudHeight">0.0 m</strong></span>
+          <span>Sikkerhed: <strong id="hudSafety">green</strong></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-editor" aria-label="Editor og feedback">
+      <div class="panel-header">
+        <h2>Editor</h2>
+      </div>
+      <textarea id="codeEditor" spellcheck="false" aria-label="Kode editor"></textarea>
+      <div id="controls">
+        <button id="runButton" type="button">KØR</button>
+        <button id="stopButton" type="button">STOP</button>
+        <button id="resetButton" type="button">NULSTIL</button>
+        <label class="toggle">
+          <input type="checkbox" id="aiToggle">
+          <span>AI-Emulation</span>
+        </label>
+      </div>
+      <section>
+        <h3>Resultater</h3>
+        <div id="results"></div>
+      </section>
+      <section>
+        <h3>Fejl &amp; status</h3>
+        <div id="status" aria-live="assertive"></div>
+      </section>
+    </section>
+  </main>
+  <script src="assets/app.js"></script>
+  <script src="assets/sim.js"></script>
+  <script src="assets/anim.js"></script>
+  <script src="assets/tests.js"></script>
+</body>
+</html>

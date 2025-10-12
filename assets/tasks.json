@@ -1,0 +1,52 @@
+[
+  {
+    "id": "task1",
+    "title": "Roter til 90°",
+    "description": "Få kranarmen til at rotere stabilt til 90° ved hjælp af Setup/Tick.",
+    "criteria": [
+      "Brug SetSpeed til at sætte passende hastighed.",
+      "Rotér armen til 90° uden at overskride tolerancen.",
+      "Hold armen stabil efter målet er nået."
+    ],
+    "maxDurationMs": 7000,
+    "tests": [
+      {"name": "AngleReached90", "label": "90° nået inden 5s", "type": "AngleReached", "target": 90, "tol": 1, "withinMs": 5000},
+      {"name": "Overshoot90", "label": "Overshoot under 3°", "type": "Overshoot", "target": 90, "maxDeg": 3},
+      {"name": "SteadyAngle", "label": "Stabil vinkel i 0.8s", "type": "SteadyState", "metric": "angle", "target": 90, "durationMs": 800, "maxError": 1}
+    ]
+  },
+  {
+    "id": "task2",
+    "title": "Løft til 2.0 m",
+    "description": "Brug løfte-API'et til at hæve krogen til 2 meter uden at gå i rød zone.",
+    "criteria": [
+      "Sæt en moderat hastighed i Setup().",
+      "Løft krogen til 2.0 m i Tick().",
+      "Undgå at sikkerhedsindikatoren bliver rød."
+    ],
+    "maxDurationMs": 8000,
+    "tests": [
+      {"name": "LiftReached2m", "label": "Nå 2.0 m med ±0.02", "type": "LiftReached", "target": 2.0, "tol": 0.02, "steadyMs": 800},
+      {"name": "SteadyHeight", "label": "Stabil højde", "type": "SteadyState", "metric": "height", "target": 2.0, "durationMs": 800, "maxError": 0.05},
+      {"name": "Safety", "label": "Ingen rød sikkerhed", "type": "SafetyNeverRed", "maxRedMs": 200}
+    ]
+  },
+  {
+    "id": "task3",
+    "title": "Sekvens: 135°/45° + løft",
+    "description": "Roter til 135°, løft 1.5 m, hold en kort pause, roter til 45° og løft til 2.0 m.",
+    "criteria": [
+      "Håndter flere mål i rækkefølge.",
+      "Undgå overshoot og hold steady.",
+      "Sørg for sikker kørsel gennem hele sekvensen."
+    ],
+    "maxDurationMs": 12000,
+    "tests": [
+      {"name": "AngleReached135", "label": "135° nås", "type": "AngleReached", "target": 135, "tol": 2, "withinMs": 4000},
+      {"name": "LiftReached1_5", "label": "1.5 m nået", "type": "LiftReached", "target": 1.5, "tol": 0.05, "steadyMs": 500},
+      {"name": "AngleReached45", "label": "45° nås", "type": "AngleReached", "target": 45, "tol": 2, "withinMs": 10000},
+      {"name": "LiftReached2_0", "label": "2.0 m til sidst", "type": "LiftReached", "target": 2.0, "tol": 0.05, "steadyMs": 800},
+      {"name": "SafetySequence", "label": "Ingen rød fase", "type": "SafetyNeverRed", "maxRedMs": 200}
+    ]
+  }
+]
