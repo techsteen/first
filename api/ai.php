@@ -17,11 +17,7 @@ $candidateConfigs = [
     __DIR__ . '/../config/config.php',
     __DIR__ . '/../Config/config.php',
     __DIR__ . '/../../config/config.php',
-    __DIR__ . '/../../Config/config.php',
-    __DIR__ . '/../config/OPENAI_KEY.php',
-    __DIR__ . '/../Config/OPENAI_KEY.php',
-    __DIR__ . '/../../config/OPENAI_KEY.php',
-    __DIR__ . '/../../Config/OPENAI_KEY.php'
+    __DIR__ . '/../../Config/config.php'
 ];
 
 $configPath = null;
@@ -138,13 +134,18 @@ try {
         curl_setopt($ch, CURLOPT_CAINFO, $caBundle);
     }
     $response = curl_exec($ch);
-    if ($response === false) {
-        throw new Exception('Ingen svar fra OpenAI.');
-    }
     $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    if ($response === false) {
+        $curlError = curl_error($ch);
+        $curlErrno = curl_errno($ch);
+        error_log('[ai.php] cURL error ' . $curlErrno . ': ' . $curlError);
+        curl_close($ch);
+        throw new Exception('Ingen svar fra OpenAI. Se serverlog for detaljer.');
+    }
     curl_close($ch);
 
     if ($statusCode < 200 || $statusCode >= 300) {
+        error_log('[ai.php] OpenAI HTTP ' . $statusCode . ' response: ' . $response);
         throw new Exception('OpenAI-fejl: ' . $statusCode);
     }
 
