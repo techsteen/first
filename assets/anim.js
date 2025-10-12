@@ -86,18 +86,18 @@
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const centerX = canvas.width / 2;
-    const baseY = canvas.height - 60;
+    const baseY = canvas.height * 0.68;
 
     // draw base
     ctx.fillStyle = '#22364f';
     ctx.fillRect(centerX - 80, baseY, 160, 40);
     ctx.fillStyle = '#1a2535';
-    ctx.fillRect(centerX - 30, baseY - 40, 60, 40);
+    ctx.fillRect(centerX - 30, baseY - 50, 60, 50);
 
     const armLength = 220;
     const angleRad = (sample.angle - 90) * Math.PI / 180;
     const pivotX = centerX;
-    const pivotY = baseY - 40;
+    const pivotY = baseY - 60;
 
     const tipX = pivotX + Math.cos(angleRad) * armLength;
     const tipY = pivotY + Math.sin(angleRad) * armLength;
@@ -110,7 +110,7 @@
     ctx.stroke();
 
     const hookX = tipX;
-    const hookY = tipY + Math.abs(sample.height) * 40;
+    const hookY = tipY + Math.abs(sample.height) * 35;
 
     ctx.strokeStyle = '#f4f5f7';
     ctx.lineWidth = 4;
