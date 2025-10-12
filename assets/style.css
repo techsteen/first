@@ -142,6 +142,7 @@ section {
   color: var(--danger);
 }
 
+#demoButton,
 #hintButton {
   width: 100%;
   padding: 0.75rem;
@@ -154,6 +155,11 @@ section {
   cursor: pointer;
 }
 
+#demoButton {
+  background: #2fa8a1;
+}
+
+#demoButton:disabled,
 #hintButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;

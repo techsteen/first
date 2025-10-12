@@ -14,6 +14,7 @@
       "Overshoot måler hvor mange grader vi glider forbi 90° efter første ramt mål. Målet er under 3°."
     ],
     "pseudocode": "// Start hastighed\npublic static void Setup() {\n  SetSpeed(15);\n}\n\n// Kørsel: Bevæg mod 90° og stop når målet er nået\npublic static void Tick(int dt) {\n  if (GetAngle() < 88) {\n    RotateTo(90);\n  } else if (GetAngle() > 92) {\n    RotateTo(90);\n  } else {\n    SetSpeed(4);\n  }\n}",
+    "demoCode": "public static void Setup() {\n  SetSpeed(18);\n}\n\npublic static void Tick(int dt) {\n  double angle = GetAngle();\n  if (angle < 85) {\n    SetSpeed(18);\n    RotateTo(90);\n  } else if (angle < 89) {\n    SetSpeed(12);\n    RotateTo(90);\n  } else if (angle < 90.5) {\n    SetSpeed(6);\n    RotateTo(90);\n  } else {\n    SetSpeed(4);\n  }\n}",
     "maxDurationMs": 7000,
     "tests": [
       {"name": "AngleReached90", "label": "90° nået inden 5s", "type": "AngleReached", "target": 90, "tol": 1, "withinMs": 5000},
@@ -36,6 +37,7 @@
       "Sikkerhedsindikatoren bliver gul ved hurtige bevægelser og rød hvis det går alt for stærkt."
     ],
     "pseudocode": "public static void Setup() {\n  SetSpeed(10);\n}\n\npublic static void Tick(int dt) {\n  double h = GetHeight();\n  if (h < 1.95) {\n    LiftTo(2.0);\n  } else {\n    SetSpeed(5);\n  }\n}",
+    "demoCode": "public static void Setup() {\n  SetSpeed(12);\n}\n\npublic static void Tick(int dt) {\n  double height = GetHeight();\n  if (height < 1.8) {\n    SetSpeed(12);\n    LiftTo(2.0);\n  } else if (height < 1.95) {\n    SetSpeed(8);\n    LiftTo(2.0);\n  } else {\n    SetSpeed(4);\n  }\n}",
     "maxDurationMs": 8000,
     "tests": [
       {"name": "LiftReached2m", "label": "Nå 2.0 m med ±0.02", "type": "LiftReached", "target": 2.0, "tol": 0.02, "steadyMs": 800},
@@ -58,6 +60,7 @@
       "Hvis sikkerheden bliver gul eller rød, kan du prøve at sænke hastigheden inden næste bevægelse."
     ],
     "pseudocode": "public static void Setup() {\n  SetSpeed(14);\n}\n\npublic static void Tick(int dt) {\n  if (GetAngle() < 134) {\n    RotateTo(135);\n    return;\n  }\n  if (GetHeight() < 1.5) {\n    LiftTo(1.5);\n    return;\n  }\n  if (GetAngle() > 46) {\n    RotateTo(45);\n    return;\n  }\n  if (GetHeight() < 2.0) {\n    LiftTo(2.0);\n  }\n}",
+    "demoCode": "public static void Setup() {\n  SetSpeed(14);\n  int stage = 0;\n}\n\npublic static void Tick(int dt) {\n  if (stage == 0) {\n    if (GetAngle() < 134) {\n      SetSpeed(14);\n      RotateTo(135);\n    } else {\n      SetSpeed(8);\n      stage = 1;\n    }\n  } else if (stage == 1) {\n    if (GetHeight() < 1.48) {\n      SetSpeed(10);\n      LiftTo(1.5);\n    } else {\n      SetSpeed(6);\n      stage = 2;\n    }\n  } else if (stage == 2) {\n    if (GetAngle() > 46) {\n      SetSpeed(12);\n      RotateTo(45);\n    } else {\n      SetSpeed(8);\n      stage = 3;\n    }\n  } else {\n    if (GetHeight() < 1.98) {\n      SetSpeed(8);\n      LiftTo(2.0);\n    } else {\n      SetSpeed(4);\n    }\n  }\n}",
     "maxDurationMs": 12000,
     "tests": [
       {"name": "AngleReached135", "label": "135° nås", "type": "AngleReached", "target": 135, "tol": 2, "withinMs": 4000},

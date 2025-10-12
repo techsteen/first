@@ -12,6 +12,7 @@
   let lastTimeline = [];
   let historyEntries = [];
   let lastTestResults = [];
+  let demoButton = null;
 
   window.addEventListener('DOMContentLoaded', init);
 
@@ -27,6 +28,11 @@
     document.getElementById('stopButton').addEventListener('click', stopAnimation);
     document.getElementById('resetButton').addEventListener('click', () => setEditor(defaultCode));
     document.getElementById('taskSelect').addEventListener('change', onTaskChange);
+    demoButton = document.getElementById('demoButton');
+    if (demoButton){
+      demoButton.addEventListener('click', runDemo);
+      demoButton.disabled = true;
+    }
     document.getElementById('hintButton').addEventListener('click', requestHint);
     document.getElementById('pseudoButton').addEventListener('click', showPseudocode);
     document.getElementById('pseudoClose').addEventListener('click', hidePseudocode);
@@ -80,6 +86,9 @@
     renderChecklist([]);
     document.getElementById('aiFeedback').textContent = '';
     updatePseudocode(currentTask.pseudocode);
+    if (demoButton){
+      demoButton.disabled = !currentTask.demoCode;
+    }
     setStatus('Opgave valgt: ' + currentTask.title);
   }
 
@@ -176,6 +185,52 @@
       message: simResult.message || 'Simulation fuldført.'
     });
     setStatus('Simulation færdig.');
+  }
+
+  function runDemo(){
+    if (!currentTask){
+      setStatus('Vælg en opgave for at se en demo.');
+      return;
+    }
+    if (!currentTask.demoCode){
+      setStatus('Der findes ingen demo for denne opgave endnu.');
+      return;
+    }
+    stopAnimation();
+    setStatus('Forbereder demo...');
+    let parsed;
+    try {
+      parsed = window.Sim.parseStudentCode(currentTask.demoCode);
+    } catch (err){
+      console.error('Demo parse fejl', err);
+      setStatus('Demo-koden kunne ikke fortolkes. Kontakt underviseren.');
+      return;
+    }
+    let simResult;
+    try {
+      simResult = window.Sim.simulate(parsed, currentTask);
+    } catch (err){
+      console.error('Demo simulation fejl', err);
+      setStatus('Demoen kunne ikke afspilles. Kontakt underviseren.');
+      return;
+    }
+    lastTimeline = simResult.timeline;
+    if (!lastTimeline || !lastTimeline.length){
+      setStatus('Demoen gav ingen bevægelse.');
+      return;
+    }
+    window.Animator.start(lastTimeline, updateHUD, handleAnimationStop);
+    const tests = window.TestRunner.runTests(lastTimeline, currentTask);
+    lastTestResults = tests;
+    renderResults(tests);
+    renderChecklist(tests);
+    appendHistory({
+      time: new Date(),
+      task: `Demo – ${currentTask.title}`,
+      success: tests.every(t => t.pass),
+      message: 'Demo afspillet.'
+    });
+    setStatus('Demo afspilles. Resultaterne viser en mulig løsning.');
   }
 
   function renderResults(results){
