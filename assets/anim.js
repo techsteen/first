@@ -6,8 +6,10 @@
   let onUpdate = null;
   let onStop = null;
   let isRunning = false;
+  let scenarioMode = 'crane';
+  let scenarioTask = null;
 
-  function start(newTimeline, updateCb, stopCb){
+  function start(newTimeline, updateCb, stopCb, options){
     stop('replace');
     const canvas = document.getElementById('simCanvas');
     if (!canvas) return;
@@ -16,11 +18,13 @@
       clearCanvas(canvas);
       return;
     }
-    duration = timeline[timeline.length - 1].t;
+    duration = timeline[timeline.length - 1].t || 0;
     onUpdate = updateCb || function(){};
     onStop = stopCb || function(){};
+    scenarioMode = options?.mode || inferMode(timeline);
+    scenarioTask = options?.task || null;
     startTimestamp = performance.now();
-    isRunning = timeline.length > 0;
+    isRunning = true;
     animationId = requestAnimationFrame(frame);
   }
 
@@ -60,96 +64,113 @@
   }
 
   function sampleTimeline(ms){
-    if (timeline.length === 0){
-      return {t:0, angle:0, height:0, safe:'green'};
+    if (!timeline.length){
+      return defaultSample();
     }
-    const target = ms;
+    if (timeline.length === 1){
+      return Object.assign({}, timeline[0]);
+    }
     for (let i = 0; i < timeline.length - 1; i++){
       const a = timeline[i];
-      const b = timeline[i+1];
-      if (target >= a.t && target <= b.t){
-        const ratio = (target - a.t) / Math.max(1, (b.t - a.t));
+      const b = timeline[i + 1];
+      if (ms >= a.t && ms <= b.t){
+        const ratio = (ms - a.t) / Math.max(1, (b.t - a.t));
+        if (scenarioMode === 'car'){
+          return {
+            t: ms,
+            mode: 'car',
+            x: lerp(a.x, b.x, ratio),
+            y: lerp(a.y, b.y, ratio),
+            heading: lerpAngle(a.heading, b.heading, ratio),
+            safe: ratio > 0.5 ? b.safe : a.safe,
+            goal: a.goal || b.goal,
+            checkpoints: Math.max(a.checkpoints || 0, b.checkpoints || 0),
+            checkpointOrder: (ratio > 0.5 ? b.checkpointOrder : a.checkpointOrder) || [],
+            collided: a.collided || b.collided
+          };
+        }
         return {
-          t: target,
+          t: ms,
+          mode: 'crane',
           angle: lerp(a.angle, b.angle, ratio),
           height: lerp(a.height, b.height, ratio),
           safe: ratio > 0.5 ? b.safe : a.safe
         };
       }
     }
-    return timeline[timeline.length - 1];
+    return Object.assign({}, timeline[timeline.length - 1]);
   }
 
   function drawScene(ctx, canvas, sample){
+    if (scenarioMode === 'car'){
+      drawCarScene(ctx, canvas, sample, scenarioTask);
+    } else {
+      drawCraneScene(ctx, canvas, sample);
+    }
+  }
+
+  function drawCraneScene(ctx, canvas, sample){
+    const angle = sample?.angle || 0;
+    const height = sample?.height || 0;
+    const safe = sample?.safe || 'green';
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#0b1726';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const centerX = canvas.width / 2;
     const baseY = canvas.height * 0.68;
-
-    // draw base
-    ctx.fillStyle = '#22364f';
-    ctx.fillRect(centerX - 80, baseY, 160, 40);
-    ctx.fillStyle = '#1a2535';
-    ctx.fillRect(centerX - 30, baseY - 50, 60, 50);
-
-    const armLength = 220;
-    const angleRad = (sample.angle - 90) * Math.PI / 180;
-    const pivotX = centerX;
     const pivotY = baseY - 60;
 
-    drawAngleGauge(ctx, pivotX, pivotY, sample.angle);
+    ctx.fillStyle = '#22364f';
+    ctx.fillRect(centerX - 80, baseY, 160, 38);
+    ctx.fillStyle = '#1a2535';
+    ctx.fillRect(centerX - 26, baseY - 48, 52, 48);
 
+    drawAngleGauge(ctx, centerX, pivotY, angle);
+
+    const armLength = 220;
+    const angleRad = (angle - 90) * Math.PI / 180;
+    const pivotX = centerX;
     const tipX = pivotX + Math.cos(angleRad) * armLength;
     const tipY = pivotY + Math.sin(angleRad) * armLength;
 
     ctx.strokeStyle = '#4ecdc4';
-    ctx.lineWidth = 12;
+    ctx.lineWidth = 10;
     ctx.beginPath();
     ctx.moveTo(pivotX, pivotY);
     ctx.lineTo(tipX, tipY);
     ctx.stroke();
 
     const hookX = tipX;
-    const hookY = tipY + Math.abs(sample.height) * 35;
+    const hookY = tipY + Math.abs(height) * 35;
 
     drawHeightScale(ctx, pivotX, tipX, tipY, 35);
 
     ctx.strokeStyle = '#f4f5f7';
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(tipX, tipY);
     ctx.lineTo(hookX, hookY);
     ctx.stroke();
 
-    ctx.fillStyle = sample.safe === 'green' ? '#5bff8a' : sample.safe === 'yellow' ? '#ffe66d' : '#ff6b6b';
+    ctx.fillStyle = safe === 'green' ? '#5bff8a' : safe === 'yellow' ? '#ffe66d' : '#ff6b6b';
     ctx.fillRect(hookX - 12, hookY, 24, 18);
-  }
-
-  function clearCanvas(canvas){
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  }
-
-  function lerp(a, b, t){
-    return a + (b - a) * t;
   }
 
   function drawAngleGauge(ctx, pivotX, pivotY, currentAngle){
     const radius = 130;
-    const inner = radius - 18;
     ctx.save();
     ctx.translate(pivotX, pivotY);
-    ctx.strokeStyle = 'rgba(255, 230, 109, 0.35)';
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(255, 230, 109, 0.28)';
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.arc(0, 0, radius, Math.PI, 0, false);
     ctx.stroke();
 
     ctx.strokeStyle = '#ffe66d';
-    ctx.lineWidth = 1.5;
-    ctx.font = '12px "Segoe UI", sans-serif';
+    ctx.lineWidth = 1.2;
+    ctx.font = '11px "Segoe UI", sans-serif';
     ctx.fillStyle = '#ffe66d';
     for (let deg = 0; deg <= 180; deg += 10){
       const rad = (deg - 90) * Math.PI / 180;
@@ -157,34 +178,32 @@
       const sin = Math.sin(rad);
       const outerX = cos * radius;
       const outerY = sin * radius;
-      const innerLen = (deg % 30 === 0) ? 22 : 14;
+      const innerLen = (deg % 30 === 0) ? 18 : 10;
       const innerX = cos * (radius - innerLen);
       const innerY = sin * (radius - innerLen);
       ctx.beginPath();
       ctx.moveTo(innerX, innerY);
       ctx.lineTo(outerX, outerY);
       ctx.stroke();
-
       if (deg % 30 === 0){
-        const labelRadius = radius + 16;
-        ctx.fillText(`${deg}°`, cos * labelRadius - 12, sin * labelRadius + 4);
+        const labelRadius = radius + 14;
+        ctx.fillText(`${deg}°`, cos * labelRadius - 10, sin * labelRadius + 4);
       }
     }
 
-    // indicator for current angle
     const currentRad = (currentAngle - 90) * Math.PI / 180;
     ctx.strokeStyle = '#ffd166';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(Math.cos(currentRad) * (inner - 8), Math.sin(currentRad) * (inner - 8));
-    ctx.lineTo(Math.cos(currentRad) * (radius + 6), Math.sin(currentRad) * (radius + 6));
+    ctx.moveTo(Math.cos(currentRad) * (radius - 24), Math.sin(currentRad) * (radius - 24));
+    ctx.lineTo(Math.cos(currentRad) * (radius + 8), Math.sin(currentRad) * (radius + 8));
     ctx.stroke();
     ctx.restore();
   }
 
   function drawHeightScale(ctx, pivotX, tipX, tipY, scale){
     const side = tipX >= pivotX ? 1 : -1;
-    const offset = 26;
+    const offset = 24;
     const startX = tipX + side * offset;
     const startY = tipY;
     const maxMeters = 10;
@@ -193,19 +212,19 @@
 
     ctx.save();
     ctx.strokeStyle = '#ff6b6b';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.6;
     ctx.beginPath();
     ctx.moveTo(startX, startY);
     ctx.lineTo(startX, endY);
     ctx.stroke();
 
-    ctx.font = '12px "Segoe UI", sans-serif';
+    ctx.font = '11px "Segoe UI", sans-serif';
     ctx.fillStyle = '#ff6b6b';
     ctx.textAlign = side > 0 ? 'left' : 'right';
     for (let i = 0; i <= maxMeters * 4; i++){
       const y = startY + i * (scale * 0.25);
       const isMeter = i % 4 === 0;
-      const tickLen = isMeter ? 14 : 8;
+      const tickLen = isMeter ? 12 : 7;
       ctx.beginPath();
       ctx.moveTo(startX, y);
       ctx.lineTo(startX + side * tickLen, y);
@@ -217,6 +236,127 @@
       }
     }
     ctx.restore();
+  }
+
+  function drawCarScene(ctx, canvas, sample, task){
+    const mazeRows = Array.isArray(task?.maze) ? task.maze : [];
+    const rows = mazeRows.length;
+    const cols = mazeRows.reduce((max, row) => Math.max(max, row.length), 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#09121f';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (!rows || !cols || !sample){
+      return;
+    }
+
+    const cellSize = Math.min((canvas.width * 0.9) / cols, (canvas.height * 0.9) / rows);
+    const offsetX = (canvas.width - cellSize * cols) / 2;
+    const offsetY = (canvas.height - cellSize * rows) / 2;
+
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+
+    for (let y = 0; y < rows; y++){
+      const row = mazeRows[y].padEnd(cols, '#');
+      for (let x = 0; x < cols; x++){
+        const cell = row[x];
+        if (cell === '#'){
+          ctx.fillStyle = '#1a2738';
+          ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        } else {
+          ctx.fillStyle = '#102033';
+          ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        }
+        if (cell === 'S'){
+          drawBadge(ctx, x, y, cellSize, '#4ecdc4', 'S');
+        }
+        if (cell === 'G'){
+          drawBadge(ctx, x, y, cellSize, '#ffe66d', 'G');
+        }
+        if (cell === 'C'){
+          drawBadge(ctx, x, y, cellSize, '#ff6b6b', 'C');
+        }
+      }
+    }
+
+    const carX = (sample.x || 0) * cellSize;
+    const carY = (sample.y || 0) * cellSize;
+    const heading = (sample.heading || 0) * Math.PI / 180;
+    const carLength = cellSize * 0.6;
+    const carWidth = cellSize * 0.32;
+
+    ctx.translate(carX, carY);
+    ctx.rotate(heading);
+    ctx.fillStyle = sample.collided ? '#ff6b6b' : '#4ecdc4';
+    ctx.strokeStyle = '#0b1726';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.rect(-carLength/2, -carWidth/2, carLength, carWidth);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ffe66d';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(carLength/2 - 4, 0);
+    ctx.lineTo(carLength/2 + 10, 0);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawBadge(ctx, gridX, gridY, cellSize, color, label){
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.18;
+    ctx.fillRect(gridX * cellSize, gridY * cellSize, cellSize, cellSize);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(gridX * cellSize + 2, gridY * cellSize + 2, cellSize - 4, cellSize - 4);
+    ctx.fillStyle = color;
+    ctx.font = 'bold 14px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, gridX * cellSize + cellSize / 2, gridY * cellSize + cellSize / 2);
+  }
+
+  function clearCanvas(canvas){
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function lerp(a, b, t){
+    return (a ?? 0) + ((b ?? 0) - (a ?? 0)) * t;
+  }
+
+  function lerpAngle(a, b, t){
+    const diff = shortestAngleDiff(a ?? 0, b ?? 0);
+    return normalizeAngle((a ?? 0) + diff * t);
+  }
+
+  function shortestAngleDiff(from, to){
+    let diff = normalizeAngle(to) - normalizeAngle(from);
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    return diff;
+  }
+
+  function normalizeAngle(angle){
+    let a = angle % 360;
+    if (a < 0) a += 360;
+    return a;
+  }
+
+  function inferMode(list){
+    const sample = list[0] || {};
+    return sample.mode === 'car' || sample.x !== undefined ? 'car' : 'crane';
+  }
+
+  function defaultSample(){
+    if (scenarioMode === 'car'){
+      return {t:0, mode:'car', x:0, y:0, heading:0, safe:'green', checkpoints:0, collided:false};
+    }
+    return {t:0, mode:'crane', angle:0, height:0, safe:'green'};
   }
 
   window.Animator = {

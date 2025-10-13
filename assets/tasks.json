@@ -1,73 +1,296 @@
 [
-  {
-    "id": "task1",
-    "title": "Roter til 90°",
-    "description": "Før armen roligt fra udgangspositionen op til 90°. Brug små justeringer tæt på målet.",
-    "criteria": [
-      "Brug SetSpeed til at styre hvor hurtigt armen må køre.",
-      "Kald RotateTo(90) for at sigte mod målvinklen.",
-      "Sørg for et blødt stop så overshoot forbliver lavt."
-    ],
-    "concepts": [
-      "RotateTo(90) betyder: \"styr armen mod 90°\". Simulatoren bevæger sig automatisk i den retning indtil du vælger et nyt mål.",
-      "SetSpeed(n) sætter en maksimal hastighed. Lavere tal gør det lettere at ramme målet uden hop.",
-      "Overshoot måler hvor mange grader vi glider forbi 90° efter første ramt mål. Målet er under 3°."
-    ],
-    "pseudocode": "// Start hastighed\npublic static void Setup() {\n  SetSpeed(15);\n}\n\n// Kørsel: Bevæg mod 90° og stop når målet er nået\npublic static void Tick(int dt) {\n  if (GetAngle() < 88) {\n    RotateTo(90);\n  } else if (GetAngle() > 92) {\n    RotateTo(90);\n  } else {\n    SetSpeed(4);\n  }\n}",
-    "demoCode": "public static void Setup() {\n  SetSpeed(24);\n}\n\npublic static void Tick(int dt) {\n  double angle = GetAngle();\n  if (angle < 86) {\n    SetSpeed(24);\n    RotateTo(90);\n  } else if (angle < 88.5) {\n    SetSpeed(16);\n    RotateTo(90);\n  } else if (angle < 89.8) {\n    SetSpeed(10);\n    RotateTo(90);\n  } else {\n    SetSpeed(4);\n    RotateTo(90);\n  }\n}",
-    "maxDurationMs": 7000,
-    "tests": [
-      {"name": "AngleReached90", "label": "90° nået inden 5s", "type": "AngleReached", "target": 90, "tol": 1, "withinMs": 5000},
-      {"name": "Overshoot90", "label": "Overshoot under 3°", "type": "Overshoot", "target": 90, "maxDeg": 3},
-      {"name": "SteadyAngle", "label": "Stabil vinkel i 0.8s", "type": "SteadyState", "metric": "angle", "target": 90, "durationMs": 800, "maxError": 1}
-    ]
-  },
-  {
-    "id": "task2",
-    "title": "Løft til 2.0 m",
-    "description": "Løft krogen støt op til 2.0 meter og hold den stille uden at ramme rød sikkerhed.",
-    "criteria": [
-      "Vælg en rolig hastighed i Setup().",
-      "Brug LiftTo(2.0) til at bede simulatoren om målhøjden.",
-      "Hold farten nede så sikkerhedslyset forbliver grønt eller gult."
-    ],
-    "concepts": [
-      "LiftTo(højde) fungerer ligesom RotateTo men for krogens højde.",
-      "Du kan ændre hastigheden undervejs ved at kalde SetSpeed igen, fx lavere hastighed tæt på 2.0 m.",
-      "Sikkerhedsindikatoren bliver gul ved hurtige bevægelser og rød hvis det går alt for stærkt."
-    ],
-    "pseudocode": "public static void Setup() {\n  SetSpeed(10);\n}\n\npublic static void Tick(int dt) {\n  double h = GetHeight();\n  if (h < 1.95) {\n    LiftTo(2.0);\n  } else {\n    SetSpeed(5);\n  }\n}",
-    "demoCode": "public static void Setup() {\n  SetSpeed(12);\n}\n\npublic static void Tick(int dt) {\n  double height = GetHeight();\n  if (height < 1.8) {\n    SetSpeed(12);\n    LiftTo(2.0);\n  } else if (height < 1.95) {\n    SetSpeed(8);\n    LiftTo(2.0);\n  } else {\n    SetSpeed(4);\n  }\n}",
-    "maxDurationMs": 8000,
-    "tests": [
-      {"name": "LiftReached2m", "label": "Nå 2.0 m med ±0.02", "type": "LiftReached", "target": 2.0, "tol": 0.02, "steadyMs": 800},
-      {"name": "SteadyHeight", "label": "Stabil højde", "type": "SteadyState", "metric": "height", "target": 2.0, "durationMs": 800, "maxError": 0.05},
-      {"name": "Safety", "label": "Ingen rød sikkerhed", "type": "SafetyNeverRed", "maxRedMs": 200}
-    ]
-  },
-  {
-    "id": "task3",
-    "title": "Sekvens: 135°/45° + løft",
-    "description": "Lav en trinvis plan: først 135°, derefter løft til 1.5 m, og til sidst 45° samt 2.0 m.",
-    "criteria": [
-      "Brug if-else til at tjekke hvad der mangler i rækkefølgen.",
-      "Sænk hastigheden før hvert mål for at undgå store overshoots.",
-      "Hold øje med sikkerhedsfarven gennem hele forløbet."
-    ],
-    "concepts": [
-      "Du kan opdele logikken i små \"trin\" ved at returnere tidligt i Tick, så kun ét mål styres ad gangen.",
-      "Når du har nået en vinkel eller højde, så sæt et nyt mål – simulatoren husker ikke gamle ønsker.",
-      "Hvis sikkerheden bliver gul eller rød, kan du prøve at sænke hastigheden inden næste bevægelse."
-    ],
-    "pseudocode": "public static void Setup() {\n  SetSpeed(14);\n}\n\npublic static void Tick(int dt) {\n  if (GetAngle() < 134) {\n    RotateTo(135);\n    return;\n  }\n  if (GetHeight() < 1.5) {\n    LiftTo(1.5);\n    return;\n  }\n  if (GetAngle() > 46) {\n    RotateTo(45);\n    return;\n  }\n  if (GetHeight() < 2.0) {\n    LiftTo(2.0);\n  }\n}",
-    "demoCode": "public static void Setup() {\n  SetSpeed(32);\n}\n\npublic static void Tick(int dt) {\n  double angle = GetAngle();\n  double height = GetHeight();\n\n  if (height < 1.2 && angle < 134) {\n    if (angle < 120) {\n      SetSpeed(40);\n    } else {\n      SetSpeed(26);\n    }\n    RotateTo(135);\n  } else if (height < 1.5) {\n    if (height < 1.3) {\n      SetSpeed(24);\n    } else {\n      SetSpeed(12);\n    }\n    LiftTo(1.5);\n  } else if (angle > 46) {\n    if (angle > 70) {\n      SetSpeed(28);\n    } else {\n      SetSpeed(18);\n    }\n    RotateTo(45);\n  } else if (height < 2.0) {\n    if (height < 1.85) {\n      SetSpeed(18);\n    } else {\n      SetSpeed(10);\n    }\n    LiftTo(2.0);\n  } else {\n    SetSpeed(6);\n  }\n}",
-    "maxDurationMs": 12000,
-    "tests": [
-      {"name": "AngleReached135", "label": "135° nås", "type": "AngleReached", "target": 135, "tol": 2, "withinMs": 4000},
-      {"name": "LiftReached1_5", "label": "1.5 m nået", "type": "LiftReached", "target": 1.5, "tol": 0.05, "steadyMs": 500},
-      {"name": "AngleReached45", "label": "45° nås", "type": "AngleReached", "target": 45, "tol": 2, "withinMs": 10000},
-      {"name": "LiftReached2_0", "label": "2.0 m til sidst", "type": "LiftReached", "target": 2.0, "tol": 0.05, "steadyMs": 800},
-      {"name": "SafetySequence", "label": "Ingen rød fase", "type": "SafetyNeverRed", "maxRedMs": 200}
-    ]
-  }
+    {
+        "id": "crane_rotate_90",
+        "mode": "crane",
+        "title": "Kran: roter til 90\u00b0",
+        "description": "F\u00f8r armen roligt fra udgangspositionen op til 90\u00b0. Brug sm\u00e5 justeringer t\u00e6t p\u00e5 m\u00e5let.",
+        "criteria": [
+            "Brug SetSpeed til at styre hvor hurtigt armen m\u00e5 k\u00f8re.",
+            "Kald RotateTo(90) for at sigte mod m\u00e5lvinklen.",
+            "S\u00f8rg for et bl\u00f8dt stop s\u00e5 overshoot forbliver lavt."
+        ],
+        "concepts": [
+            "RotateTo(90) betyder: \"styr armen mod 90\u00b0\". Simulatoren bev\u00e6ger sig automatisk i den retning indtil du v\u00e6lger et nyt m\u00e5l.",
+            "SetSpeed(n) s\u00e6tter en maksimal hastighed. Lavere tal g\u00f8r det lettere at ramme m\u00e5let uden hop.",
+            "Overshoot m\u00e5ler hvor mange grader vi glider forbi 90\u00b0 efter f\u00f8rste ramt m\u00e5l. M\u00e5let er under 3\u00b0."
+        ],
+        "starterCode": "public static void Setup() {\n  SetSpeed(18);\n}\n\npublic static void Tick(int dt) {\n  ControlCrane(dt);\n}\n\npublic static void ControlCrane(int dt) {\n  // TODO: Skriv din styring der bringer armen til 90\u00b0\n}\n",
+        "pseudocode": "public static void Setup() {\n  SetSpeed(15);\n}\n\npublic static void Tick(int dt) {\n  ControlCrane(dt);\n}\n\npublic static void ControlCrane(int dt) {\n  double angle = GetAngle();\n  if (angle < 88) {\n    SetSpeed(18);\n    RotateTo(90);\n    return;\n  }\n  if (angle > 92) {\n    SetSpeed(12);\n    RotateTo(90);\n    return;\n  }\n  SetSpeed(4);\n}\n",
+        "demoCode": "public static void Setup() {\n  SetSpeed(24);\n  int stage = 0;\n}\n\npublic static void Tick(int dt) {\n  DemoControl(dt);\n}\n\npublic static void DemoControl(int dt) {\n  double angle = GetAngle();\n  if (angle < 86) {\n    SetSpeed(24);\n    RotateTo(90);\n    return;\n  }\n  if (angle < 88.5) {\n    SetSpeed(16);\n    RotateTo(90);\n    return;\n  }\n  if (angle < 89.8) {\n    SetSpeed(10);\n    RotateTo(90);\n    return;\n  }\n  SetSpeed(4);\n  RotateTo(90);\n}\n",
+        "maxDurationMs": 7000,
+        "tests": [
+            {
+                "name": "AngleReached90",
+                "label": "90\u00b0 n\u00e5et inden 5s",
+                "type": "AngleReached",
+                "target": 90,
+                "tol": 1,
+                "withinMs": 5000
+            },
+            {
+                "name": "Overshoot90",
+                "label": "Overshoot under 3\u00b0",
+                "type": "Overshoot",
+                "target": 90,
+                "maxDeg": 3
+            },
+            {
+                "name": "SteadyAngle",
+                "label": "Stabil vinkel i 0.8s",
+                "type": "SteadyState",
+                "metric": "angle",
+                "target": 90,
+                "durationMs": 800,
+                "maxError": 1
+            }
+        ]
+    },
+    {
+        "id": "crane_lift_2m",
+        "mode": "crane",
+        "title": "Kran: l\u00f8ft til 2.0 m",
+        "description": "L\u00f8ft krogen st\u00f8t op til 2.0 meter og hold den stille uden at ramme r\u00f8d sikkerhed.",
+        "criteria": [
+            "V\u00e6lg en rolig hastighed i Setup().",
+            "Brug LiftTo(2.0) til at bede simulatoren om m\u00e5lh\u00f8jden.",
+            "Hold farten nede s\u00e5 sikkerhedslyset forbliver gr\u00f8nt eller gult."
+        ],
+        "concepts": [
+            "LiftTo(h\u00f8jde) fungerer ligesom RotateTo men for krogens h\u00f8jde.",
+            "Du kan \u00e6ndre hastigheden undervejs ved at kalde SetSpeed igen, fx lavere hastighed t\u00e6t p\u00e5 2.0 m.",
+            "Sikkerhedsindikatoren bliver gul ved hurtige bev\u00e6gelser og r\u00f8d hvis det g\u00e5r alt for st\u00e6rkt."
+        ],
+        "starterCode": "public static void Setup() {\n  SetSpeed(12);\n}\n\npublic static void Tick(int dt) {\n  ControlLift(dt);\n}\n\npublic static void ControlLift(int dt) {\n  // TODO: Hold \u00f8je med GetHeight og styr LiftTo(2.0) sikkert\n}\n",
+        "pseudocode": "public static void Setup() {\n  SetSpeed(10);\n}\n\npublic static void Tick(int dt) {\n  ControlLift(dt);\n}\n\npublic static void ControlLift(int dt) {\n  double h = GetHeight();\n  if (h < 1.85) {\n    SetSpeed(12);\n    LiftTo(2.0);\n    return;\n  }\n  SetSpeed(6);\n  LiftTo(2.0);\n}\n",
+        "demoCode": "public static void Setup() {\n  SetSpeed(12);\n}\n\npublic static void Tick(int dt) {\n  DemoLift(dt);\n}\n\npublic static void DemoLift(int dt) {\n  double height = GetHeight();\n  if (height < 1.8) {\n    SetSpeed(12);\n    LiftTo(2.0);\n    return;\n  }\n  if (height < 1.95) {\n    SetSpeed(8);\n    LiftTo(2.0);\n    return;\n  }\n  SetSpeed(4);\n}\n",
+        "maxDurationMs": 8000,
+        "tests": [
+            {
+                "name": "LiftReached2m",
+                "label": "N\u00e5 2.0 m med \u00b10.02",
+                "type": "LiftReached",
+                "target": 2.0,
+                "tol": 0.02,
+                "steadyMs": 800
+            },
+            {
+                "name": "SteadyHeight",
+                "label": "Stabil h\u00f8jde",
+                "type": "SteadyState",
+                "metric": "height",
+                "target": 2.0,
+                "durationMs": 800,
+                "maxError": 0.05
+            },
+            {
+                "name": "Safety",
+                "label": "Ingen r\u00f8d sikkerhed",
+                "type": "SafetyNeverRed",
+                "maxRedMs": 200
+            }
+        ]
+    },
+    {
+        "id": "crane_sequence",
+        "mode": "crane",
+        "title": "Kran: sekvens 135\u00b0 \u2192 45\u00b0 + l\u00f8ft",
+        "description": "Lav en trinvis plan: f\u00f8rst 135\u00b0, derefter l\u00f8ft til 1.5 m, og til sidst 45\u00b0 samt 2.0 m.",
+        "criteria": [
+            "Brug if-else til at tjekke hvad der mangler i r\u00e6kkef\u00f8lgen.",
+            "S\u00e6nk hastigheden f\u00f8r hvert m\u00e5l for at undg\u00e5 store overshoots.",
+            "Hold \u00f8je med sikkerhedsfarven gennem hele forl\u00f8bet."
+        ],
+        "concepts": [
+            "Du kan opdele logikken i sm\u00e5 'trin' ved at returnere tidligt i Tick, s\u00e5 kun \u00e9t m\u00e5l styres ad gangen.",
+            "N\u00e5r du har n\u00e5et en vinkel eller h\u00f8jde, s\u00e5 s\u00e6t et nyt m\u00e5l \u2013 simulatoren husker ikke gamle \u00f8nsker.",
+            "Hvis sikkerheden bliver gul eller r\u00f8d, kan du pr\u00f8ve at s\u00e6nke hastigheden inden n\u00e6ste bev\u00e6gelse."
+        ],
+        "starterCode": "public static void Setup() {\n  SetSpeed(18);\n  int step = 0;\n}\n\npublic static void Tick(int dt) {\n  ControlSequence(dt);\n}\n\npublic static void ControlSequence(int dt) {\n  // TODO: Skift mellem rotation og l\u00f8ft i r\u00e6kkef\u00f8lge\n}\n",
+        "pseudocode": "public static void Setup() {\n  SetSpeed(14);\n  int step = 0;\n}\n\npublic static void Tick(int dt) {\n  ControlSequence(dt);\n}\n\npublic static void ControlSequence(int dt) {\n  if (step == 0 && GetAngle() < 134) {\n    RotateTo(135);\n    return;\n  }\n  if (step == 0) { step = 1; }\n  if (step == 1 && GetHeight() < 1.5) {\n    LiftTo(1.5);\n    return;\n  }\n  if (step == 1) { step = 2; }\n  if (step == 2 && GetAngle() > 46) {\n    RotateTo(45);\n    return;\n  }\n  if (step == 2) { step = 3; }\n  if (step == 3 && GetHeight() < 2.0) {\n    LiftTo(2.0);\n    return;\n  }\n  SetSpeed(6);\n}\n",
+        "demoCode": "public static void Setup() {\n  SetSpeed(32);\n  int step = 0;\n}\n\npublic static void Tick(int dt) {\n  DemoSequence(dt);\n}\n\npublic static void DemoSequence(int dt) {\n  double angle = GetAngle();\n  double height = GetHeight();\n\n  if (angle < 134 && step == 0) {\n    if (angle < 120) { SetSpeed(40); } else { SetSpeed(26); }\n    RotateTo(135);\n    return;\n  }\n  if (step == 0) { step = 1; }\n\n  if (height < 1.5 && step == 1) {\n    if (height < 1.3) { SetSpeed(24); } else { SetSpeed(12); }\n    LiftTo(1.5);\n    return;\n  }\n  if (step == 1) { step = 2; }\n\n  if (angle > 46 && step == 2) {\n    if (angle > 70) { SetSpeed(28); } else { SetSpeed(18); }\n    RotateTo(45);\n    return;\n  }\n  if (step == 2) { step = 3; }\n\n  if (height < 2.0 && step == 3) {\n    if (height < 1.85) { SetSpeed(18); } else { SetSpeed(10); }\n    LiftTo(2.0);\n    return;\n  }\n  SetSpeed(6);\n}\n",
+        "maxDurationMs": 12000,
+        "tests": [
+            {
+                "name": "AngleReached135",
+                "label": "135\u00b0 n\u00e5s",
+                "type": "AngleReached",
+                "target": 135,
+                "tol": 2,
+                "withinMs": 4000
+            },
+            {
+                "name": "LiftReached1_5",
+                "label": "1.5 m n\u00e5et",
+                "type": "LiftReached",
+                "target": 1.5,
+                "tol": 0.05,
+                "steadyMs": 500
+            },
+            {
+                "name": "AngleReached45",
+                "label": "45\u00b0 n\u00e5s",
+                "type": "AngleReached",
+                "target": 45,
+                "tol": 2,
+                "withinMs": 10000
+            },
+            {
+                "name": "LiftReached2_0",
+                "label": "2.0 m til sidst",
+                "type": "LiftReached",
+                "target": 2.0,
+                "tol": 0.05,
+                "steadyMs": 800
+            },
+            {
+                "name": "SafetySequence",
+                "label": "Ingen r\u00f8d fase",
+                "type": "SafetyNeverRed",
+                "maxRedMs": 200
+            }
+        ]
+    },
+    {
+        "id": "maze_easy",
+        "mode": "car",
+        "title": "Bil: Labyrint 1",
+        "description": "K\u00f8r bilen fra start (S) til m\u00e5l (G) gennem den smalle hovedgang. Du skal passere checkpointet (C) undervejs.",
+        "criteria": [
+            "Nulstil bilen i Setup() og v\u00e6lg en moderat hastighed.",
+            "Brug TurnTo(grad) og DriveForward(distance) til at f\u00f8lge gangen.",
+            "Stop bilen roligt n\u00e5r m\u00e5let er n\u00e5et."
+        ],
+        "concepts": [
+            "IsWallAhead(distance) hj\u00e6lper med at tjekke om n\u00e6ste felt er blokeret.",
+            "TurnTo(vinkel) retter bilen mod en bestemt retning (0\u00b0 h\u00f8jre, 90\u00b0 ned, 180\u00b0 venstre).",
+            "Hold styr p\u00e5 dine trin med en variabel (fx stage) s\u00e5 du ved hvorn\u00e5r du skal dreje."
+        ],
+        "starterCode": "public static void Setup() {\n  ResetCar();\n  SetDriveSpeed(1.6);\n  SetTurnSpeed(220);\n  int stage = 0;\n}\n\npublic static void Tick(int dt) {\n  NavigateLabyrinth();\n}\n\npublic static void NavigateLabyrinth() {\n  // TODO: Brug stage og TurnTo(...) for at f\u00f8lge gangen trin for trin\n}\n",
+        "pseudocode": "public static void Setup() {\n  ResetCar();\n  SetDriveSpeed(1.6);\n  SetTurnSpeed(220);\n  int stage = 0;\n}\n\npublic static void Tick(int dt) {\n  NavigateLabyrinth();\n}\n\npublic static void NavigateLabyrinth() {\n  if (stage == 0) { DriveForward(6.0); stage = 1; return; }\n  if (stage == 1 && GetPosX() >= 7.4) { TurnTo(90); stage = 2; return; }\n  // forts\u00e6t med TurnTo og DriveForward for hvert gangstykke\n}\n",
+        "demoCode": "public static void Setup() {\n  ResetCar();\n  SetDriveSpeed(2.2);\n  SetTurnSpeed(260);\n  int stage = 0;\n}\n\npublic static void Tick(int dt) {\n  DemoNavigate();\n}\n\npublic static void DemoNavigate() {\n  if (IsGoalReached()) { StopCar(); return; }\n  double x = GetPosX();\n  double y = GetPosY();\n  if (stage == 0) {\n    DriveForward(6.0);\n    stage = 1;\n    return;\n  }\n  if (stage == 1 && x >= 7.35) {\n    TurnTo(90);\n    stage = 2;\n    return;\n  }\n  if (stage == 2 && Math.Abs(GetHeading() - 90) < 1) {\n    DriveForward(3.0);\n    stage = 3;\n    return;\n  }\n  if (stage == 3 && y >= 4.35) {\n    TurnTo(180);\n    stage = 4;\n    return;\n  }\n  if (stage == 4 && Math.Abs(Math.Abs(GetHeading()) - 180) < 1) {\n    DriveForward(4.0);\n    stage = 5;\n    return;\n  }\n  if (stage == 5 && x <= 3.65) {\n    TurnTo(90);\n    stage = 6;\n    return;\n  }\n  if (stage == 6 && Math.Abs(GetHeading() - 90) < 1) {\n    DriveForward(2.0);\n    stage = 7;\n    return;\n  }\n  if (stage == 7 && y >= 6.35) {\n    TurnTo(0);\n    stage = 8;\n    return;\n  }\n  if (stage == 8 && Math.Abs(GetHeading()) < 1) {\n    DriveForward(6.0);\n    stage = 9;\n    return;\n  }\n  if (stage == 9 && x >= 9.35) {\n    TurnTo(90);\n    stage = 10;\n    return;\n  }\n  if (stage == 10 && Math.Abs(GetHeading() - 90) < 1) {\n    DriveForward(1.0);\n    stage = 11;\n    return;\n  }\n  if (stage == 11 && y >= 7.35) {\n    TurnTo(0);\n    stage = 12;\n    return;\n  }\n  if (stage == 12 && Math.Abs(GetHeading()) < 1) {\n    DriveForward(1.1);\n    stage = 13;\n    return;\n  }\n  if (stage == 13 && x >= 10.45) {\n    StopCar();\n  }\n}\n",
+        "maze": [
+            "############",
+            "#S      ####",
+            "####### ####",
+            "####### ####",
+            "###  C  ####",
+            "### ########",
+            "###       ##",
+            "######### G#",
+            "############"
+        ],
+        "start": {
+            "x": 1,
+            "y": 1,
+            "heading": 0
+        },
+        "goal": {
+            "x": 10,
+            "y": 7
+        },
+        "checkpoints": [
+            {
+                "x": 5,
+                "y": 4
+            }
+        ],
+        "maxDurationMs": 16000,
+        "tests": [
+            {
+                "name": "Maze1Goal",
+                "label": "M\u00e5l n\u00e5et",
+                "type": "CarReachedGoal",
+                "withinMs": 14000,
+                "tol": 0.2
+            },
+            {
+                "name": "Maze1Checkpoint",
+                "label": "Checkpoint ramt",
+                "type": "CarCheckpoint",
+                "index": 0
+            },
+            {
+                "name": "Maze1Safe",
+                "label": "Ingen kollision",
+                "type": "CarNoCollision"
+            }
+        ]
+    },
+    {
+        "id": "maze_advanced",
+        "mode": "car",
+        "title": "Bil: Labyrint 2",
+        "description": "To checkpoints skal passeres i r\u00e6kkef\u00f8lge f\u00f8r du m\u00e5 ramme m\u00e5let. Gangen er smallere og kr\u00e6ver flere drejninger.",
+        "criteria": [
+            "Planl\u00e6g dine trin s\u00e5 begge checkpoints (C) bes\u00f8ges i den angivne r\u00e6kkef\u00f8lge.",
+            "Tilpas hastigheden i skarpe sving, s\u00e5 du ikke rammer v\u00e6ggene.",
+            "Stop bilen roligt i m\u00e5lcellen (G)."
+        ],
+        "concepts": [
+            "Brug variabler til b\u00e5de trin og om et checkpoint allerede er taget.",
+            "Kig p\u00e5 heading: 0\u00b0 = mod h\u00f8jre, 90\u00b0 = ned, 180\u00b0 = venstre, 270\u00b0 = op.",
+            "IsWallAhead(0.5) er nyttig til at teste om n\u00e6ste felt er frit f\u00f8r du k\u00f8rer."
+        ],
+        "starterCode": "public static void Setup() {\n  ResetCar();\n  SetDriveSpeed(1.5);\n  SetTurnSpeed(200);\n  int stage = 0;\n  bool checkpointA = false;\n  bool checkpointB = false;\n}\n\npublic static void Tick(int dt) {\n  NavigateAdvanced();\n}\n\npublic static void NavigateAdvanced() {\n  // TODO: Skift mellem drejninger s\u00e5 begge checkpoints rammes f\u00f8r m\u00e5let\n}\n",
+        "pseudocode": "public static void Setup() {\n  ResetCar();\n  SetDriveSpeed(1.5);\n  SetTurnSpeed(200);\n  int stage = 0;\n  bool checkpointA = false;\n  bool checkpointB = false;\n}\n\npublic static void Tick(int dt) {\n  NavigateAdvanced();\n}\n\npublic static void NavigateAdvanced() {\n  if (!checkpointA && GetPosY() < 4.6 && GetPosX() >= 5.4) { checkpointA = true; }\n  if (checkpointA && !checkpointB && GetPosY() >= 7.4 && GetPosX() >= 7.4) { checkpointB = true; }\n  if (stage == 0) { DriveForward(7.0); stage = 1; return; }\n  if (stage == 1 && GetPosX() >= 8.4) { TurnTo(90); stage = 2; return; }\n  // forts\u00e6t med TurnTo og DriveForward for hvert gangstykke\n}\n",
+        "demoCode": "public static void Setup() {\n  ResetCar();\n  SetDriveSpeed(2.1);\n  SetTurnSpeed(260);\n  int stage = 0;\n  bool checkpointA = false;\n  bool checkpointB = false;\n}\n\npublic static void Tick(int dt) {\n  DemoAdvanced();\n}\n\npublic static void DemoAdvanced() {\n  if (IsGoalReached()) { StopCar(); return; }\n  double x = GetPosX();\n  double y = GetPosY();\n  if (!checkpointA && y <= 4.7 && x >= 5.3) { checkpointA = true; }\n  if (checkpointA && !checkpointB && y >= 7.3 && x >= 7.2) { checkpointB = true; }\n  if (stage == 0) {\n    DriveForward(7.2);\n    stage = 1;\n    return;\n  }\n  if (stage == 1 && x >= 8.3) {\n    TurnTo(90);\n    stage = 2;\n    return;\n  }\n  if (stage == 2 && Math.Abs(GetHeading() - 90) < 1) {\n    DriveForward(3.2);\n    stage = 3;\n    return;\n  }\n  if (stage == 3 && y >= 4.5) {\n    TurnTo(180);\n    stage = 4;\n    return;\n  }\n  if (stage == 4 && Math.Abs(Math.Abs(GetHeading()) - 180) < 1) {\n    DriveForward(4.5);\n    stage = 5;\n    return;\n  }\n  if (stage == 5 && x <= 4.2) {\n    TurnTo(90);\n    stage = 6;\n    return;\n  }\n  if (stage == 6 && Math.Abs(GetHeading() - 90) < 1) {\n    DriveForward(3.2);\n    stage = 7;\n    return;\n  }\n  if (stage == 7 && y >= 7.3) {\n    TurnTo(0);\n    stage = 8;\n    return;\n  }\n  if (stage == 8 && Math.Abs(GetHeading()) < 1) {\n    DriveForward(3.2);\n    stage = 9;\n    return;\n  }\n  if (stage == 9 && x >= 7.2) {\n    DriveForward(3.0);\n    stage = 10;\n    return;\n  }\n  if (stage == 10 && x >= 10.2) {\n    TurnTo(90);\n    stage = 11;\n    return;\n  }\n  if (stage == 11 && Math.Abs(GetHeading() - 90) < 1) {\n    DriveForward(1.0);\n    stage = 12;\n    return;\n  }\n  if (stage == 12 && y >= 8.2) {\n    TurnTo(0);\n    stage = 13;\n    return;\n  }\n  if (stage == 13 && Math.Abs(GetHeading()) < 1) {\n    DriveForward(1.0);\n    stage = 14;\n    return;\n  }\n  if (stage == 14 && x >= 11.45) {\n    StopCar();\n  }\n}\n",
+        "maze": [
+            "#############",
+            "#S       ####",
+            "######## ####",
+            "######## ####",
+            "#### C   ####",
+            "#### ##### ##",
+            "#### ##### ##",
+            "####   C   ##",
+            "########## G#",
+            "#############"
+        ],
+        "start": {
+            "x": 1,
+            "y": 1,
+            "heading": 0
+        },
+        "goal": {
+            "x": 11,
+            "y": 8
+        },
+        "checkpoints": [
+            {
+                "x": 5,
+                "y": 4
+            },
+            {
+                "x": 7,
+                "y": 7
+            }
+        ],
+        "maxDurationMs": 20000,
+        "tests": [
+            {
+                "name": "Maze2CheckpointA",
+                "label": "Checkpoint A",
+                "type": "CarCheckpoint",
+                "index": 0
+            },
+            {
+                "name": "Maze2CheckpointB",
+                "label": "Checkpoint B",
+                "type": "CarCheckpoint",
+                "index": 1
+            },
+            {
+                "name": "Maze2Goal",
+                "label": "M\u00e5l n\u00e5et",
+                "type": "CarReachedGoal",
+                "withinMs": 18000,
+                "tol": 0.25
+            },
+            {
+                "name": "Maze2Safe",
+                "label": "Ingen kollision",
+                "type": "CarNoCollision"
+            }
+        ]
+    }
 ]

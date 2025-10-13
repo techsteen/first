@@ -20,6 +20,15 @@
         case 'SafetyNeverRed':
           result = safetyNeverRed(timeline, test);
           break;
+        case 'CarReachedGoal':
+          result = carReachedGoal(timeline, test, taskSpec);
+          break;
+        case 'CarCheckpoint':
+          result = carCheckpoint(timeline, test, taskSpec);
+          break;
+        case 'CarNoCollision':
+          result = carNoCollision(timeline, test);
+          break;
         default:
           result = {name: test.name, pass: false, detail: 'Ukendt testtype.'};
       }
@@ -135,6 +144,52 @@
       }
     }
     return {pass:true, detail:`Rød i ${redAccum} ms (grænse ${maxRedMs}).`};
+  }
+
+  function carReachedGoal(timeline, spec, task){
+    if (!timeline.length){
+      return {pass:false, detail:'Ingen bevægelse registreret.'};
+    }
+    const tol = spec.tol ?? 0.2;
+    const within = spec.withinMs ?? (task?.maxDurationMs || 20000);
+    const goal = task?.goal || {x:0, y:0};
+    const goalX = (goal.x || 0) + 0.5;
+    const goalY = (goal.y || 0) + 0.5;
+    const reached = timeline.find(sample => sample.t <= within && distance(sample.x, sample.y, goalX, goalY) <= tol);
+    const pass = Boolean(reached);
+    return {
+      pass,
+      detail: pass ? `Målet nået ved ${reached.t} ms med afstand ${distance(reached.x, reached.y, goalX, goalY).toFixed(2)}.` : 'Målet blev ikke nået i tide.'
+    };
+  }
+
+  function carCheckpoint(timeline, spec, task){
+    const index = spec.index ?? 0;
+    const checkpoints = task?.checkpoints || [];
+    if (!checkpoints[index]){
+      return {pass:false, detail:'Checkpoint findes ikke i opgaven.'};
+    }
+    const metSample = timeline.find(sample => Array.isArray(sample.checkpointOrder) && sample.checkpointOrder.includes(index));
+    if (!metSample){
+      return {pass:false, detail:`Checkpoint ${index + 1} blev ikke registreret.`};
+    }
+    const orderOk = metSample.checkpointOrder.every((value, idx) => value === idx);
+    return {
+      pass: orderOk,
+      detail: orderOk ? `Checkpoint ${index + 1} registreret ved ${metSample.t} ms.` : 'Checkpoints blev ikke taget i korrekt rækkefølge.'
+    };
+  }
+
+  function carNoCollision(timeline, spec){
+    const collided = timeline.some(sample => sample.collided);
+    return {
+      pass: !collided,
+      detail: collided ? 'Bilen ramte væggen.' : 'Ingen kollision registreret.'
+    };
+  }
+
+  function distance(x1, y1, x2, y2){
+    return Math.hypot((x1 ?? 0) - (x2 ?? 0), (y1 ?? 0) - (y2 ?? 0));
   }
 
   window.TestRunner = {

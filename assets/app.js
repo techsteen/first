@@ -1,14 +1,18 @@
 (function(){
-  const defaultCode = `public static void Setup() {
+  const fallbackCode = `public static void Setup() {
     SetSpeed(15);
   }
   public static void Tick(int dt) {
-    // Opgave 1 eksempel: roter til 90°
-    if (GetAngle() < 90) { RotateTo(90); }
+    ControlExample(dt);
+  }
+  public static void ControlExample(int dt) {
+    // TODO: Udfyld styringen for den valgte opgave
   }`;
 
+  let defaultCode = fallbackCode;
   let tasks = [];
   let currentTask = null;
+  let currentMode = 'crane';
   let lastTimeline = [];
   let historyEntries = [];
   let lastTestResults = [];
@@ -18,15 +22,16 @@
 
   function init(){
     bindUI();
-    loadTasks();
+    renderHUDStructure(currentMode);
     setEditor(defaultCode);
     setStatus('Klar. Vælg opgave og tryk KØR.');
+    loadTasks();
   }
 
   function bindUI(){
     document.getElementById('runButton').addEventListener('click', onRun);
     document.getElementById('stopButton').addEventListener('click', stopAnimation);
-    document.getElementById('resetButton').addEventListener('click', () => setEditor(defaultCode));
+    document.getElementById('resetButton').addEventListener('click', () => setEditor(getCurrentStarter()));
     document.getElementById('taskSelect').addEventListener('change', onTaskChange);
     demoButton = document.getElementById('demoButton');
     if (demoButton){
@@ -63,6 +68,7 @@
       });
       if (tasks.length > 0){
         select.value = tasks[0].id;
+        defaultCode = tasks[0].starterCode || fallbackCode;
         setTask(tasks[0].id);
       }
     } catch (err){
@@ -76,8 +82,11 @@
   }
 
   function setTask(taskId){
-    currentTask = tasks.find(t => t.id === taskId);
-    if (!currentTask) return;
+    const nextTask = tasks.find(t => t.id === taskId);
+    if (!nextTask) return;
+    currentTask = nextTask;
+    currentMode = currentTask.mode || 'crane';
+
     const desc = document.getElementById('taskDescription');
     desc.textContent = currentTask.description;
     renderCriteria(currentTask.criteria);
@@ -89,13 +98,21 @@
     if (demoButton){
       demoButton.disabled = !currentTask.demoCode;
     }
-    setStatus('Opgave valgt: ' + currentTask.title);
+
+    renderHUDStructure(currentMode);
+    updateHUD(null);
+
+    const starter = currentTask.starterCode || defaultCode;
+    setEditor(starter);
+    lastTimeline = [];
+    lastTestResults = [];
+    setStatus(`Opgave valgt: ${currentTask.title}`);
   }
 
   function renderCriteria(criteria){
     const list = document.getElementById('taskCriteria');
     list.innerHTML = '';
-    criteria.forEach(item => {
+    (criteria || []).forEach(item => {
       const li = document.createElement('li');
       li.textContent = item;
       list.appendChild(li);
@@ -105,11 +122,7 @@
   function renderConcepts(concepts){
     const list = document.getElementById('conceptList');
     list.innerHTML = '';
-    const defaults = [
-      'RotateTo(vinkel) sætter et mål. Simulatoren drejer stille og roligt mod målet med den hastighed, du sidst satte med SetSpeed.',
-      'Overshoot er hvor mange grader vi glider forbi målet efter vi første gang rammer det. Mindre overshoot betyder roligere stop.'
-    ];
-    const items = Array.isArray(concepts) && concepts.length ? concepts : defaults;
+    const items = Array.isArray(concepts) && concepts.length ? concepts : getDefaultConcepts(currentMode);
     items.forEach(text => {
       const li = document.createElement('li');
       li.textContent = text;
@@ -121,7 +134,7 @@
     const list = document.getElementById('checklist');
     list.innerHTML = '';
     (currentTask?.tests || []).forEach(test => {
-      const result = results.find(r => r.name === test.name);
+      const result = (results || []).find(r => r.name === test.name);
       const li = document.createElement('li');
       li.textContent = test.label;
       if (!result){
@@ -155,6 +168,7 @@
       }
       return;
     }
+
     setStatus('Simulerer...');
     let simResult;
     try {
@@ -168,12 +182,14 @@
       }
       return;
     }
+
     lastTimeline = simResult.timeline;
-    if (!lastTimeline || lastTimeline.length === 0){
+    if (!lastTimeline || !lastTimeline.length){
       setStatus('Simulation gav ingen data.');
       return;
     }
-    window.Animator.start(lastTimeline, updateHUD, handleAnimationStop);
+
+    window.Animator.start(lastTimeline, updateHUD, handleAnimationStop, {mode: simResult.mode || currentMode, task: currentTask});
     const tests = window.TestRunner.runTests(lastTimeline, currentTask);
     lastTestResults = tests;
     renderResults(tests);
@@ -219,7 +235,7 @@
       setStatus('Demoen gav ingen bevægelse.');
       return;
     }
-    window.Animator.start(lastTimeline, updateHUD, handleAnimationStop);
+    window.Animator.start(lastTimeline, updateHUD, handleAnimationStop, {mode: simResult.mode || currentMode, task: currentTask});
     const tests = window.TestRunner.runTests(lastTimeline, currentTask);
     lastTestResults = tests;
     renderResults(tests);
@@ -236,7 +252,7 @@
   function renderResults(results){
     const container = document.getElementById('results');
     container.innerHTML = '';
-    if (!results || results.length === 0){
+    if (!results || !results.length){
       const empty = document.createElement('div');
       empty.textContent = 'Ingen testresultater tilgængelige.';
       container.appendChild(empty);
@@ -291,12 +307,33 @@
   }
 
   function updateHUD(sample){
-    if (!sample) return;
-    document.getElementById('hudAngle').textContent = `${sample.angle.toFixed(1)}°`;
-    document.getElementById('hudHeight').textContent = `${sample.height.toFixed(2)} m`;
-    document.getElementById('hudSafety').textContent = sample.safe;
-    const hud = document.getElementById('hud');
-    hud.style.border = `2px solid ${sample.safe === 'green' ? '#5bff8a' : sample.safe === 'yellow' ? '#ffe66d' : '#ff6b6b'}`;
+    if (!sample){
+      resetHudValues();
+      return;
+    }
+    if (currentMode === 'car'){
+      const posText = `${sample.x !== undefined ? sample.x.toFixed(2) : '0.00'} / ${sample.y !== undefined ? sample.y.toFixed(2) : '0.00'}`;
+      setHudValue('hud-pos', posText);
+      const heading = sample.heading !== undefined ? normalizeHeading(sample.heading).toFixed(0) + '°' : '0°';
+      setHudValue('hud-heading', heading);
+      const checkpointsTotal = Array.isArray(currentTask?.checkpoints) ? currentTask.checkpoints.length : 0;
+      const checkpointCount = sample.checkpoints !== undefined ? sample.checkpoints : 0;
+      const checkpointText = checkpointsTotal ? `${checkpointCount}/${checkpointsTotal}` : `${checkpointCount}`;
+      setHudValue('hud-checkpoint', checkpointText);
+      const status = sample.collided ? 'Kollision' : sample.goal ? 'Mål nået' : (sample.safe || 'green');
+      setHudValue('hud-status', status);
+      const hud = document.getElementById('hud');
+      hud.style.border = `2px solid ${sample.collided ? '#ff6b6b' : '#5bff8a'}`;
+    } else {
+      const angle = sample.angle !== undefined ? sample.angle.toFixed(1) : '0.0';
+      const height = sample.height !== undefined ? sample.height.toFixed(2) : '0.00';
+      const safe = sample.safe || 'green';
+      setHudValue('hud-angle', `${angle}°`);
+      setHudValue('hud-height', `${height} m`);
+      setHudValue('hud-safety', safe);
+      const hud = document.getElementById('hud');
+      hud.style.border = `2px solid ${safe === 'green' ? '#5bff8a' : safe === 'yellow' ? '#ffe66d' : '#ff6b6b'}`;
+    }
   }
 
   async function requestHint(force, parseError){
@@ -313,12 +350,15 @@
       const schemaRes = await fetch('assets/ai_schemas.json');
       const schemaData = await schemaRes.json();
       const executionMode = (aiEnabled || parseError) ? 'ai_emulation' : 'deterministic';
+      const lastSample = lastTimeline[lastTimeline.length - 1] || (currentMode === 'car'
+        ? {t:0, x:0, y:0, heading:0, safe:'green'}
+        : {t:0, angle:0, height:0, safe:'green'});
       const payload = {
         execution_mode: executionMode,
         task: currentTask,
         student_code_excerpt: getEditor().slice(0, 2000),
-        failed_tests: lastTestResults.filter(r => !r.pass).map(r => ({name: r.name, detail: r.detail})),
-        sim_state: lastTimeline[lastTimeline.length - 1] || {angle:0, height:0, safe:'green', t:0},
+        failed_tests: (lastTestResults || []).filter(r => !r.pass).map(r => ({name: r.name, detail: r.detail})),
+        sim_state: lastSample,
         parse_error: parseError || null,
         output_schema: schemaData.ai_output
       };
@@ -336,7 +376,7 @@
       const aiActive = executionMode === 'ai_emulation';
       displayAIResponse(data, aiActive);
       if (aiActive && Array.isArray(data.timeline) && data.timeline.length){
-        window.Animator.start(data.timeline, updateHUD, handleAnimationStop);
+        window.Animator.start(data.timeline, updateHUD, handleAnimationStop, {mode: currentMode, task: currentTask});
       }
       setStatus('AI-svar modtaget.');
     } catch (err){
@@ -402,6 +442,82 @@
     } else {
       body.textContent = text;
     }
+  }
+
+  function getCurrentStarter(){
+    return currentTask?.starterCode || defaultCode;
+  }
+
+  function getDefaultConcepts(mode){
+    if (mode === 'car'){
+      return [
+        'Heading 0° peger mod højre. Drejninger sker i trin på 90°.',
+        'IsWallAhead(distance) kan bruges til at tjekke næste felt i labyrinten.',
+        'Hold styr på dine trin med fx en stage-variabel og opdater den efter hver bevægelse.'
+      ];
+    }
+    return [
+      'RotateTo(vinkel) sætter et mål. Simulatoren drejer mod målet med den hastighed du sidst angav.',
+      'Overshoot er hvor mange grader vi glider forbi målet efter første træf. Lav hastighed giver mindre overshoot.'
+    ];
+  }
+
+  function renderHUDStructure(mode){
+    const hud = document.getElementById('hud');
+    if (!hud) return;
+    hud.innerHTML = '';
+    hud.dataset.mode = mode;
+    if (mode === 'car'){
+      createHudLine(hud, 'Position (x/y)', 'hud-pos');
+      createHudLine(hud, 'Heading', 'hud-heading');
+      createHudLine(hud, 'Checkpoints', 'hud-checkpoint');
+      createHudLine(hud, 'Status', 'hud-status');
+    } else {
+      createHudLine(hud, 'Vinkel', 'hud-angle');
+      createHudLine(hud, 'Højde', 'hud-height');
+      createHudLine(hud, 'Sikkerhed', 'hud-safety');
+    }
+    resetHudValues();
+  }
+
+  function createHudLine(container, label, key){
+    const span = document.createElement('span');
+    span.className = 'hud-line';
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'hud-label';
+    labelSpan.textContent = label + ':';
+    const value = document.createElement('strong');
+    value.className = 'hud-value';
+    value.dataset.key = key;
+    value.textContent = '—';
+    span.appendChild(labelSpan);
+    span.appendChild(value);
+    container.appendChild(span);
+  }
+
+  function setHudValue(key, text){
+    const hud = document.getElementById('hud');
+    if (!hud) return;
+    const target = hud.querySelector(`[data-key="${key}"]`);
+    if (target){
+      target.textContent = text;
+    }
+  }
+
+  function resetHudValues(){
+    const hud = document.getElementById('hud');
+    if (!hud) return;
+    hud.querySelectorAll('[data-key]').forEach(el => {
+      el.textContent = '—';
+    });
+    hud.style.border = '2px solid rgba(255,255,255,0.2)';
+  }
+
+  function normalizeHeading(value){
+    let heading = value || 0;
+    heading %= 360;
+    if (heading < 0) heading += 360;
+    return heading;
   }
 
 })();

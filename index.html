@@ -2,13 +2,13 @@
 <html lang="da">
 <head>
   <meta charset="UTF-8">
-  <title>Kran Træner</title>
+  <title>Sim Træner</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
   <header>
-    <h1>Kran Træner</h1>
-    <p>Programmer kranen med C#-lignende kode og opnå målene.</p>
+    <h1>Sim Træner</h1>
+    <p>Programmer kranen og labyrint-bilen med C#-lignende kode og se simuleringerne i realtid.</p>
   </header>
   <main id="layout">
     <section id="panel-tasks" aria-label="Opgaver og status">
@@ -38,14 +38,10 @@
       <div id="aiFeedback"></div>
     </section>
 
-    <section id="panel-canvas" aria-label="Kran animation">
+    <section id="panel-canvas" aria-label="Simulationsvisning">
       <div id="canvasWrapper">
         <canvas id="simCanvas" width="900" height="520">Din browser understøtter ikke canvas.</canvas>
-        <div id="hud">
-          <span>Vinkel: <strong id="hudAngle">0°</strong></span>
-          <span>Højde: <strong id="hudHeight">0.0 m</strong></span>
-          <span>Sikkerhed: <strong id="hudSafety">green</strong></span>
-        </div>
+        <div id="hud"></div>
       </div>
     </section>
 
