@@ -358,9 +358,11 @@ function renderStep1() {
         <span class="mt-2 inline-block bg-white/90 text-xs font-semibold text-slate-600 px-3 py-1 rounded-full shadow-sm">Forbinder subnettene</span>
       </div>
 
-      <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-        <line x1="50" y1="24" x2="25" y2="40" stroke="#475569" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="4 4"></line>
-        <line x1="50" y1="24" x2="75" y2="40" stroke="#475569" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="4 4"></line>
+      <svg class="absolute inset-0 w-full h-full pointer-events-none router-link-layer" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <path d="M50 26 C44 32 38 36 34 42" stroke="#14b8a6" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.75" fill="none"></path>
+        <path d="M50 26 C56 32 62 36 66 42" stroke="#38bdf8" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.75" fill="none"></path>
+        <circle cx="34" cy="42" r="1.5" fill="#0f766e" fill-opacity="0.8"></circle>
+        <circle cx="66" cy="42" r="1.5" fill="#0369a1" fill-opacity="0.8"></circle>
       </svg>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-40">
