@@ -45,8 +45,6 @@ const subnet2Devices = Array.from({ length: 12 }, (_, i) => ({
 
 const state = {
   step: 0,
-  subnet1Collapsed: false,
-  subnet2Collapsed: false,
   calculationMode: 'subnets',
   customSubnets: 2,
   customHosts: 126
@@ -56,6 +54,8 @@ let broadcastGenerator = null;
 let broadcastAnimator = null;
 let broadcastPackets = [];
 let chefTimer = null;
+let subnetGenerators = [];
+let subnetAnimators = [];
 
 function getDevicePosition(index) {
   const row = Math.floor(index / 6);
@@ -63,6 +63,15 @@ function getDevicePosition(index) {
   return {
     x: 8 + col * 14.5,
     y: 35 + row * 14
+  };
+}
+
+function getSubnetDevicePosition(index) {
+  const row = Math.floor(index / 3);
+  const col = index % 3;
+  return {
+    x: 18 + col * 32,
+    y: 56 + row * 12
   };
 }
 
@@ -143,6 +152,10 @@ function cleanupStep() {
   }
 
   broadcastPackets = [];
+  subnetGenerators.forEach((interval) => clearInterval(interval));
+  subnetAnimators.forEach((interval) => clearInterval(interval));
+  subnetGenerators = [];
+  subnetAnimators = [];
 }
 
 function setStep(newStep) {
@@ -260,72 +273,110 @@ function renderStep0() {
   setupBroadcastScene();
 }
 
-function renderSubnetColumn(index) {
-  const isFirst = index === 1;
-  const devices = isFirst ? subnet1Devices : subnet2Devices;
-  const collapsed = isFirst ? state.subnet1Collapsed : state.subnet2Collapsed;
-  const color = isFirst ? 'green' : 'blue';
-  const borderClass = isFirst ? 'border-green-500 bg-green-50' : 'border-blue-500 bg-blue-50';
-  const headerBorder = isFirst ? 'border-green-400' : 'border-blue-400';
-  const badgeColor = isFirst ? 'bg-green-200 text-green-700' : 'bg-blue-200 text-blue-700';
-  const wifiEmoji = '📶';
-  const networkTitle = isFirst ? 'Subnet 1: 192.168.1.0/25' : 'Subnet 2: 192.168.1.128/25';
-  const maskTitle = 'Mask: 255.255.255.128';
+function renderStep1() {
+  const subnets = [
+    {
+      id: 1,
+      title: 'Subnet 1: 192.168.1.0/25',
+      mask: 'Mask: 255.255.255.128',
+      hostsLabel: '× 12 enheder',
+      svgId: 'subnet1-svg',
+      panelClasses: 'border-green-400 from-green-50 to-green-100',
+      portColor: 'bg-green-400',
+      badgeClasses: 'bg-green-200 text-green-700',
+      devices: subnet1Devices,
+      deviceBorderClass: 'border-green-400',
+      lineColor: '#34d399',
+      packetColor: '#22c55e'
+    },
+    {
+      id: 2,
+      title: 'Subnet 2: 192.168.1.128/25',
+      mask: 'Mask: 255.255.255.128',
+      hostsLabel: '× 12 enheder',
+      svgId: 'subnet2-svg',
+      panelClasses: 'border-blue-400 from-blue-50 to-blue-100',
+      portColor: 'bg-blue-400',
+      badgeClasses: 'bg-blue-200 text-blue-700',
+      devices: subnet2Devices,
+      deviceBorderClass: 'border-blue-400',
+      lineColor: '#60a5fa',
+      packetColor: '#2563eb'
+    }
+  ];
 
-  return `
-    <div class="border-4 ${borderClass} rounded-xl p-4 relative">
-      <button data-action="toggle-subnet" data-target="${index}" class="w-full flex items-center justify-between bg-white ${headerBorder} border-2 rounded-lg px-3 py-2 text-left shadow-sm">
-        <div>
-          <p class="font-bold text-gray-800 text-sm">${networkTitle}</p>
-          <p class="text-xs text-gray-600">${maskTitle}</p>
-          <p class="text-xs text-gray-500">× 12 enheder</p>
-        </div>
-        <span class="text-2xl text-${color}-600">${collapsed ? '▼' : '▲'}</span>
-      </button>
+  const routerPorts = Array.from({ length: 8 })
+    .map(() => '<span class="block w-2 h-6 rounded bg-emerald-400"></span>')
+    .join('');
 
-      ${collapsed
-        ? ''
-        : `
-          <div class="mt-4">
-            <div class="bg-gray-800 text-white rounded-lg border-4 border-gray-900 shadow-xl px-4 py-2 mx-auto w-fit">
-              <p class="text-xs font-bold text-center mb-1">SWITCH ${index}</p>
-              <div class="flex gap-1 justify-center">
-                ${Array.from({ length: 6 })
-                  .map(() => '<span class="block w-2 h-5 bg-green-400 rounded"></span>')
-                  .join('')}
-              </div>
-            </div>
+  const panels = subnets
+    .map((subnet) => {
+      const deviceGrid = createDeviceCards(subnet.devices, subnet.deviceBorderClass);
+      const switchPorts = Array.from({ length: 6 })
+        .map(() => `<span class="block w-2 h-5 ${subnet.portColor} rounded"></span>`)
+        .join('');
 
-            <div class="grid grid-cols-3 gap-2 mt-4">
-              ${createDeviceCards(devices, isFirst ? 'border-green-400' : 'border-blue-400')}
-            </div>
+      return `
+        <div class="relative border-4 ${subnet.panelClasses} rounded-2xl bg-gradient-to-b overflow-hidden min-h-[420px]">
+          <div class="absolute top-4 left-4 bg-white/90 border border-slate-200 rounded-lg px-4 py-2 shadow-sm z-30">
+            <p class="font-bold text-gray-800 text-sm">${subnet.title}</p>
+            <p class="text-xs text-gray-600">${subnet.mask}</p>
+            <p class="text-xs text-gray-500">${subnet.hostsLabel}</p>
+          </div>
 
-            <div class="mt-3 text-center">
-              <span class="inline-flex items-center gap-1 ${badgeColor} px-3 py-1 rounded-full text-xs font-semibold">${wifiEmoji} Lokalt broadcast</span>
+          <div class="absolute left-1/2 -translate-x-1/2 top-20 bg-slate-900 text-white border-4 border-slate-800 rounded-2xl px-6 py-3 shadow-2xl z-40">
+            <p class="text-xs font-bold text-center tracking-[0.35em]">SWITCH ${subnet.id}</p>
+            <div class="flex gap-1 justify-center mt-2">${switchPorts}</div>
+          </div>
+
+          <svg id="${subnet.svgId}" class="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <g data-layer="lines"></g>
+            <g data-layer="packets"></g>
+          </svg>
+
+          <div class="absolute w-full" style="top: 182px;">
+            <div class="grid grid-cols-3 gap-4 px-6">
+              ${deviceGrid}
             </div>
           </div>
-        `}
-    </div>
-  `;
-}
 
-function renderStep1() {
+          <div class="absolute left-0 right-0 bottom-6 text-center z-30">
+            <span class="inline-flex items-center gap-1 ${subnet.badgeClasses} px-3 py-1 rounded-full text-xs font-semibold">📶 Lokalt broadcast</span>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
   visualizationEl.innerHTML = `
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[500px]">
-      ${renderSubnetColumn(1)}
-      ${renderSubnetColumn(2)}
+    <div class="relative min-h-[560px]">
+      <div class="absolute left-1/2 -translate-x-1/2 top-6 z-40 text-center">
+        <div class="bg-slate-900 text-white border-4 border-slate-700 rounded-2xl px-8 py-4 shadow-2xl">
+          <p class="text-sm font-bold tracking-[0.45em]">ROUTER</p>
+          <div class="flex gap-1 justify-center mt-2">${routerPorts}</div>
+        </div>
+        <span class="mt-2 inline-block bg-white/90 text-xs font-semibold text-slate-600 px-3 py-1 rounded-full shadow-sm">Forbinder subnettene</span>
+      </div>
+
+      <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <line x1="50" y1="24" x2="25" y2="40" stroke="#475569" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="4 4"></line>
+        <line x1="50" y1="24" x2="75" y2="40" stroke="#475569" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="4 4"></line>
+      </svg>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-40">
+        ${panels}
+      </div>
     </div>
   `;
 
-  visualizationEl.querySelectorAll('[data-action="toggle-subnet"]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const target = Number(button.getAttribute('data-target'));
-      if (target === 1) {
-        state.subnet1Collapsed = !state.subnet1Collapsed;
-      } else {
-        state.subnet2Collapsed = !state.subnet2Collapsed;
-      }
-      renderStep1();
+  subnets.forEach((subnet) => {
+    setupSubnetScene({
+      svgId: subnet.svgId,
+      devices: subnet.devices,
+      switchX: 50,
+      switchY: 30,
+      lineColor: subnet.lineColor,
+      packetColor: subnet.packetColor
     });
   });
 }
@@ -592,6 +643,142 @@ function renderVisualization() {
   }
 }
 
+function setupSubnetScene({ svgId, devices, switchX, switchY, lineColor, packetColor }) {
+  const svg = document.getElementById(svgId);
+  if (!svg) {
+    return;
+  }
+
+  const lineLayer = svg.querySelector('[data-layer="lines"]');
+  const packetLayer = svg.querySelector('[data-layer="packets"]');
+
+  if (!lineLayer || !packetLayer) {
+    return;
+  }
+
+  lineLayer.innerHTML = '';
+  packetLayer.innerHTML = '';
+
+  devices.forEach((_, index) => {
+    const { x, y } = getSubnetDevicePosition(index);
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x);
+    line.setAttribute('y1', y);
+    line.setAttribute('x2', switchX);
+    line.setAttribute('y2', switchY);
+    line.setAttribute('stroke', lineColor);
+    line.setAttribute('stroke-width', '1.6');
+    line.setAttribute('stroke-linecap', 'round');
+    line.setAttribute('opacity', '0.65');
+    lineLayer.appendChild(line);
+  });
+
+  const toSwitchPackets = [];
+  const fromSwitchPackets = [];
+
+  const generator = setInterval(() => {
+    const fromIndex = Math.floor(Math.random() * devices.length);
+    const startPos = getSubnetDevicePosition(fromIndex);
+
+    const packetElement = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    packetElement.setAttribute('r', '2.4');
+    packetElement.setAttribute('class', 'packet');
+    packetElement.setAttribute('fill', packetColor);
+    packetElement.setAttribute('cx', startPos.x);
+    packetElement.setAttribute('cy', startPos.y);
+    packetLayer.appendChild(packetElement);
+
+    const availableTargets = devices
+      .map((_, idx) => idx)
+      .filter((idx) => idx !== fromIndex);
+    for (let i = availableTargets.length - 1; i > 0; i -= 1) {
+      const swapIndex = Math.floor(Math.random() * (i + 1));
+      const temp = availableTargets[i];
+      availableTargets[i] = availableTargets[swapIndex];
+      availableTargets[swapIndex] = temp;
+    }
+
+    const fanOut = Math.min(4, availableTargets.length);
+    const targets = availableTargets.slice(0, fanOut);
+
+    toSwitchPackets.push({
+      element: packetElement,
+      progress: 0,
+      startPos,
+      targets
+    });
+
+    if (toSwitchPackets.length > 5) {
+      const removed = toSwitchPackets.shift();
+      if (removed && removed.element && removed.element.parentNode) {
+        removed.element.parentNode.removeChild(removed.element);
+      }
+    }
+  }, 1200);
+
+  const animator = setInterval(() => {
+    for (let i = toSwitchPackets.length - 1; i >= 0; i -= 1) {
+      const packet = toSwitchPackets[i];
+      const nextProgress = packet.progress + 0.05;
+      packet.progress = nextProgress;
+
+      if (nextProgress >= 1) {
+        if (packet.element.parentNode) {
+          packet.element.parentNode.removeChild(packet.element);
+        }
+        toSwitchPackets.splice(i, 1);
+
+        packet.targets.forEach((targetIndex) => {
+          const targetPos = getSubnetDevicePosition(targetIndex);
+          const clone = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          clone.setAttribute('r', '2');
+          clone.setAttribute('class', 'packet active');
+          clone.setAttribute('fill', packetColor);
+          clone.setAttribute('cx', switchX);
+          clone.setAttribute('cy', switchY);
+          packetLayer.appendChild(clone);
+
+          fromSwitchPackets.push({
+            element: clone,
+            progress: 0,
+            targetPos
+          });
+        });
+
+        continue;
+      }
+
+      const x = packet.startPos.x + (switchX - packet.startPos.x) * nextProgress;
+      const y = packet.startPos.y + (switchY - packet.startPos.y) * nextProgress;
+      packet.element.setAttribute('cx', x);
+      packet.element.setAttribute('cy', y);
+      packet.element.classList.add('active');
+    }
+
+    for (let i = fromSwitchPackets.length - 1; i >= 0; i -= 1) {
+      const packet = fromSwitchPackets[i];
+      const nextProgress = packet.progress + 0.06;
+      packet.progress = nextProgress;
+
+      if (nextProgress >= 1) {
+        if (packet.element.parentNode) {
+          packet.element.parentNode.removeChild(packet.element);
+        }
+        fromSwitchPackets.splice(i, 1);
+        continue;
+      }
+
+      const x = switchX + (packet.targetPos.x - switchX) * nextProgress;
+      const y = switchY + (packet.targetPos.y - switchY) * nextProgress;
+      packet.element.setAttribute('cx', x);
+      packet.element.setAttribute('cy', y);
+    }
+  }, 60);
+
+  subnetGenerators.push(generator);
+  subnetAnimators.push(animator);
+}
+
 function setupBroadcastScene() {
   const svg = document.getElementById('broadcast-svg');
   if (!svg) {
@@ -614,6 +801,7 @@ function setupBroadcastScene() {
     line.setAttribute('y2', '12');
     line.setAttribute('stroke', '#9ca3af');
     line.setAttribute('stroke-width', '1.8');
+    line.setAttribute('stroke-linecap', 'round');
     lineLayer.appendChild(line);
   });
 
@@ -704,8 +892,6 @@ prevBtn.addEventListener('click', () => {
 nextBtn.addEventListener('click', () => {
   if (state.step === steps.length - 1) {
     state.step = 0;
-    state.subnet1Collapsed = false;
-    state.subnet2Collapsed = false;
     state.calculationMode = 'subnets';
     state.customSubnets = 2;
     state.customHosts = 126;
