@@ -99,6 +99,8 @@
     const pivotX = centerX;
     const pivotY = baseY - 60;
 
+    drawAngleGauge(ctx, pivotX, pivotY, sample.angle);
+
     const tipX = pivotX + Math.cos(angleRad) * armLength;
     const tipY = pivotY + Math.sin(angleRad) * armLength;
 
@@ -111,6 +113,8 @@
 
     const hookX = tipX;
     const hookY = tipY + Math.abs(sample.height) * 35;
+
+    drawHeightScale(ctx, pivotX, pivotY, armLength, 35);
 
     ctx.strokeStyle = '#f4f5f7';
     ctx.lineWidth = 4;
@@ -130,6 +134,85 @@
 
   function lerp(a, b, t){
     return a + (b - a) * t;
+  }
+
+  function drawAngleGauge(ctx, pivotX, pivotY, currentAngle){
+    const radius = 130;
+    const inner = radius - 18;
+    ctx.save();
+    ctx.translate(pivotX, pivotY);
+    ctx.strokeStyle = 'rgba(255, 230, 109, 0.35)';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, Math.PI, 0, false);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ffe66d';
+    ctx.lineWidth = 2;
+    ctx.font = '12px "Segoe UI", sans-serif';
+    ctx.fillStyle = '#ffe66d';
+    for (let deg = 0; deg <= 180; deg += 10){
+      const rad = (deg - 90) * Math.PI / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      const outerX = cos * radius;
+      const outerY = sin * radius;
+      const innerLen = (deg % 30 === 0) ? 22 : 14;
+      const innerX = cos * (radius - innerLen);
+      const innerY = sin * (radius - innerLen);
+      ctx.beginPath();
+      ctx.moveTo(innerX, innerY);
+      ctx.lineTo(outerX, outerY);
+      ctx.stroke();
+
+      if (deg % 30 === 0){
+        const labelRadius = radius + 16;
+        ctx.fillText(`${deg}°`, cos * labelRadius - 12, sin * labelRadius + 4);
+      }
+    }
+
+    // indicator for current angle
+    const currentRad = (currentAngle - 90) * Math.PI / 180;
+    ctx.strokeStyle = '#ffd166';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(currentRad) * (inner - 8), Math.sin(currentRad) * (inner - 8));
+    ctx.lineTo(Math.cos(currentRad) * (radius + 6), Math.sin(currentRad) * (radius + 6));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawHeightScale(ctx, pivotX, pivotY, armLength, scale){
+    const startX = pivotX + armLength + 60;
+    const startY = pivotY - 30;
+    const maxMeters = 10;
+    const heightPx = maxMeters * scale;
+    const endY = startY + heightPx;
+
+    ctx.save();
+    ctx.strokeStyle = '#ff6b6b';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(startX, endY);
+    ctx.stroke();
+
+    ctx.font = '12px "Segoe UI", sans-serif';
+    ctx.fillStyle = '#ff6b6b';
+    for (let i = 0; i <= maxMeters * 4; i++){
+      const y = startY + i * (scale * 0.25);
+      const isMeter = i % 4 === 0;
+      const tickLen = isMeter ? 18 : 10;
+      ctx.beginPath();
+      ctx.moveTo(startX, y);
+      ctx.lineTo(startX + tickLen, y);
+      ctx.stroke();
+      if (isMeter){
+        const label = `${(i / 4).toFixed(0)} m`;
+        ctx.fillText(label, startX + tickLen + 4, y + 4);
+      }
+    }
+    ctx.restore();
   }
 
   window.Animator = {
