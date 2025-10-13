@@ -114,7 +114,7 @@
     const hookX = tipX;
     const hookY = tipY + Math.abs(sample.height) * 35;
 
-    drawHeightScale(ctx, pivotX, pivotY, armLength, 35);
+    drawHeightScale(ctx, pivotX, tipX, tipY, 35);
 
     ctx.strokeStyle = '#f4f5f7';
     ctx.lineWidth = 4;
@@ -142,13 +142,13 @@
     ctx.save();
     ctx.translate(pivotX, pivotY);
     ctx.strokeStyle = 'rgba(255, 230, 109, 0.35)';
-    ctx.lineWidth = 8;
+    ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.arc(0, 0, radius, Math.PI, 0, false);
     ctx.stroke();
 
     ctx.strokeStyle = '#ffe66d';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.font = '12px "Segoe UI", sans-serif';
     ctx.fillStyle = '#ffe66d';
     for (let deg = 0; deg <= 180; deg += 10){
@@ -174,7 +174,7 @@
     // indicator for current angle
     const currentRad = (currentAngle - 90) * Math.PI / 180;
     ctx.strokeStyle = '#ffd166';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(Math.cos(currentRad) * (inner - 8), Math.sin(currentRad) * (inner - 8));
     ctx.lineTo(Math.cos(currentRad) * (radius + 6), Math.sin(currentRad) * (radius + 6));
@@ -182,16 +182,18 @@
     ctx.restore();
   }
 
-  function drawHeightScale(ctx, pivotX, pivotY, armLength, scale){
-    const startX = pivotX + armLength + 60;
-    const startY = pivotY - 30;
+  function drawHeightScale(ctx, pivotX, tipX, tipY, scale){
+    const side = tipX >= pivotX ? 1 : -1;
+    const offset = 26;
+    const startX = tipX + side * offset;
+    const startY = tipY;
     const maxMeters = 10;
     const heightPx = maxMeters * scale;
     const endY = startY + heightPx;
 
     ctx.save();
     ctx.strokeStyle = '#ff6b6b';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(startX, startY);
     ctx.lineTo(startX, endY);
@@ -199,17 +201,19 @@
 
     ctx.font = '12px "Segoe UI", sans-serif';
     ctx.fillStyle = '#ff6b6b';
+    ctx.textAlign = side > 0 ? 'left' : 'right';
     for (let i = 0; i <= maxMeters * 4; i++){
       const y = startY + i * (scale * 0.25);
       const isMeter = i % 4 === 0;
-      const tickLen = isMeter ? 18 : 10;
+      const tickLen = isMeter ? 14 : 8;
       ctx.beginPath();
       ctx.moveTo(startX, y);
-      ctx.lineTo(startX + tickLen, y);
+      ctx.lineTo(startX + side * tickLen, y);
       ctx.stroke();
       if (isMeter){
         const label = `${(i / 4).toFixed(0)} m`;
-        ctx.fillText(label, startX + tickLen + 4, y + 4);
+        const labelX = startX + side * (tickLen + 4);
+        ctx.fillText(label, labelX, y + 4);
       }
     }
     ctx.restore();
