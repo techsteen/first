@@ -567,8 +567,8 @@
   function extractFunctionBody(code, signatureRegex){
     const match = signatureRegex.exec(code);
     if (!match) return null;
-    const bodyStart = match.index + match[0].length;
-    const captured = captureBlock(code, bodyStart);
+    const openBraceIndex = match.index + match[0].length - 1;
+    const captured = captureBlock(code, openBraceIndex);
     return {body: captured.body, end: captured.end};
   }
 
@@ -585,7 +585,8 @@
       }
       const params = parseParameters(match[3]);
       const start = match.index;
-      const bodyInfo = captureBlock(code, regex.lastIndex);
+      const openBraceIndex = match.index + match[0].length - 1;
+      const bodyInfo = captureBlock(code, openBraceIndex);
       functions.push({name, params, body: bodyInfo.body});
       result += code.slice(lastIndex, start);
       lastIndex = bodyInfo.end;
@@ -595,16 +596,38 @@
     return {code: result, functions};
   }
 
-  function captureBlock(code, startIndex){
-    let depth = 1;
-    let index = startIndex;
+  function captureBlock(code, openBraceIndex){
+    if (code[openBraceIndex] !== '{'){
+      throw new Error('Forventede blokstart med {.');
+    }
+    let depth = 0;
+    let index = openBraceIndex;
+    const bodyStart = openBraceIndex + 1;
+    let inString = false;
+    let stringQuote = '';
     while (index < code.length){
       const char = code[index++];
-      if (char === '{') depth++;
-      else if (char === '}'){
+      if (inString){
+        if (char === '\\' && index < code.length){
+          index++;
+          continue;
+        }
+        if (char === stringQuote){
+          inString = false;
+        }
+        continue;
+      }
+      if (char === '"' || char === '\''){
+        inString = true;
+        stringQuote = char;
+        continue;
+      }
+      if (char === '{'){
+        depth++;
+      } else if (char === '}'){
         depth--;
         if (depth === 0){
-          return {body: code.slice(startIndex, index - 1), end: index};
+          return {body: code.slice(bodyStart, index - 1), end: index};
         }
       }
     }
