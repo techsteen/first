@@ -1,0 +1,111 @@
+:root {
+  color-scheme: light;
+}
+
+.btn,
+.btn-primary {
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn {
+  background-color: #6b7280;
+  color: #fff;
+}
+
+.btn:hover {
+  background-color: #4b5563;
+}
+
+.btn:disabled {
+  background-color: #d1d5db;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: #4f46e5;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background-color: #4338ca;
+}
+
+.device-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #fff;
+  border-radius: 0.75rem;
+  padding: 0.5rem;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.5);
+}
+
+.device-card span {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #475569;
+  font-family: "Fira Code", Menlo, Monaco, Consolas, "Courier New", monospace;
+  text-align: center;
+}
+
+.callout-box {
+  background-color: #fef3c7;
+  border: 2px solid #facc15;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  font-size: 0.75rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: #bbf7d0;
+  color: #15803d;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.grid-scroll {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.fade-in {
+  animation: fadeIn 0.45s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.packet {
+  fill: #ef4444;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.packet.active {
+  opacity: 1;
+}
