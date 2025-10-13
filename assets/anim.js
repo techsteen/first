@@ -249,9 +249,9 @@
       return;
     }
 
-    const cellSize = Math.min((canvas.width * 0.9) / cols, (canvas.height * 0.9) / rows);
+    const cellSize = Math.min((canvas.width * 0.9) / cols, (canvas.height * 0.85) / rows);
     const offsetX = (canvas.width - cellSize * cols) / 2;
-    const offsetY = (canvas.height - cellSize * rows) / 2;
+    const offsetY = (canvas.height - cellSize * rows) / 2.2;
 
     ctx.save();
     ctx.translate(offsetX, offsetY);
@@ -278,6 +278,42 @@
         }
       }
     }
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= cols; x++){
+      const lineX = x * cellSize;
+      ctx.beginPath();
+      ctx.moveTo(lineX, 0);
+      ctx.lineTo(lineX, rows * cellSize);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= rows; y++){
+      const lineY = y * cellSize;
+      ctx.beginPath();
+      ctx.moveTo(0, lineY);
+      ctx.lineTo(cols * cellSize, lineY);
+      ctx.stroke();
+    }
+
+    const labelFont = Math.max(11, cellSize * 0.22);
+    const axisOffset = Math.max(12, cellSize * 0.2);
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.font = `bold ${labelFont}px "Segoe UI", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (let x = 0; x < cols; x++){
+      const value = (x + 0.5).toFixed(1);
+      ctx.fillText(value, x * cellSize + cellSize / 2, rows * cellSize + axisOffset);
+    }
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let y = 0; y < rows; y++){
+      const value = (y + 0.5).toFixed(1);
+      ctx.fillText(value, -axisOffset * 0.35, y * cellSize + cellSize / 2);
+    }
+    ctx.restore();
 
     const carX = (sample.x || 0) * cellSize;
     const carY = (sample.y || 0) * cellSize;

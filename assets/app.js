@@ -1,5 +1,7 @@
 (function(){
-  const fallbackCode = `public static void Setup() {
+  const fallbackCode = `// Simulatoren kalder Setup() én gang og derefter Tick(dt) ca. 60 gange i sekundet.
+  // Brug dt-parameteren hvis du har brug for tidsbaserede beregninger.
+  public static void Setup() {
     SetSpeed(15);
   }
   public static void Tick(int dt) {
@@ -31,7 +33,7 @@
   function bindUI(){
     document.getElementById('runButton').addEventListener('click', onRun);
     document.getElementById('stopButton').addEventListener('click', stopAnimation);
-    document.getElementById('resetButton').addEventListener('click', () => setEditor(getCurrentStarter()));
+    document.getElementById('resetButton').addEventListener('click', onResetEditor);
     document.getElementById('taskSelect').addEventListener('change', onTaskChange);
     demoButton = document.getElementById('demoButton');
     if (demoButton){
@@ -107,6 +109,16 @@
     lastTimeline = [];
     lastTestResults = [];
     setStatus(`Opgave valgt: ${currentTask.title}`);
+  }
+
+  function onResetEditor(){
+    stopAnimation();
+    setEditor(getCurrentStarter());
+    lastTimeline = [];
+    renderResults([]);
+    renderChecklist([]);
+    updateHUD(null);
+    setStatus('Starterkode indlæst. Tryk KØR for at simulere igen.');
   }
 
   function renderCriteria(criteria){
@@ -437,10 +449,11 @@
 
   function updatePseudocode(text){
     const body = document.getElementById('pseudoBody');
+    const runtimeInfo = `\n\n// Simulatorens hovedløkke (kun til illustration, du skal ikke skrive den selv)\npublic static void SimMain() {\n  Setup();\n  int dt = 16; // 16 ms ≈ 60 Tick-kald pr. sekund\n  for (int tid = 0; tid < SimDuration; tid += dt) {\n    Tick(dt);\n  }\n}`;
     if (!text){
-      body.textContent = 'Ingen pseudokode tilgængelig for denne opgave endnu.';
+      body.textContent = 'Ingen pseudokode tilgængelig for denne opgave endnu.' + runtimeInfo;
     } else {
-      body.textContent = text;
+      body.textContent = text + runtimeInfo;
     }
   }
 
@@ -451,6 +464,7 @@
   function getDefaultConcepts(mode){
     if (mode === 'car'){
       return [
+        'Hvert felt i labyrinten svarer til 1,0 måleenhed. Gridet og HUD\'en viser bilens centrum.',
         'Heading 0° peger mod højre. Drejninger sker i trin på 90°.',
         'IsWallAhead(distance) kan bruges til at tjekke næste felt i labyrinten.',
         'Hold styr på dine trin med fx en stage-variabel og opdater den efter hver bevægelse.'
