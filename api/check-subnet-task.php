@@ -25,6 +25,13 @@ function findConfigFile(): array
     $candidates = [];
     $checked = [];
 
+    $envPath = getenv('CONFIG_PATH');
+    if (is_string($envPath) && $envPath !== '') {
+        $candidates[] = $envPath;
+        $candidates[] = __DIR__ . '/' . ltrim($envPath, '/\\');
+        $candidates[] = dirname(__DIR__) . '/' . ltrim($envPath, '/\\');
+    }
+
     $envFile = getenv('CONFIG_FILE');
     if (is_string($envFile) && $envFile !== '') {
         $candidates[] = $envFile;
@@ -40,6 +47,37 @@ function findConfigFile(): array
     }
 
     $bases = [__DIR__, dirname(__DIR__), dirname(__DIR__, 2), dirname(__DIR__, 3)];
+
+    $docRoots = [];
+    $docRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
+    if (is_string($docRoot) && $docRoot !== '') {
+        $docRoots[] = $docRoot;
+    }
+    $contextRoot = $_SERVER['CONTEXT_DOCUMENT_ROOT'] ?? '';
+    if (is_string($contextRoot) && $contextRoot !== '' && $contextRoot !== $docRoot) {
+        $docRoots[] = $contextRoot;
+    }
+    $scriptFilename = $_SERVER['SCRIPT_FILENAME'] ?? '';
+    if (is_string($scriptFilename) && $scriptFilename !== '') {
+        $docRoots[] = dirname($scriptFilename);
+    }
+    $scriptDirName = $_SERVER['SCRIPT_NAME'] ?? '';
+    if (is_string($scriptDirName) && $scriptDirName !== '' && is_string($docRoot) && $docRoot !== '') {
+        $joined = rtrim($docRoot, "\\/") . '/' . ltrim(dirname($scriptDirName), '/\\');
+        $docRoots[] = $joined;
+    }
+
+    foreach ($docRoots as $root) {
+        if (!is_string($root) || $root === '') {
+            continue;
+        }
+        $root = rtrim($root, "\\/");
+        if ($root === '') {
+            continue;
+        }
+        $bases[] = $root;
+    }
+
     foreach ($bases as $base) {
         if (!is_string($base) || $base === '') {
             continue;
@@ -259,7 +297,7 @@ $requestBody = [
     'messages' => [
         [
             'role' => 'system',
-            'content' => 'Du er en hjælpsom underviser i subnetting. Du skal svare med JSON på formen {"status":"correct|incorrect","feedback":"kort forklaring på dansk"}. Ros kort ved korrekte svar og forklar hvad der mangler ved forkerte.'
+            'content' => 'Du er en hjælpsom underviser i subnetting. Svar altid med JSON på formen {"status":"correct|incorrect","feedback":"tekst"}. "feedback" skal være 2-3 korte sætninger på dansk. Hvis svaret er korrekt: ros kort og forklar hvorfor løsningen er rigtig. Hvis svaret er forkert: giv konkrete hints til, hvordan eleven kan finde svaret, fx hvilke formler eller intervaller der skal bruges, men afslør aldrig den præcise adresse eller det nøjagtige tal. Nævn aldrig direkte den forventede løsning.'
         ],
         [
             'role' => 'user',
@@ -331,6 +369,29 @@ if (!is_array($result) || !isset($result['status'])) {
 
 $status = in_array($result['status'], ['correct', 'incorrect'], true) ? $result['status'] : 'incorrect';
 $feedback = isset($result['feedback']) ? trim((string) $result['feedback']) : '';
+
+if ($status === 'incorrect' && $expected !== '') {
+    $pattern = '/' . preg_quote($expected, '/') . '/iu';
+    $feedback = preg_replace($pattern, '[skjult]', $feedback);
+}
+
+$feedback = trim($feedback);
+
+if ($status === 'correct') {
+    if ($feedback === '') {
+        $feedback = 'Godt arbejde – svaret matcher løsningen.';
+    }
+    if (stripos($feedback, 'godt arbejde') !== 0 && stripos($feedback, 'flot arbejde') !== 0) {
+        $feedback = 'Godt arbejde! ' . $feedback;
+    }
+} else {
+    if ($feedback === '') {
+        $feedback = 'Gennemgå trin for trin, hvordan subnettet beregnes, og dobbelttjek dine mellemregninger.';
+    }
+    if (stripos($feedback, 'elevens svar') !== 0) {
+        $feedback = 'Elevens svar er ikke korrekt endnu. ' . $feedback;
+    }
+}
 
 respond([
     'status' => $status,

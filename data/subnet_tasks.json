@@ -207,6 +207,146 @@
     "category": "Hosts",
     "prompt": "Hvor mange brugbare værter findes i netværket 10.0.0.0/18?",
     "expectedAnswer": "16382",
-    "explanation": "Et /18 har 14 værtsbits: 2^14 - 2 = 16382." 
+    "explanation": "Et /18 har 14 værtsbits: 2^14 - 2 = 16382."
+  },
+  {
+    "id": 31,
+    "category": "Design",
+    "prompt": "Hvilket prefix skal du vælge for et subnet med mindst 900 brugbare værter?",
+    "expectedAnswer": "/22",
+    "explanation": "Et subnet med mindst 900 brugbare værter kræver 10 værtsbits: 2^10 - 2 = 1022. 32 - 10 = 22, så prefixet skal være /22."
+  },
+  {
+    "id": 32,
+    "category": "Netværk",
+    "prompt": "Hvad er netværksadressen for IP'en 10.12.45.200/21?",
+    "expectedAnswer": "10.12.40.0",
+    "explanation": "Et /21 har blokstørrelse 8 i tredje oktet (masken 255.255.248.0). 45 ligger i blokken, der starter ved 40."
+  },
+  {
+    "id": 33,
+    "category": "Broadcast",
+    "prompt": "Hvad er broadcast-adressen for subnettet 172.20.192.0/20?",
+    "expectedAnswer": "172.20.207.255",
+    "explanation": "Et /20 har blokstørrelse 16 i tredje oktet. Intervallet 192-207 afsluttes med broadcast-adressen 172.20.207.255."
+  },
+  {
+    "id": 34,
+    "category": "Maske",
+    "prompt": "Hvad er subnetmasken i decimal for prefix /17?",
+    "expectedAnswer": "255.255.128.0",
+    "explanation": "Et /17 betyder 1 værtsbit i tredje oktet: 10000000 i binær svarer til 128 i decimal."
+  },
+  {
+    "id": 35,
+    "category": "Design",
+    "prompt": "Hvor mange subnets får du ved at opdele et /24 netværk til /28?",
+    "expectedAnswer": "16",
+    "explanation": "Fra /24 til /28 låner du 4 bits. 2^4 = 16 subnets."
+  },
+  {
+    "id": 36,
+    "category": "Hosts",
+    "prompt": "Hvor mange brugbare værter findes i netværket 192.168.16.0/23?",
+    "expectedAnswer": "510",
+    "explanation": "Et /23 har 9 værtsbits: 2^9 - 2 = 510 brugbare værter."
+  },
+  {
+    "id": 37,
+    "category": "Adresser",
+    "prompt": "Hvad er den første brugbare adresse i 172.31.64.0/19?",
+    "expectedAnswer": "172.31.64.1",
+    "explanation": "Netværksadressen er 172.31.64.0, så første host er +1."
+  },
+  {
+    "id": 38,
+    "category": "Broadcast",
+    "prompt": "Hvad er broadcast-adressen for IP'en 192.168.5.190/26?",
+    "expectedAnswer": "192.168.5.191",
+    "explanation": "Et /26 har blokstørrelse 64. IP'en ligger i blokken 128-191, så broadcast-adressen er 192.168.5.191."
+  },
+  {
+    "id": 39,
+    "category": "Hosts",
+    "prompt": "Hvor mange brugbare værter er der i hvert subnet med prefix /25?",
+    "expectedAnswer": "126",
+    "explanation": "Et /25 har 7 værtsbits: 2^7 - 2 = 126 brugbare adresser."
+  },
+  {
+    "id": 40,
+    "category": "Design",
+    "prompt": "Hvilket prefix giver plads til mindst 50 brugbare værter i hvert subnet?",
+    "expectedAnswer": "/26",
+    "explanation": "Et /26 har 6 værtsbits: 2^6 - 2 = 62 brugbare værter, hvilket opfylder kravet på 50."
+  },
+  {
+    "id": 41,
+    "category": "Netværk",
+    "prompt": "Hvad er netværksadressen for IP'en 203.0.113.78/29?",
+    "expectedAnswer": "203.0.113.72",
+    "explanation": "Et /29 har blokstørrelse 8. 78 ligger i blokken 72-79, så netværksadressen er 203.0.113.72."
+  },
+  {
+    "id": 42,
+    "category": "Adresser",
+    "prompt": "Hvad er den sidste brugbare adresse i 198.51.100.128/27?",
+    "expectedAnswer": "198.51.100.158",
+    "explanation": "Et /27 dækker 128-159. Broadcast er 198.51.100.159, så sidste host er 198.51.100.158."
+  },
+  {
+    "id": 43,
+    "category": "Hosts",
+    "prompt": "Hvor mange brugbare værter findes i et /22 subnet?",
+    "expectedAnswer": "1022",
+    "explanation": "Et /22 har 10 værtsbits: 2^10 - 2 = 1022 brugbare værter."
+  },
+  {
+    "id": 44,
+    "category": "Broadcast",
+    "prompt": "Hvad er broadcast-adressen for subnettet 10.50.12.0/23?",
+    "expectedAnswer": "10.50.13.255",
+    "explanation": "Et /23 dækker to sammenhængende /24-net: 10.50.12.0-10.50.13.255, så broadcast er 10.50.13.255."
+  },
+  {
+    "id": 45,
+    "category": "Design",
+    "prompt": "Hvilket prefix skal vælges for mindst 2000 brugbare værter i et subnet?",
+    "expectedAnswer": "/21",
+    "explanation": "2000 værter kræver 11 værtsbits: 2^11 - 2 = 2046. 32 - 11 = 21, så prefixet skal være /21."
+  },
+  {
+    "id": 46,
+    "category": "Design",
+    "prompt": "Hvor mange subnets får du ved at låne 2 bits fra et /20 netværk?",
+    "expectedAnswer": "4",
+    "explanation": "2 ekstra subnet-bits giver 2^2 = 4 subnets ud af /20-netværket."
+  },
+  {
+    "id": 47,
+    "category": "Blokstørrelse",
+    "prompt": "Hvad er blokstørrelsen (antal adresser) for et /21 subnet?",
+    "expectedAnswer": "2048",
+    "explanation": "Et /21 efterlader 11 værtsbits: 2^11 = 2048 adresser i alt."
+  },
+  {
+    "id": 48,
+    "category": "Broadcast",
+    "prompt": "Hvad er broadcast-adressen for subnettet 192.168.60.32/28?",
+    "expectedAnswer": "192.168.60.47",
+    "explanation": "Et /28 har blokstørrelse 16. Intervallet 32-47 slutter med broadcast-adressen 192.168.60.47."
+  },
+  {
+    "id": 49,
+    "category": "Teori",
+    "prompt": "Hvor mange værtsbits er til rådighed i et subnet med prefix /18?",
+    "expectedAnswer": "14",
+    "explanation": "Et /18 betyder 18 netværksbits og 14 værtsbits (32 - 18 = 14)."
+  },
+  {
+    "id": 50,
+    "category": "Opsummering",
+    "prompt": "Hvilket summariseret netværk dækker subnettene 192.168.8.0/24 til 192.168.11.0/24?",
+    "expectedAnswer": "192.168.8.0/22",
+    "explanation": "Fire sammenhængende /24-net kan samles til ét /22: 192.168.8.0-192.168.11.255."
   }
 ]

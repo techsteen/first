@@ -27,7 +27,7 @@ const steps = [
     description: 'Eksperimenter med netværksklasser, antal subnets eller hosts og se beregningerne opdatere med det samme.'
   },
   {
-    title: 'Øvelser: 30 subnetting-opgaver',
+    title: 'Øvelser: 50 subnetting-opgaver',
     description: 'Test din viden med opgaver, få feedback fra AI og følg din fremgang.'
   }
 ];
@@ -498,16 +498,6 @@ function renderStep1() {
       <svg class="absolute inset-0 w-full h-full pointer-events-none router-link-layer" viewBox="0 0 100 100" preserveAspectRatio="none">
         <path id="router-path-left" d="M50 24 C44 31 38 36 33 43" stroke="#14b8a6" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.78" fill="none"></path>
         <path id="router-path-right" d="M50 24 C56 31 62 36 67 43" stroke="#38bdf8" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.78" fill="none"></path>
-        <circle cx="33" cy="43" r="1.4" fill="#0f766e" fill-opacity="0.85"></circle>
-        <circle cx="67" cy="43" r="1.4" fill="#0369a1" fill-opacity="0.85"></circle>
-        <g class="router-stop-marker" transform="translate(33 43)">
-          <circle class="router-stop-marker__outer" r="4.1"></circle>
-          <circle class="router-stop-marker__inner" r="1.35"></circle>
-        </g>
-        <g class="router-stop-marker" transform="translate(67 43)">
-          <circle class="router-stop-marker__outer" r="4.1"></circle>
-          <circle class="router-stop-marker__inner" r="1.35"></circle>
-        </g>
       </svg>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-40">
@@ -933,6 +923,25 @@ function submitTaskAnswer(taskId) {
     });
 }
 
+function revealTaskSolution(taskId) {
+  if (!state.tasks) {
+    return;
+  }
+
+  const task = state.tasks.find((item) => item.id === taskId);
+  if (!task) {
+    return;
+  }
+
+  const current = state.taskStatuses[taskId] || {};
+  state.taskStatuses[taskId] = {
+    ...current,
+    revealed: true
+  };
+
+  renderStep5();
+}
+
 function getTaskStatusLabel(status) {
   switch (status) {
     case 'correct':
@@ -975,7 +984,7 @@ function renderStep5() {
     visualizationEl.innerHTML = `
       <div class="min-h-[400px] flex flex-col items-center justify-center text-center gap-2">
         <div class="loading-spinner"></div>
-        <p class="text-sm text-gray-600">Indlæser 30 opgaver i subnetting...</p>
+        <p class="text-sm text-gray-600">Indlæser 50 opgaver i subnetting...</p>
       </div>
     `;
 
@@ -1014,6 +1023,12 @@ function renderStep5() {
       const category = task.category ? `<span class="task-tag">${escapeHtml(task.category)}</span>` : '';
       const disabledAttr = statusInfo.status === 'checking' ? 'disabled' : '';
       const buttonLabel = statusInfo.status === 'checking' ? 'Evaluerer...' : 'Send svar';
+      const isRevealed = Boolean(statusInfo.revealed);
+      const revealDisabledAttr = isRevealed ? 'disabled' : '';
+      const revealLabel = isRevealed ? 'Forklaring vist' : 'Vis forklaring';
+      const explanationBlock = isRevealed
+        ? `<div class="task-explanation"><p class="task-explanation-answer"><strong>Korrekt svar:</strong> ${escapeHtml(task.expectedAnswer || '')}</p><p>${escapeHtml(task.explanation || '').replace(/\n/g, '<br>')}</p></div>`
+        : '';
 
       return `
         <article class="task-card${statusClass}" data-task-id="${task.id}">
@@ -1029,8 +1044,12 @@ function renderStep5() {
             <textarea data-task-input="${task.id}" rows="3" class="task-answer" placeholder="Skriv dit svar her..." ${disabledAttr}>${escapeHtml(storedAnswer)}</textarea>
           </div>
           <footer class="task-footer">
-            <button type="button" class="btn-primary task-submit" data-task-submit="${task.id}" ${disabledAttr}>${buttonLabel}</button>
+            <div class="task-actions">
+              <button type="button" class="btn-primary task-submit" data-task-submit="${task.id}" ${disabledAttr}>${buttonLabel}</button>
+              <button type="button" class="btn-secondary task-reveal" data-task-reveal="${task.id}" ${revealDisabledAttr}>${revealLabel}</button>
+            </div>
             ${feedback}
+            ${explanationBlock}
           </footer>
         </article>
       `;
@@ -1069,6 +1088,16 @@ function renderStep5() {
         return;
       }
       submitTaskAnswer(id);
+    });
+  });
+
+  visualizationEl.querySelectorAll('[data-task-reveal]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      const id = Number(event.currentTarget.getAttribute('data-task-reveal'));
+      if (Number.isNaN(id)) {
+        return;
+      }
+      revealTaskSolution(id);
     });
   });
 }

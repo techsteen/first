@@ -35,6 +35,29 @@
   background-color: #4338ca;
 }
 
+.btn-secondary {
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  background-color: #fff;
+  color: #4338ca;
+  border: 1.5px solid rgba(79, 70, 229, 0.4);
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background-color: rgba(199, 210, 254, 0.35);
+  border-color: rgba(79, 70, 229, 0.6);
+}
+
+.btn-secondary:disabled {
+  background-color: rgba(226, 232, 240, 0.4);
+  color: rgba(71, 85, 105, 0.8);
+  border-color: rgba(148, 163, 184, 0.5);
+  cursor: not-allowed;
+}
+
 .device-card {
   display: flex;
   flex-direction: column;
@@ -243,19 +266,6 @@
   }
 }
 
-.router-stop-marker__outer {
-  fill: rgba(15, 23, 42, 0.92);
-  opacity: 0.88;
-}
-
-.router-stop-marker__inner {
-  fill: #ef4444;
-  opacity: 0.95;
-  filter: drop-shadow(0 0 2px rgba(248, 113, 113, 0.7));
-}
-
-/* Tidligere router-banner og note-klasser er fjernet til fordel for central stop-indikator */
-
 .network-class-btn {
   display: inline-flex;
   flex-direction: column;
@@ -419,8 +429,30 @@
   gap: 0.5rem;
 }
 
+.task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
 .task-footer .btn-primary {
   align-self: flex-start;
+}
+
+.task-explanation {
+  background: rgba(99, 102, 241, 0.08);
+  border: 1.5px solid rgba(99, 102, 241, 0.25);
+  border-radius: 0.85rem;
+  padding: 0.75rem 0.85rem;
+  font-size: 0.82rem;
+  color: #312e81;
+  line-height: 1.45;
+}
+
+.task-explanation-answer {
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+  color: #1e293b;
 }
 
 .task-feedback {
