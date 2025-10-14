@@ -87,6 +87,15 @@ let routerTrafficGenerators = [];
 let routerTrafficAnimators = [];
 let routerTrafficCleanups = [];
 let tasksPromise = null;
+let termOverlayElement = null;
+let termOverlayDialog = null;
+let termOverlayTitle = null;
+let termOverlayBody = null;
+let termOverlayCloseButton = null;
+let termOverlayBackdrop = null;
+let termOverlayLastFocus = null;
+let termOverlayKeyHandlerBound = false;
+const termExplanationCache = new Map();
 
 function getDevicePosition(index) {
   const row = Math.floor(index / 6);
@@ -176,6 +185,177 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function formatExplanationText(value) {
+  const safe = escapeHtml(typeof value === 'string' ? value : '');
+  if (safe === '') {
+    return '<p class="term-overlay__empty">Ingen forklaring tilgængelig.</p>';
+  }
+
+  return safe
+    .split(/\n{2,}/)
+    .map((block) => `<p>${block.replace(/\n/g, '<br>')}</p>`)
+    .join('');
+}
+
+function handleTermOverlayKeydown(event) {
+  if (event.key === 'Escape' && termOverlayElement && termOverlayElement.classList.contains('visible')) {
+    event.preventDefault();
+    closeTermOverlay();
+  }
+}
+
+function ensureTermOverlay() {
+  if (termOverlayElement) {
+    return;
+  }
+
+  termOverlayElement = document.createElement('div');
+  termOverlayElement.id = 'term-overlay';
+  termOverlayElement.className = 'term-overlay';
+  termOverlayElement.setAttribute('aria-hidden', 'true');
+  termOverlayElement.innerHTML = `
+    <div class="term-overlay__backdrop" data-overlay-close></div>
+    <div class="term-overlay__dialog" role="dialog" aria-modal="true" aria-labelledby="term-overlay-title">
+      <button type="button" class="term-overlay__close" aria-label="Luk forklaring" data-overlay-close>&times;</button>
+      <h3 id="term-overlay-title" class="term-overlay__title"></h3>
+      <div class="term-overlay__body"></div>
+    </div>
+  `;
+
+  document.body.appendChild(termOverlayElement);
+
+  termOverlayDialog = termOverlayElement.querySelector('.term-overlay__dialog');
+  termOverlayTitle = termOverlayElement.querySelector('#term-overlay-title');
+  termOverlayBody = termOverlayElement.querySelector('.term-overlay__body');
+  termOverlayCloseButton = termOverlayElement.querySelector('.term-overlay__close');
+  termOverlayBackdrop = termOverlayElement.querySelector('.term-overlay__backdrop');
+
+  const closers = termOverlayElement.querySelectorAll('[data-overlay-close]');
+  closers.forEach((closer) => {
+    closer.addEventListener('click', () => {
+      closeTermOverlay();
+    });
+  });
+
+  if (!termOverlayKeyHandlerBound) {
+    document.addEventListener('keydown', handleTermOverlayKeydown);
+    termOverlayKeyHandlerBound = true;
+  }
+}
+
+function closeTermOverlay() {
+  if (!termOverlayElement) {
+    return;
+  }
+
+  termOverlayElement.classList.remove('visible');
+  termOverlayElement.setAttribute('aria-hidden', 'true');
+
+  if (termOverlayDialog) {
+    termOverlayDialog.setAttribute('aria-busy', 'false');
+  }
+
+  document.body.classList.remove('term-overlay-open');
+
+  if (termOverlayLastFocus && typeof termOverlayLastFocus.focus === 'function') {
+    termOverlayLastFocus.focus();
+  }
+
+  termOverlayLastFocus = null;
+}
+
+function openTermOverlay(term, context) {
+  ensureTermOverlay();
+
+  const trimmedTerm = typeof term === 'string' && term.trim() !== '' ? term.trim() : 'Forklaring';
+  const trimmedContext = typeof context === 'string' ? context.trim() : '';
+  const cacheKey = `${trimmedTerm}::${trimmedContext}`;
+
+  termOverlayLastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+  if (termOverlayTitle) {
+    termOverlayTitle.textContent = trimmedTerm;
+  }
+
+  if (termOverlayBody) {
+    termOverlayBody.innerHTML = '<p class="term-overlay__loading">Henter forklaring...</p>';
+  }
+
+  if (termOverlayDialog) {
+    termOverlayDialog.setAttribute('aria-busy', 'true');
+  }
+
+  termOverlayElement.classList.add('visible');
+  termOverlayElement.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('term-overlay-open');
+
+  if (termOverlayCloseButton) {
+    termOverlayCloseButton.focus();
+  }
+
+  if (termExplanationCache.has(cacheKey)) {
+    if (termOverlayBody) {
+      termOverlayBody.innerHTML = formatExplanationText(termExplanationCache.get(cacheKey));
+    }
+    if (termOverlayDialog) {
+      termOverlayDialog.setAttribute('aria-busy', 'false');
+    }
+    return;
+  }
+
+  fetch('api/explain-term.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      term: trimmedTerm,
+      context: trimmedContext
+    })
+  })
+    .then((response) => response.json().catch(() => ({ error: 'Uventet svar fra serveren.' })))
+    .then((data) => {
+      if (!termOverlayBody) {
+        return;
+      }
+
+      if (!data || data.error) {
+        const message = data && data.error ? data.error : 'Der opstod en fejl under opslaget.';
+        termOverlayBody.innerHTML = `<p class="term-overlay__error">${escapeHtml(message)}</p>`;
+      } else {
+        const explanation = typeof data.explanation === 'string' ? data.explanation : '';
+        termExplanationCache.set(cacheKey, explanation);
+        termOverlayBody.innerHTML = formatExplanationText(explanation);
+      }
+
+      if (termOverlayDialog) {
+        termOverlayDialog.setAttribute('aria-busy', 'false');
+      }
+    })
+    .catch((error) => {
+      if (!termOverlayBody) {
+        return;
+      }
+      const message = error instanceof Error ? error.message : 'Der opstod en ukendt fejl under opslaget.';
+      termOverlayBody.innerHTML = `<p class="term-overlay__error">${escapeHtml(message)}</p>`;
+      if (termOverlayDialog) {
+        termOverlayDialog.setAttribute('aria-busy', 'false');
+      }
+    });
+}
+
+function setupTutorialTerms() {
+  const termButtons = visualizationEl.querySelectorAll('.term-button');
+  termButtons.forEach((button) => {
+    button.setAttribute('aria-haspopup', 'dialog');
+    button.addEventListener('click', () => {
+      const term = button.getAttribute('data-term') || button.textContent || '';
+      const context = button.getAttribute('data-context') || '';
+      openTermOverlay(term, context);
+    });
+  });
 }
 
 function calculateSubnetting() {
@@ -364,46 +544,98 @@ function renderStep0() {
   const deviceGrid = createDeviceCards(originalDevices);
 
   visualizationEl.innerHTML = `
-    <div class="relative min-h-[500px]">
-      <div class="border-4 border-red-400 rounded-xl p-4 md:p-6 bg-red-50 relative overflow-hidden min-h-[500px]">
-        <div class="callout-box absolute top-4 left-4 z-10">
-          <p class="font-bold text-gray-800">Netværk: 192.168.1.0/24</p>
-          <p class="text-gray-600">Subnet mask: 255.255.255.0</p>
-          <p class="text-gray-500">× 24 enheder</p>
-        </div>
+    <div class="tutorial-grid">
+      <article class="tutorial-panel">
+        <header class="tutorial-panel__header">
+          <p class="tutorial-panel__kicker">Hej hold!</p>
+          <h2 class="tutorial-panel__title">Hvorfor skal vi lære subnetting?</h2>
+        </header>
+        <p>
+          Når vi samler alle maskiner i ét <button type="button" class="term-button" data-term="LAN" data-context="Definér begrebet Local Area Network for elever på et grundforløb og giv et letforståeligt eksempel.">lokalt netværk</button>,
+          råber hver enhed ud i rummet, når den sender en <button type="button" class="term-button" data-term="Broadcast" data-context="Forklar hvad broadcast betyder i et LAN, hvorfor det kan skabe støj, og hvordan det opleves af nye elever.">broadcast</button>.
+          På et Grundforløb betyder det langsomme filer, nervøse printere og elever der mister fokus. Som underviser er mit mål, at I kan se problemet og selv foreslå en løsning.
+        </p>
+        <section class="tutorial-section">
+          <h3>Udfordringen i værkstedet</h3>
+          <p>
+            Forestil jer vores Techcollege Makerspace: 24 pc'er, en 3D-printer og nogle tablets. Alt er sat i ét netværk <span class="tutorial-highlight">192.168.1.0/24</span>.
+            Når en elev spejler sin skærm, ender signalet hos alle andre – uanset om de har brug for det eller ej. Det slider på både udstyr og tålmodighed.
+          </p>
+          <ul class="tutorial-list">
+            <li>Mere unødvendig trafik = langsommere svar fra servere.</li>
+            <li>Fejl ét sted kan smitte hele netværket.</li>
+            <li>Det er svært at finde ud af, hvem der skaber støjen.</li>
+          </ul>
+        </section>
+        <section class="tutorial-section">
+          <h3>Løsningen vi arbejder hen imod</h3>
+          <p>
+            Vi deler netværket i mindre <button type="button" class="term-button" data-term="Subnet" data-context="Forklar hvad et subnet er, og hvordan det hjælper med at reducere broadcast-trafik. Brug et pædagogisk hverdagseksempel.">subnets</button>. Hvert subnet er som sin egen klasse – roligere og lettere at styre.
+            I dag undersøger vi, hvordan <button type="button" class="term-button" data-term="CIDR" data-context="Forklar Classless Inter-Domain Routing kort og i et sprog som en Grundforløbselev kan forstå. Giv et nemt eksempel.">CIDR-notation</button>
+            og en ny <button type="button" class="term-button" data-term="Subnetmaske" data-context="Forklar hvad en subnetmaske er, hvordan man læser den, og hvorfor den er vigtig når man opdeler netværk.">subnetmaske</button> hjælper os med at låne bits fra host-delen.
+          </p>
+          <p>
+            Når vi har delt os i to grupper, sørger en <button type="button" class="term-button" data-term="Gateway" data-context="Forklar gateway-begrebet for en ny elev og hvorfor den er nødvendig når vi forbinder flere subnets.">gateway</button> eller router for at sende trafikken de rigtige steder hen.
+          </p>
+        </section>
+        <section class="tutorial-section">
+          <h3>Sådan gør vi i fællesskab</h3>
+          <ol class="tutorial-steps">
+            <li>Observer den massive broadcast-trafik i animationen til højre.</li>
+            <li>Diskutér i grupper hvorfor det er et problem for vores elever og udstyr.</li>
+            <li>Lav en hurtig skitse af, hvordan to subnets kunne fordeles i jeres praksis.</li>
+            <li>Brug beregneren i trin 5 til at teste jeres idéer.</li>
+          </ol>
+        </section>
+        <footer class="tutorial-panel__footer">
+          <p>
+            Husk: subnetting handler ikke kun om tal – det handler om at give vores læringsmiljø ro. Stil spørgsmål, klik på fagordene for ekstra forklaringer, og vær nysgerrige!
+          </p>
+        </footer>
+      </article>
 
-        <div class="absolute left-1/2 -translate-x-1/2 top-12 bg-gray-800 text-white rounded-lg border-4 border-gray-900 shadow-2xl px-10 py-3 z-20">
-          <div class="font-bold text-sm text-center mb-2 tracking-widest">LAN SWITCH</div>
-          <div class="flex gap-1 justify-center">
-            ${Array.from({ length: 12 })
-              .map(() => '<span class="block w-2 h-6 bg-green-400 rounded"></span>')
-              .join('')}
+      <div class="relative min-h-[500px] tutorial-visual">
+        <div class="border-4 border-red-400 rounded-xl p-4 md:p-6 bg-red-50 relative overflow-hidden min-h-[500px]">
+          <div class="callout-box absolute top-4 left-4 z-10">
+            <p class="font-bold text-gray-800">Netværk: 192.168.1.0/24</p>
+            <p class="text-gray-600">Subnet mask: 255.255.255.0</p>
+            <p class="text-gray-500">× 24 enheder</p>
           </div>
-        </div>
 
-        <svg id="broadcast-svg" class="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-          <g id="line-layer"></g>
-          <g id="packet-layer"></g>
-        </svg>
-
-        <div class="absolute w-full" style="top: 160px;" id="device-wrapper">
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 px-4">
-            ${deviceGrid}
+          <div class="absolute left-1/2 -translate-x-1/2 top-12 bg-gray-800 text-white rounded-lg border-4 border-gray-900 shadow-2xl px-10 py-3 z-20">
+            <div class="font-bold text-sm text-center mb-2 tracking-widest">LAN SWITCH</div>
+            <div class="flex gap-1 justify-center">
+              ${Array.from({ length: 12 })
+                .map(() => '<span class="block w-2 h-6 bg-green-400 rounded"></span>')
+                .join('')}
+            </div>
           </div>
+
+          <svg id="broadcast-svg" class="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <g id="line-layer"></g>
+            <g id="packet-layer"></g>
+          </svg>
+
+          <div class="absolute w-full" style="top: 160px;" id="device-wrapper">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 px-4">
+              ${deviceGrid}
+            </div>
+          </div>
+
+          <div class="absolute bottom-6 right-6 text-6xl">⚠️</div>
         </div>
 
-        <div class="absolute bottom-6 right-6 text-6xl">⚠️</div>
-      </div>
-
-      <div id="chef-popup" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white border-4 border-indigo-600 rounded-xl p-6 shadow-2xl max-w-sm z-30">
-        <div class="text-4xl mb-3 text-center">👨‍💼</div>
-        <p class="text-lg font-bold text-gray-800 mb-2">Netværksadministrator:</p>
-        <p class="text-sm text-gray-700">"Vi har et problem! Alt for meget broadcast-trafik gennem switchen. Vi skal opdele netværket i mindre subnets!"</p>
+        <div id="chef-popup" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white border-4 border-indigo-600 rounded-xl p-6 shadow-2xl max-w-sm z-30">
+          <div class="text-4xl mb-3 text-center">👨‍💼</div>
+          <p class="text-lg font-bold text-gray-800 mb-2">Netværksadministrator:</p>
+          <p class="text-sm text-gray-700">"Vi har et problem! Alt for meget broadcast-trafik gennem switchen. Vi skal opdele netværket i mindre subnets!"</p>
+        </div>
       </div>
     </div>
   `;
 
   setupBroadcastScene();
+  setupTutorialTerms();
 }
 
 function renderStep1() {
