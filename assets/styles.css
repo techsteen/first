@@ -141,3 +141,31 @@
   z-index: 25;
   filter: drop-shadow(0 8px 16px rgba(15, 23, 42, 0.18));
 }
+
+.router-packet {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  filter: drop-shadow(0 0 4px rgba(14, 165, 233, 0.45));
+}
+
+.router-packet.active {
+  opacity: 1;
+}
+
+.router-burst {
+  fill: none;
+  opacity: 0.85;
+  animation: routerBurst 0.6s ease-out forwards;
+  mix-blend-mode: multiply;
+}
+
+@keyframes routerBurst {
+  from {
+    r: 0.6;
+    opacity: 0.85;
+  }
+  to {
+    r: 5.4;
+    opacity: 0;
+  }
+}

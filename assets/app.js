@@ -56,6 +56,9 @@ let broadcastPackets = [];
 let chefTimer = null;
 let subnetGenerators = [];
 let subnetAnimators = [];
+let routerTrafficGenerators = [];
+let routerTrafficAnimators = [];
+let routerTrafficCleanups = [];
 
 function getDevicePosition(index) {
   const row = Math.floor(index / 6);
@@ -156,6 +159,12 @@ function cleanupStep() {
   subnetAnimators.forEach((interval) => clearInterval(interval));
   subnetGenerators = [];
   subnetAnimators = [];
+  routerTrafficGenerators.forEach((interval) => clearInterval(interval));
+  routerTrafficAnimators.forEach((interval) => clearInterval(interval));
+  routerTrafficCleanups.forEach((cleanup) => cleanup());
+  routerTrafficGenerators = [];
+  routerTrafficAnimators = [];
+  routerTrafficCleanups = [];
 }
 
 function setStep(newStep) {
@@ -355,12 +364,15 @@ function renderStep1() {
           <p class="text-sm font-bold tracking-[0.45em]">ROUTER</p>
           <div class="flex gap-1 justify-center mt-2">${routerPorts}</div>
         </div>
-        <span class="mt-2 inline-block bg-white/90 text-xs font-semibold text-slate-600 px-3 py-1 rounded-full shadow-sm">Forbinder subnettene</span>
+        <div class="mt-2 flex flex-col items-center gap-1">
+          <span class="inline-block bg-white/90 text-xs font-semibold text-slate-600 px-3 py-1 rounded-full shadow-sm">Forbinder subnettene</span>
+          <span class="inline-block bg-emerald-50/90 text-[11px] font-semibold text-emerald-700 px-3 py-1 rounded-full shadow-sm">Router stopper broadcast til andre LAN</span>
+        </div>
       </div>
 
       <svg class="absolute inset-0 w-full h-full pointer-events-none router-link-layer" viewBox="0 0 100 100" preserveAspectRatio="none">
-        <path d="M50 26 C44 32 38 36 34 42" stroke="#14b8a6" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.75" fill="none"></path>
-        <path d="M50 26 C56 32 62 36 66 42" stroke="#38bdf8" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.75" fill="none"></path>
+        <path id="router-path-left" d="M50 26 C44 32 38 36 34 42" stroke="#14b8a6" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.75" fill="none"></path>
+        <path id="router-path-right" d="M50 26 C56 32 62 36 66 42" stroke="#38bdf8" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.75" fill="none"></path>
         <circle cx="34" cy="42" r="1.5" fill="#0f766e" fill-opacity="0.8"></circle>
         <circle cx="66" cy="42" r="1.5" fill="#0369a1" fill-opacity="0.8"></circle>
       </svg>
@@ -380,6 +392,18 @@ function renderStep1() {
       lineColor: subnet.lineColor,
       packetColor: subnet.packetColor
     });
+  });
+
+  setupRouterTraffic({
+    pathId: 'router-path-left',
+    color: '#0f766e',
+    burstColor: '#14b8a6'
+  });
+
+  setupRouterTraffic({
+    pathId: 'router-path-right',
+    color: '#0369a1',
+    burstColor: '#38bdf8'
   });
 }
 
@@ -643,6 +667,106 @@ function renderVisualization() {
     default:
       visualizationEl.innerHTML = '';
   }
+}
+
+function setupRouterTraffic({ pathId, color, burstColor }) {
+  const path = document.getElementById(pathId);
+  if (!path) {
+    return;
+  }
+
+  const svg = path.ownerSVGElement;
+  if (!svg || typeof path.getTotalLength !== 'function') {
+    return;
+  }
+
+  const pathLength = path.getTotalLength();
+  const activePackets = [];
+
+  const spawnPacket = () => {
+    const packet = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    const startPoint = path.getPointAtLength(pathLength);
+    packet.setAttribute('r', '1.9');
+    packet.setAttribute('fill', color);
+    packet.setAttribute('cx', startPoint.x);
+    packet.setAttribute('cy', startPoint.y);
+    packet.setAttribute('class', 'router-packet');
+    svg.appendChild(packet);
+
+    activePackets.push({
+      element: packet,
+      progress: 0
+    });
+
+    if (activePackets.length > 6) {
+      const stale = activePackets.shift();
+      if (stale && stale.element && stale.element.parentNode) {
+        stale.element.parentNode.removeChild(stale.element);
+      }
+    }
+  };
+
+  const generator = setInterval(() => {
+    if (Math.random() < 0.6) {
+      spawnPacket();
+    }
+  }, 900);
+
+  const animator = setInterval(() => {
+    for (let i = activePackets.length - 1; i >= 0; i -= 1) {
+      const packet = activePackets[i];
+      const nextProgress = packet.progress + 0.05;
+      packet.progress = nextProgress;
+
+      const distance = Math.max(pathLength * (1 - nextProgress), 0);
+      const point = path.getPointAtLength(distance);
+      packet.element.setAttribute('cx', point.x);
+      packet.element.setAttribute('cy', point.y);
+      packet.element.classList.add('active');
+
+      if (nextProgress >= 1) {
+        if (packet.element.parentNode) {
+          packet.element.parentNode.removeChild(packet.element);
+        }
+        activePackets.splice(i, 1);
+
+        const routerPoint = path.getPointAtLength(0);
+        const burst = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        burst.setAttribute('cx', routerPoint.x);
+        burst.setAttribute('cy', routerPoint.y);
+        burst.setAttribute('r', '0.5');
+        burst.setAttribute('class', 'router-burst');
+        burst.setAttribute('stroke', burstColor || color);
+        burst.setAttribute('stroke-width', '1.4');
+        svg.appendChild(burst);
+
+        setTimeout(() => {
+          if (burst.parentNode) {
+            burst.parentNode.removeChild(burst);
+          }
+        }, 650);
+      }
+    }
+  }, 60);
+
+  const cleanup = () => {
+    for (let i = activePackets.length - 1; i >= 0; i -= 1) {
+      const packet = activePackets[i];
+      if (packet.element && packet.element.parentNode) {
+        packet.element.parentNode.removeChild(packet.element);
+      }
+    }
+    activePackets.length = 0;
+    svg.querySelectorAll('.router-burst').forEach((burst) => {
+      if (burst.parentNode) {
+        burst.parentNode.removeChild(burst);
+      }
+    });
+  };
+
+  routerTrafficGenerators.push(generator);
+  routerTrafficAnimators.push(animator);
+  routerTrafficCleanups.push(cleanup);
 }
 
 function setupSubnetScene({ svgId, devices, switchX, switchY, lineColor, packetColor }) {
