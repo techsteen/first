@@ -1,0 +1,212 @@
+[
+  {
+    "id": 1,
+    "category": "Hosts",
+    "prompt": "Hvor mange brugbare værtsadresser findes i subnettet 192.168.10.0/26?",
+    "expectedAnswer": "62",
+    "explanation": "Et /26 subnet har 64 adresser totalt. Fratræk 2 til netværks- og broadcast-adressen: 64 - 2 = 62." 
+  },
+  {
+    "id": 2,
+    "category": "Broadcast",
+    "prompt": "Angiv broadcast-adressen for subnettet 192.168.10.64/27.",
+    "expectedAnswer": "192.168.10.95",
+    "explanation": "Et /27 subnet har blokstørrelse 32. 64 + 31 = 95 er broadcast." 
+  },
+  {
+    "id": 3,
+    "category": "Maske",
+    "prompt": "Hvad er subnetmasken i decimalnotation for prefix /28?",
+    "expectedAnswer": "255.255.255.240",
+    "explanation": "Et /28 låner 4 bits i sidste oktet, hvilket giver masken 240." 
+  },
+  {
+    "id": 4,
+    "category": "Design",
+    "prompt": "Hvor mange subnets får du, når du låner 3 bits fra et /24 netværk?",
+    "expectedAnswer": "8",
+    "explanation": "3 lånte bits giver 2^3 = 8 subnets." 
+  },
+  {
+    "id": 5,
+    "category": "Adresser",
+    "prompt": "Hvad er den første brugbare adresse i 10.0.4.0/22?",
+    "expectedAnswer": "10.0.4.1",
+    "explanation": "Netværksadressen er 10.0.4.0, så første host er +1." 
+  },
+  {
+    "id": 6,
+    "category": "Adresser",
+    "prompt": "Hvad er den sidste brugbare adresse i 172.16.32.0/20?",
+    "expectedAnswer": "172.16.47.254",
+    "explanation": "Et /20 dækker adresserne 172.16.32.0-172.16.47.255, så sidste host er 172.16.47.254." 
+  },
+  {
+    "id": 7,
+    "category": "Design",
+    "prompt": "Hvilket prefix skal bruges for mindst 30 brugbare hosts i hvert subnet?",
+    "expectedAnswer": "/27",
+    "explanation": "Et /27 giver 32 adresser og 30 brugbare værter." 
+  },
+  {
+    "id": 8,
+    "category": "Hosts",
+    "prompt": "Hvor mange brugbare værter findes i netværket 10.20.0.0/19?",
+    "expectedAnswer": "8190",
+    "explanation": "Et /19 har 13 værtsbits: 2^13 - 2 = 8190." 
+  },
+  {
+    "id": 9,
+    "category": "Maske",
+    "prompt": "Hvad er subnetmasken i decimal for prefix /23?",
+    "expectedAnswer": "255.255.254.0",
+    "explanation": "Et /23 betyder at tredje oktet har 11111110 = 254." 
+  },
+  {
+    "id": 10,
+    "category": "Netværk",
+    "prompt": "Hvad er netværksadressen for IP'en 192.168.33.77/26?",
+    "expectedAnswer": "192.168.33.64",
+    "explanation": "Et /26 har blokstørrelse 64. 77 ligger i intervallet 64-127." 
+  },
+  {
+    "id": 11,
+    "category": "Broadcast",
+    "prompt": "Hvad er broadcast-adressen for IP'en 172.16.5.129/25?",
+    "expectedAnswer": "172.16.5.255",
+    "explanation": "Et /25 har blokstørrelse 128, så intervallet 172.16.5.128-255 ender på 255." 
+  },
+  {
+    "id": 12,
+    "category": "Design",
+    "prompt": "Hvor mange subnets kan du få ved at låne 5 bits fra et /16 netværk?",
+    "expectedAnswer": "32",
+    "explanation": "5 lånte bits giver 2^5 = 32 subnets." 
+  },
+  {
+    "id": 13,
+    "category": "Hosts",
+    "prompt": "Hvor mange brugbare værter findes der i et /30 subnet?",
+    "expectedAnswer": "2",
+    "explanation": "Et /30 har 4 adresser totalt, hvilket giver 2 brugbare værter." 
+  },
+  {
+    "id": 14,
+    "category": "Blokstørrelse",
+    "prompt": "Hvad er blokstørrelsen (antal adresser) for et /29 subnet?",
+    "expectedAnswer": "8",
+    "explanation": "Et /29 har 3 værtsbits, så 2^3 = 8 adresser i alt." 
+  },
+  {
+    "id": 15,
+    "category": "Adresser",
+    "prompt": "Hvad er første brugbare adresse i 192.168.200.128/26?",
+    "expectedAnswer": "192.168.200.129",
+    "explanation": "Netværksadressen er 192.168.200.128, så første host er +1." 
+  },
+  {
+    "id": 16,
+    "category": "Broadcast",
+    "prompt": "Hvad er broadcast-adressen for subnettet 10.10.128.0/17?",
+    "expectedAnswer": "10.10.255.255",
+    "explanation": "Et /17 dækker 10.10.128.0-10.10.255.255." 
+  },
+  {
+    "id": 17,
+    "category": "Netværk",
+    "prompt": "Hvad er netværksadressen for IP'en 10.33.19.201/20?",
+    "expectedAnswer": "10.33.16.0",
+    "explanation": "Et /20 har blokstørrelse 16 i tredje oktet. 19 falder i blokken der starter ved 16." 
+  },
+  {
+    "id": 18,
+    "category": "Design",
+    "prompt": "Hvilket prefix skal vælges for mindst 400 brugbare hosts pr. subnet?",
+    "expectedAnswer": "/23",
+    "explanation": "Et /23 giver 512 adresser og 510 brugbare værter, hvilket opfylder kravet." 
+  },
+  {
+    "id": 19,
+    "category": "Hosts",
+    "prompt": "Hvor mange brugbare værter er der i 172.16.0.0/21?",
+    "expectedAnswer": "2046",
+    "explanation": "Et /21 har 11 værtsbits: 2^11 - 2 = 2046." 
+  },
+  {
+    "id": 20,
+    "category": "Maske",
+    "prompt": "Hvad er subnetmasken i decimal for prefix /22?",
+    "expectedAnswer": "255.255.252.0",
+    "explanation": "Et /22 giver 11111100 i tredje oktet = 252." 
+  },
+  {
+    "id": 21,
+    "category": "Broadcast",
+    "prompt": "Hvad er broadcast-adressen for 192.168.14.192/26?",
+    "expectedAnswer": "192.168.14.255",
+    "explanation": "Et /26 har blokstørrelse 64. Blokken 192-255 slutter på 255." 
+  },
+  {
+    "id": 22,
+    "category": "Netværk",
+    "prompt": "Hvad er netværksadressen for IP'en 172.16.99.200/18?",
+    "expectedAnswer": "172.16.64.0",
+    "explanation": "Et /18 har blokstørrelse 64 i tredje oktet. 99 ligger i blokken der starter ved 64." 
+  },
+  {
+    "id": 23,
+    "category": "Design",
+    "prompt": "Hvor mange subnets fås ved at låne 2 bits fra et /20 netværk?",
+    "expectedAnswer": "4",
+    "explanation": "2 lånte bits giver 2^2 = 4 subnets." 
+  },
+  {
+    "id": 24,
+    "category": "Hosts",
+    "prompt": "Hvor mange brugbare værter er der i et /27 subnet?",
+    "expectedAnswer": "30",
+    "explanation": "Et /27 har 32 adresser totalt og dermed 30 brugbare." 
+  },
+  {
+    "id": 25,
+    "category": "Adresser",
+    "prompt": "Hvad er den første brugbare adresse i 10.0.64.0/18?",
+    "expectedAnswer": "10.0.64.1",
+    "explanation": "Netværksadressen er 10.0.64.0, så første host er +1." 
+  },
+  {
+    "id": 26,
+    "category": "Broadcast",
+    "prompt": "Hvad er broadcast-adressen for subnettet 172.16.48.0/20?",
+    "expectedAnswer": "172.16.63.255",
+    "explanation": "Et /20 dækker 172.16.48.0-172.16.63.255." 
+  },
+  {
+    "id": 27,
+    "category": "Maske",
+    "prompt": "Hvad er subnetmasken i decimal for prefix /30?",
+    "expectedAnswer": "255.255.255.252",
+    "explanation": "Et /30 efterlader 2 værtsbits i sidste oktet: 11111100 = 252." 
+  },
+  {
+    "id": 28,
+    "category": "Netværk",
+    "prompt": "Hvad er netværksadressen for IP'en 192.168.19.5/28?",
+    "expectedAnswer": "192.168.19.0",
+    "explanation": "Et /28 har blokstørrelse 16. 5 ligger i blokken 0-15." 
+  },
+  {
+    "id": 29,
+    "category": "Design",
+    "prompt": "Hvilket prefix giver mindst 12 brugbare hosts i hvert subnet?",
+    "expectedAnswer": "/28",
+    "explanation": "Et /28 giver 16 adresser og 14 brugbare værter, som opfylder kravet." 
+  },
+  {
+    "id": 30,
+    "category": "Hosts",
+    "prompt": "Hvor mange brugbare værter findes i netværket 10.0.0.0/18?",
+    "expectedAnswer": "16382",
+    "explanation": "Et /18 har 14 værtsbits: 2^14 - 2 = 16382." 
+  }
+]

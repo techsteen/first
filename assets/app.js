@@ -24,7 +24,11 @@ const steps = [
   },
   {
     title: 'Prøv selv: Tilpas subnetting',
-    description: 'Eksperimenter med antal subnets eller hosts og se beregningerne opdatere med det samme.'
+    description: 'Eksperimenter med netværksklasser, antal subnets eller hosts og se beregningerne opdatere med det samme.'
+  },
+  {
+    title: 'Øvelser: 30 subnetting-opgaver',
+    description: 'Test din viden med opgaver, få feedback fra AI og følg din fremgang.'
   }
 ];
 
@@ -43,11 +47,34 @@ const subnet2Devices = Array.from({ length: 12 }, (_, i) => ({
   ip: `192.168.1.${129 + i}`
 }));
 
+const networkClasses = {
+  A: {
+    label: 'Klasse A',
+    baseIp: '10.0.0.0',
+    prefix: 8
+  },
+  B: {
+    label: 'Klasse B',
+    baseIp: '172.16.0.0',
+    prefix: 16
+  },
+  C: {
+    label: 'Klasse C',
+    baseIp: '192.168.1.0',
+    prefix: 24
+  }
+};
+
 const state = {
   step: 0,
   calculationMode: 'subnets',
   customSubnets: 2,
-  customHosts: 126
+  customHosts: 126,
+  networkClass: 'C',
+  tasks: null,
+  tasksLoading: false,
+  tasksError: null,
+  taskStatuses: {}
 };
 
 let broadcastGenerator = null;
@@ -59,6 +86,7 @@ let subnetAnimators = [];
 let routerTrafficGenerators = [];
 let routerTrafficAnimators = [];
 let routerTrafficCleanups = [];
+let tasksPromise = null;
 
 function getDevicePosition(index) {
   const row = Math.floor(index / 6);
@@ -78,50 +106,139 @@ function getSubnetDevicePosition(index) {
   };
 }
 
+function ipToNumber(ipString) {
+  const parts = ipString.split('.').map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => Number.isNaN(part))) {
+    return 0;
+  }
+
+  return (
+    (parts[0] << 24)
+    | (parts[1] << 16)
+    | (parts[2] << 8)
+    | parts[3]
+  ) >>> 0;
+}
+
+function numberToIp(num) {
+  const a = (num >>> 24) & 255;
+  const b = (num >>> 16) & 255;
+  const c = (num >>> 8) & 255;
+  const d = num & 255;
+  return `${a}.${b}.${c}.${d}`;
+}
+
+function prefixToMask(prefix) {
+  const mask = [];
+  let remaining = prefix;
+  for (let i = 0; i < 4; i += 1) {
+    const bits = Math.max(Math.min(remaining, 8), 0);
+    const value = bits === 0 ? 0 : 256 - 2 ** (8 - bits);
+    mask.push(value);
+    remaining -= bits;
+  }
+  return mask.join('.');
+}
+
+function loadSubnetTasks() {
+  if (tasksPromise) {
+    return tasksPromise;
+  }
+
+  tasksPromise = fetch('data/subnet_tasks.json', { cache: 'no-cache' })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error('Kunne ikke hente opgaverne.');
+      }
+      return response.json();
+    })
+    .then((data) => {
+      if (!Array.isArray(data)) {
+        throw new Error('Uventet format for opgaver.');
+      }
+      return data;
+    })
+    .catch((error) => {
+      tasksPromise = null;
+      throw error;
+    });
+
+  return tasksPromise;
+}
+
+function escapeHtml(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function calculateSubnetting() {
+  const classData = networkClasses[state.networkClass] || networkClasses.C;
+  const basePrefix = classData.prefix;
+  const baseIp = classData.baseIp;
+  const totalHostBits = 32 - basePrefix;
+
   let subnetBits;
   let numSubnets;
   let hostsPerSubnet;
+  let effectiveHostBits;
+  let capacityWarning = '';
 
   if (state.calculationMode === 'subnets') {
-    numSubnets = state.customSubnets;
-    subnetBits = Math.ceil(Math.log2(numSubnets));
-    hostsPerSubnet = Math.pow(2, 8 - subnetBits) - 2;
-  } else {
-    hostsPerSubnet = state.customHosts;
-    const hostBits = Math.ceil(Math.log2(hostsPerSubnet + 2));
-    subnetBits = 8 - hostBits;
-    if (subnetBits < 0) {
-      subnetBits = 0;
+    const requestedSubnets = Math.max(1, state.customSubnets);
+    const requestedBits = Math.ceil(Math.log2(requestedSubnets));
+    subnetBits = Math.min(requestedBits, totalHostBits);
+    numSubnets = 2 ** subnetBits;
+    effectiveHostBits = Math.max(totalHostBits - subnetBits, 0);
+    hostsPerSubnet = effectiveHostBits > 0 ? 2 ** effectiveHostBits - 2 : 0;
+    if (requestedBits > totalHostBits) {
+      capacityWarning = 'Der er ikke nok bits til så mange subnets i denne klasse. Viser maks mulige subnets.';
     }
-    numSubnets = Math.pow(2, Math.max(subnetBits, 0));
+  } else {
+    const requestedHosts = Math.max(0, state.customHosts);
+    const requestedHostBits = Math.ceil(Math.log2(requestedHosts + 2));
+    effectiveHostBits = Math.min(requestedHostBits, totalHostBits);
+    subnetBits = Math.max(totalHostBits - effectiveHostBits, 0);
+    numSubnets = 2 ** subnetBits;
+    hostsPerSubnet = effectiveHostBits > 0 ? 2 ** effectiveHostBits - 2 : 0;
+    if (requestedHostBits > totalHostBits) {
+      capacityWarning = 'Der er ikke nok værts-bits i denne klasse til det ønskede antal hosts. Viser maks mulige hosts.';
+    }
   }
 
-  if (subnetBits < 0) {
-    subnetBits = 0;
-  }
+  subnetBits = Math.max(subnetBits, 0);
 
-  const newPrefix = 24 + subnetBits;
-  const subnetMaskLastOctet = 256 - Math.pow(2, 8 - subnetBits);
-  const blockSize = Math.pow(2, 8 - subnetBits);
+  const newPrefix = Math.min(basePrefix + subnetBits, 32);
+  const blockSize = 2 ** Math.max(32 - newPrefix, 0);
+  const subnetMask = prefixToMask(newPrefix);
 
   const subnets = [];
+  const baseNumber = ipToNumber(baseIp);
+  const totalRange = 2 ** Math.max(totalHostBits, 0);
+  const maxRangeEnd = baseNumber + totalRange - 1;
+
   for (let i = 0; i < numSubnets && i < 256; i += 1) {
-    const networkAddress = i * blockSize;
-    if (networkAddress > 255) {
+    const networkNumber = baseNumber + i * blockSize;
+    if (networkNumber > maxRangeEnd) {
       break;
     }
 
-    const firstHost = networkAddress + 1;
-    const lastHost = networkAddress + blockSize - 2;
-    const broadcast = networkAddress + blockSize - 1;
+    const broadcastNumber = Math.min(networkNumber + blockSize - 1, maxRangeEnd);
+    const firstHostNumber = blockSize > 2 ? networkNumber + 1 : (blockSize > 1 ? networkNumber + 1 : networkNumber);
+    const lastHostNumber = blockSize > 2 ? broadcastNumber - 1 : (blockSize > 1 ? broadcastNumber - 1 : networkNumber);
 
     subnets.push({
       id: i,
-      network: `192.168.1.${networkAddress}`,
-      firstHost: `192.168.1.${firstHost}`,
-      lastHost: `192.168.1.${lastHost}`,
-      broadcast: `192.168.1.${broadcast}`,
+      network: numberToIp(networkNumber),
+      firstHost: hostsPerSubnet > 0 ? numberToIp(firstHostNumber) : 'Ingen brugbare hosts',
+      lastHost: hostsPerSubnet > 0 ? numberToIp(lastHostNumber) : 'Ingen brugbare hosts',
+      broadcast: numberToIp(broadcastNumber),
       usableHosts: hostsPerSubnet,
       prefix: newPrefix
     });
@@ -133,8 +250,15 @@ function calculateSubnetting() {
     numSubnets,
     hostsPerSubnet,
     newPrefix,
-    subnetMask: `255.255.255.${subnetMaskLastOctet}`,
-    blockSize
+    subnetMask,
+    blockSize,
+    baseIp,
+    basePrefix,
+    classLabel: classData.label,
+    totalHostBits,
+    sliderMaxPower: Math.max(Math.min(totalHostBits, 10), 0),
+    hostsSliderMax: Math.max(2, Math.min(65534, 2 ** Math.min(totalHostBits, 16) - 2)),
+    capacityWarning
   };
 }
 
@@ -352,6 +476,9 @@ function renderStep1() {
           <div class="absolute left-0 right-0 bottom-6 text-center z-30">
             <span class="inline-flex items-center gap-1 ${subnet.badgeClasses} px-3 py-1 rounded-full text-xs font-semibold">📶 Lokalt broadcast</span>
           </div>
+          <div class="router-gate-note ${subnet.id === 1 ? 'left' : 'right'}">
+            <span>Routeren afviser broadcast til det andet subnet</span>
+          </div>
         </div>
       `;
     })
@@ -375,10 +502,25 @@ function renderStep1() {
         <path id="router-path-right" d="M50 26 C56 32 62 36 66 42" stroke="#38bdf8" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.75" fill="none"></path>
         <circle cx="34" cy="42" r="1.5" fill="#0f766e" fill-opacity="0.8"></circle>
         <circle cx="66" cy="42" r="1.5" fill="#0369a1" fill-opacity="0.8"></circle>
+        <g class="router-stop-marker" transform="translate(34 42)">
+          <circle r="4.1"></circle>
+          <text x="0" y="1.5">🚫</text>
+        </g>
+        <g class="router-stop-marker" transform="translate(66 42)">
+          <circle r="4.1"></circle>
+          <text x="0" y="1.5">🚫</text>
+        </g>
       </svg>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-40">
         ${panels}
+      </div>
+
+      <div class="router-stop-banner left">
+        <span>🚫 Routeren stopper broadcast videre mod Subnet 2</span>
+      </div>
+      <div class="router-stop-banner right">
+        <span>🚫 Ingen broadcast sendes videre til Subnet 1</span>
       </div>
     </div>
   `;
@@ -504,6 +646,24 @@ function renderStep3() {
 
 function renderStep4() {
   const calc = calculateSubnetting();
+  const subnetModeActive = state.calculationMode === 'subnets';
+  const desiredPower = Math.round(Math.log2(Math.max(state.customSubnets, 1)));
+  const sliderPower = Math.min(desiredPower, calc.sliderMaxPower);
+  if (subnetModeActive && desiredPower !== sliderPower) {
+    state.customSubnets = 2 ** sliderPower;
+  }
+
+  if (!subnetModeActive) {
+    const clampedHosts = Math.min(Math.max(state.customHosts, 2), calc.hostsSliderMax);
+    if (clampedHosts !== state.customHosts) {
+      state.customHosts = clampedHosts;
+    }
+  }
+
+  const hostBitsLeft = Math.max(calc.totalHostBits - calc.subnetBits, 0);
+  const hostExplanation = hostBitsLeft > 0
+    ? `• Det giver 2<sup>${hostBitsLeft}</sup> - 2 = <strong>${calc.hostsPerSubnet} brugbare hosts</strong> pr. subnet`
+    : '• Ingen værtsbits tilbage - kun netværks- og broadcast-adresser uden brugbare værter.';
 
   const subnetCards = calc.subnets
     .map(
@@ -527,9 +687,12 @@ function renderStep4() {
               <p class="text-xs text-gray-600 font-semibold uppercase">Broadcast</p>
               <p class="font-mono text-gray-800 font-bold">${subnet.broadcast}</p>
             </div>
-            <div class="bg-purple-50 rounded p-2 text-center border border-purple-200">
-              <p class="text-xs text-gray-600 uppercase">Brugbare hosts</p>
+            <div class="bg-purple-100 rounded p-2 text-center border border-purple-300">
+              <p class="text-xs text-gray-600 font-semibold uppercase">Brugbare hosts</p>
               <p class="text-xl font-bold text-purple-600">${subnet.usableHosts}</p>
+            </div>
+            <div class="bg-yellow-50 rounded p-2 text-xs text-slate-600">
+              <p><strong>Subnet mask:</strong> ${calc.subnetMask}</p>
             </div>
           </div>
         </div>
@@ -538,75 +701,110 @@ function renderStep4() {
     .join('');
 
   visualizationEl.innerHTML = `
-    <div class="space-y-5">
-      <div class="bg-purple-50 border-2 border-purple-400 rounded-xl p-4">
-        <h3 class="text-lg font-bold text-gray-800 mb-3">🎮 Eksperimenter med subnetting</h3>
-        <div class="flex flex-col md:flex-row gap-3">
-          <button data-mode="subnets" class="flex-1 py-2 px-3 rounded-lg font-bold text-sm border ${state.calculationMode === 'subnets' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-700 border-gray-300'}">Vælg antal subnets</button>
-          <button data-mode="hosts" class="flex-1 py-2 px-3 rounded-lg font-bold text-sm border ${state.calculationMode === 'hosts' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-700 border-gray-300'}">Vælg antal hosts pr. subnet</button>
+    <div class="space-y-4">
+      <div class="bg-white border border-slate-200 rounded-xl p-4 flex flex-wrap items-center gap-3 justify-between">
+        <div>
+          <p class="text-sm font-semibold text-slate-600">Vælg netværksklasse:</p>
+          <div class="flex flex-wrap gap-2 mt-2">
+            ${Object.entries(networkClasses)
+              .map(([key, classInfo]) => {
+                const isActive = state.networkClass === key;
+                return `
+                  <button type="button" class="network-class-btn ${isActive ? 'active' : ''}" data-network-class="${key}">
+                    ${classInfo.label}
+                    <span>${classInfo.baseIp}/${classInfo.prefix}</span>
+                  </button>
+                `;
+              })
+              .join('')}
+          </div>
         </div>
-        <div class="bg-white border border-purple-200 rounded-lg p-4 mt-3">
-          ${state.calculationMode === 'subnets'
-            ? `
-              <label class="block text-sm font-semibold text-gray-800 mb-2">Hvor mange subnets vil du have?</label>
-              <div class="flex items-center gap-4">
-                <input type="range" id="subnet-range" min="0" max="8" step="1" value="${Math.log2(state.customSubnets)}" class="flex-1" />
-                <span class="text-3xl font-bold text-purple-600 min-w-[3rem] text-center">${state.customSubnets}</span>
-              </div>
-              <p class="text-xs text-gray-500 mt-1">Værdien er en potens af to (2, 4, 8, ... 256).</p>
-            `
-            : `
-              <label class="block text-sm font-semibold text-gray-800 mb-2">Hvor mange hosts skal der være plads til pr. subnet?</label>
-              <div class="flex items-center gap-4">
-                <input type="range" id="hosts-range" min="2" max="254" value="${state.customHosts}" class="flex-1" />
-                <span class="text-3xl font-bold text-purple-600 min-w-[3rem] text-center">${state.customHosts}</span>
-              </div>
-            `}
+        <div class="text-sm text-slate-600 leading-5">
+          <p><strong>Aktiv klasse:</strong> ${calc.classLabel}</p>
+          <p><strong>Base:</strong> ${calc.baseIp}/${calc.basePrefix}</p>
+          <p><strong>Tilgængelige værtsbits:</strong> ${calc.totalHostBits}</p>
         </div>
       </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div class="bg-white border-2 border-indigo-400 rounded-xl p-3 text-center">
-          <p class="text-xs text-gray-500 uppercase">Antal subnets</p>
-          <p class="text-2xl font-bold text-indigo-600">${calc.numSubnets}</p>
+      <div class="bg-purple-50 border-2 border-purple-400 rounded-lg p-3">
+        <h3 class="text-base md:text-lg font-bold text-gray-800 mb-3">🎮 Eksperimenter med subnetting:</h3>
+        <div class="flex gap-2 md:gap-3 mb-3">
+          <button data-mode="subnets" class="flex-1 py-2 px-3 rounded-lg font-bold text-xs md:text-sm transition-colors ${subnetModeActive ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-purple-300'}">Vælg antal subnets</button>
+          <button data-mode="hosts" class="flex-1 py-2 px-3 rounded-lg font-bold text-xs md:text-sm transition-colors ${!subnetModeActive ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-purple-300'}">Vælg antal hosts pr. subnet</button>
         </div>
-        <div class="bg-white border-2 border-indigo-400 rounded-xl p-3 text-center">
-          <p class="text-xs text-gray-500 uppercase">Hosts pr. subnet</p>
-          <p class="text-2xl font-bold text-indigo-600">${calc.hostsPerSubnet}</p>
+        <div class="bg-white p-3 rounded-lg border-2 border-purple-300">
+          ${subnetModeActive
+            ? `
+                <label class="block text-gray-800 font-bold mb-2 text-sm">Hvor mange subnets vil du have?</label>
+                <div class="flex items-center gap-3">
+                  <input type="range" min="0" max="${calc.sliderMaxPower}" value="${sliderPower}" id="subnet-range" class="flex-1" />
+                  <span class="text-xl md:text-2xl font-bold text-purple-600 w-16 text-center">${state.customSubnets}</span>
+                </div>
+                <p class="text-xs text-gray-600 mt-1">Potenser af 2 op til klassens kapacitet.</p>
+              `
+            : `
+                <label class="block text-gray-800 font-bold mb-2 text-sm">Hvor mange hosts skal der være plads til pr. subnet?</label>
+                <div class="flex items-center gap-3">
+                  <input type="range" min="2" max="${calc.hostsSliderMax}" value="${state.customHosts}" id="hosts-range" class="flex-1" />
+                  <span class="text-xl md:text-2xl font-bold text-purple-600 w-16 text-center">${state.customHosts}</span>
+                </div>
+              `}
         </div>
-        <div class="bg-white border-2 border-indigo-400 rounded-xl p-3 text-center">
-          <p class="text-xs text-gray-500 uppercase">Subnet bits lånt</p>
-          <p class="text-2xl font-bold text-indigo-600">${calc.subnetBits}</p>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div class="bg-white p-2 md:p-3 rounded-lg border-2 border-indigo-400 text-center">
+          <p class="text-xs text-gray-600 mb-0.5">Antal subnets</p>
+          <p class="text-2xl md:text-3xl font-bold text-indigo-600">${calc.numSubnets}</p>
         </div>
-        <div class="bg-white border-2 border-indigo-400 rounded-xl p-3 text-center">
-          <p class="text-xs text-gray-500 uppercase">Ny subnet mask</p>
-          <p class="text-lg font-bold text-indigo-600">${calc.subnetMask}</p>
+        <div class="bg-white p-2 md:p-3 rounded-lg border-2 border-indigo-400 text-center">
+          <p class="text-xs text-gray-600 mb-0.5">Hosts pr. subnet</p>
+          <p class="text-2xl md:text-3xl font-bold text-indigo-600">${calc.hostsPerSubnet}</p>
+        </div>
+        <div class="bg-white p-2 md:p-3 rounded-lg border-2 border-indigo-400 text-center">
+          <p class="text-xs text-gray-600 mb-0.5">Subnet bits lånt</p>
+          <p class="text-2xl md:text-3xl font-bold text-indigo-600">${calc.subnetBits}</p>
+        </div>
+        <div class="bg-white p-2 md:p-3 rounded-lg border-2 border-indigo-400 text-center">
+          <p class="text-xs text-gray-600 mb-0.5">Ny subnet mask</p>
+          <p class="text-base md:text-xl font-bold text-indigo-600">${calc.subnetMask}</p>
           <p class="text-xs text-gray-500">/${calc.newPrefix}</p>
         </div>
       </div>
 
-      <div class="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-4 text-sm text-gray-700">
-        <p class="font-bold text-gray-800 mb-2">💡 Hvorfor disse tal?</p>
-        <ul class="list-disc list-inside space-y-1">
-          <li>Vi startede med /24 (8 bits til hosts).</li>
-          <li>Vi låner <strong>${calc.subnetBits}</strong> bit(s) til subnetting.</li>
-          <li>Det giver 2<sup>${calc.subnetBits}</sup> = <strong>${calc.numSubnets}</strong> subnets.</li>
-          <li>Der er ${8 - calc.subnetBits} bits tilbage til hosts.</li>
-          <li>Brugbare hosts: 2<sup>${8 - calc.subnetBits}</sup> − 2 = <strong>${calc.hostsPerSubnet}</strong>.</li>
-        </ul>
+      <div class="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-3">
+        <p class="font-bold text-gray-800 mb-1 text-sm">💡 Hvorfor disse tal?</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-1 text-xs text-gray-700">
+          <p>• Vi startede med /${calc.basePrefix} (${calc.totalHostBits} bits til hosts)</p>
+          <p>• Vi låner <strong>${calc.subnetBits} bit(s)</strong> til subnetting</p>
+          <p>• Dette giver os 2<sup>${calc.subnetBits}</sup> = <strong>${calc.numSubnets} subnets</strong></p>
+          <p>• Der er nu ${hostBitsLeft} bits tilbage til hosts</p>
+          <p class="md:col-span-2">${hostExplanation}</p>
+        </div>
+        ${calc.capacityWarning ? `<p class="text-xs text-amber-600 font-semibold mt-2">⚠️ ${calc.capacityWarning}</p>` : ''}
       </div>
 
-      <div class="bg-gradient-to-br from-slate-100 to-slate-200 border-4 border-slate-300 rounded-xl p-4">
+      <div class="bg-gradient-to-br from-gray-100 to-gray-200 border-4 border-gray-400 rounded-lg p-4">
         <div class="flex items-center justify-between mb-3">
-          <h4 class="text-lg font-bold text-gray-800">🌐 Netværk: 192.168.1.0/${calc.newPrefix}</h4>
-          <span class="bg-white border border-gray-300 rounded-lg px-3 py-1 text-sm font-semibold text-gray-700">${calc.numSubnets} subnets</span>
+          <h3 class="text-lg md:text-xl font-bold text-gray-800">
+            🌐 Netværk: ${calc.baseIp}/${calc.newPrefix}
+          </h3>
+          <div class="bg-white px-3 py-1 rounded-lg border-2 border-gray-400">
+            <span class="font-bold text-sm text-gray-800">${calc.numSubnets} Subnets</span>
+          </div>
         </div>
         <div class="card-grid grid-scroll">
           ${subnetCards}
         </div>
-        ${calc.subnets.length >= 256
-          ? '<p class="text-xs text-gray-500 mt-2">Viser de første 256 subnets for at holde listen håndterbar.</p>'
-          : ''}
+        ${calc.subnets.length >= 256 ? '<p class="text-xs text-gray-500 mt-2">Viser de første 256 subnets for at holde listen håndterbar.</p>' : ''}
+      </div>
+
+      <div class="bg-green-100 border-2 border-green-500 rounded-lg p-3">
+        <p class="text-xs md:text-sm text-gray-700">
+          <strong>💡 Vigtigt at huske:</strong> Bemærk hvordan flere subnets betyder færre hosts pr. subnet,
+          og omvendt. Dette er en fundamental del af subnetting - du skal balancere mellem
+          antal netværk og antal enheder pr. netværk baseret på dine behov!
+        </p>
       </div>
     </div>
   `;
@@ -614,11 +812,41 @@ function renderStep4() {
   visualizationEl.querySelectorAll('[data-mode]').forEach((button) => {
     button.addEventListener('click', () => {
       const mode = button.getAttribute('data-mode');
+      if (!mode) {
+        return;
+      }
       state.calculationMode = mode;
       if (mode === 'subnets' && (state.customSubnets & (state.customSubnets - 1)) !== 0) {
-        // Sikrer at værdien er en potens af to
         state.customSubnets = 2;
       }
+      renderStep4();
+    });
+  });
+
+  visualizationEl.querySelectorAll('[data-network-class]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const selected = button.getAttribute('data-network-class');
+      if (!selected || !networkClasses[selected]) {
+        return;
+      }
+      if (selected === state.networkClass) {
+        return;
+      }
+
+      state.networkClass = selected;
+
+      const classInfo = networkClasses[selected];
+      const hostBits = 32 - classInfo.prefix;
+      const maxPower = Math.max(Math.min(hostBits, 10), 0);
+      const currentPower = Math.round(Math.log2(Math.max(state.customSubnets, 1)));
+      if (currentPower > maxPower) {
+        state.customSubnets = 2 ** maxPower || 1;
+      }
+      const maxHosts = Math.max(2, Math.min(65534, 2 ** Math.min(hostBits, 16) - 2));
+      if (state.customHosts > maxHosts) {
+        state.customHosts = maxHosts;
+      }
+
       renderStep4();
     });
   });
@@ -627,7 +855,7 @@ function renderStep4() {
   if (subnetRange) {
     subnetRange.addEventListener('input', (event) => {
       const power = Number(event.target.value);
-      state.customSubnets = Math.pow(2, power);
+      state.customSubnets = 2 ** power;
       renderStep4();
     });
   }
@@ -639,6 +867,217 @@ function renderStep4() {
       renderStep4();
     });
   }
+}
+
+function setTaskStatus(taskId, status, details = {}) {
+  const current = state.taskStatuses[taskId] || {};
+  state.taskStatuses[taskId] = {
+    ...current,
+    ...details,
+    status
+  };
+}
+
+function submitTaskAnswer(taskId) {
+  if (!state.tasks) {
+    return;
+  }
+
+  const input = visualizationEl.querySelector(`[data-task-input="${taskId}"]`);
+  if (!input) {
+    return;
+  }
+
+  const answer = input.value.trim();
+
+  if (answer === '') {
+    setTaskStatus(taskId, 'incomplete', {
+      feedback: 'Skriv dit svar, før du sender det til evaluering.',
+      answer: ''
+    });
+    renderStep5();
+    return;
+  }
+
+  setTaskStatus(taskId, 'checking', {
+    feedback: 'Tjekker svar hos AI...',
+    answer
+  });
+  renderStep5();
+
+  fetch('api/check-subnet-task.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      taskId,
+      answer
+    })
+  })
+    .then((response) => response.json().catch(() => ({ error: 'Uventet svar fra serveren.' })))
+    .then((data) => {
+      if (!data || data.error) {
+        setTaskStatus(taskId, 'error', {
+          feedback: data && data.error ? data.error : 'Ukendt fejl under evalueringen.',
+          answer
+        });
+      } else {
+        const normalizedStatus = data.status === 'correct' ? 'correct' : data.status === 'incorrect' ? 'incorrect' : 'error';
+        setTaskStatus(taskId, normalizedStatus, {
+          feedback: data.feedback || '',
+          answer
+        });
+      }
+      renderStep5();
+    })
+    .catch((error) => {
+      setTaskStatus(taskId, 'error', {
+        feedback: error instanceof Error ? error.message : 'Der opstod en ukendt fejl.',
+        answer
+      });
+      renderStep5();
+    });
+}
+
+function getTaskStatusLabel(status) {
+  switch (status) {
+    case 'correct':
+      return '✅ Korrekt besvarelse';
+    case 'incorrect':
+      return '❌ Ikke korrekt endnu';
+    case 'checking':
+      return '⏳ Evaluerer...';
+    case 'error':
+      return '⚠️ Fejl under evaluering';
+    case 'incomplete':
+      return '✍️ Svar mangler';
+    default:
+      return '📄 Klar til besvarelse';
+  }
+}
+
+function renderStep5() {
+  if (state.tasksError) {
+    visualizationEl.innerHTML = `
+      <div class="min-h-[400px] flex flex-col items-center justify-center text-center gap-3">
+        <div class="text-4xl">😕</div>
+        <p class="text-sm md:text-base text-gray-700 max-w-lg">${escapeHtml(state.tasksError)}</p>
+        <button type="button" class="btn-primary" id="retry-load-tasks">Prøv at indlæse opgaverne igen</button>
+      </div>
+    `;
+
+    const retryButton = document.getElementById('retry-load-tasks');
+    if (retryButton) {
+      retryButton.addEventListener('click', () => {
+        state.tasksError = null;
+        state.tasks = null;
+        renderStep5();
+      });
+    }
+    return;
+  }
+
+  if (!state.tasks) {
+    visualizationEl.innerHTML = `
+      <div class="min-h-[400px] flex flex-col items-center justify-center text-center gap-2">
+        <div class="loading-spinner"></div>
+        <p class="text-sm text-gray-600">Indlæser 30 opgaver i subnetting...</p>
+      </div>
+    `;
+
+    if (!state.tasksLoading) {
+      state.tasksLoading = true;
+      loadSubnetTasks()
+        .then((tasks) => {
+          state.tasks = tasks;
+          state.tasksLoading = false;
+          renderStep5();
+        })
+        .catch((error) => {
+          state.tasksLoading = false;
+          state.tasksError = error instanceof Error ? error.message : 'Kunne ikke hente opgaverne.';
+          renderStep5();
+        });
+    }
+    return;
+  }
+
+  const totalTasks = state.tasks.length;
+  const solvedCount = state.tasks.reduce((count, task) => {
+    const status = state.taskStatuses[task.id]?.status;
+    return status === 'correct' ? count + 1 : count;
+  }, 0);
+  const percent = totalTasks > 0 ? Math.round((solvedCount / totalTasks) * 100) : 0;
+
+  const cards = state.tasks
+    .map((task, index) => {
+      const statusInfo = state.taskStatuses[task.id] || {};
+      const statusClass = statusInfo.status ? ` ${statusInfo.status}` : '';
+      const label = getTaskStatusLabel(statusInfo.status);
+      const storedAnswer = statusInfo.answer || '';
+      const feedback = statusInfo.feedback ? `<div class="task-feedback ${statusInfo.status || 'idle'}">${escapeHtml(statusInfo.feedback)}</div>` : '';
+      const promptHtml = escapeHtml(task.prompt || '').replace(/\n/g, '<br>');
+      const category = task.category ? `<span class="task-tag">${escapeHtml(task.category)}</span>` : '';
+      const disabledAttr = statusInfo.status === 'checking' ? 'disabled' : '';
+      const buttonLabel = statusInfo.status === 'checking' ? 'Evaluerer...' : 'Send svar';
+
+      return `
+        <article class="task-card${statusClass}" data-task-id="${task.id}">
+          <header class="task-card-header">
+            <div>
+              <p class="task-title">Opgave ${index + 1}</p>
+              ${category}
+            </div>
+            <p class="task-status">${label}</p>
+          </header>
+          <div class="task-body">
+            <p class="task-prompt">${promptHtml}</p>
+            <textarea data-task-input="${task.id}" rows="3" class="task-answer" placeholder="Skriv dit svar her..." ${disabledAttr}>${escapeHtml(storedAnswer)}</textarea>
+          </div>
+          <footer class="task-footer">
+            <button type="button" class="btn-primary task-submit" data-task-submit="${task.id}" ${disabledAttr}>${buttonLabel}</button>
+            ${feedback}
+          </footer>
+        </article>
+      `;
+    })
+    .join('');
+
+  visualizationEl.innerHTML = `
+    <div class="space-y-4">
+      <div class="bg-white border border-slate-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 class="text-lg font-bold text-slate-800">🧠 Subnetting-øvelser</h3>
+          <p class="text-sm text-slate-600">Skriv dine svar og få feedback fra AI for hver opgave.</p>
+        </div>
+        <div class="task-progress">
+          <span class="task-progress-count">${solvedCount}/${totalTasks} løst</span>
+          <div class="task-progress-bar">
+            <div style="width: ${percent}%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-sm text-slate-700">
+        <p>Tip: Skriv dine beregninger tydeligt. Hvis svaret ikke stemmer, får du feedback om, hvad du bør dobbelttjekke.</p>
+      </div>
+
+      <div class="task-grid">
+        ${cards}
+      </div>
+    </div>
+  `;
+
+  visualizationEl.querySelectorAll('[data-task-submit]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      const id = Number(event.currentTarget.getAttribute('data-task-submit'));
+      if (Number.isNaN(id)) {
+        return;
+      }
+      submitTaskAnswer(id);
+    });
+  });
 }
 
 function renderVisualization() {
@@ -663,6 +1102,9 @@ function renderVisualization() {
       break;
     case 4:
       renderStep4();
+      break;
+    case 5:
+      renderStep5();
       break;
     default:
       visualizationEl.innerHTML = '';
@@ -698,7 +1140,7 @@ function setupRouterTraffic({ pathId, color, burstColor }) {
       progress: 0
     });
 
-    if (activePackets.length > 6) {
+    if (activePackets.length > 10) {
       const stale = activePackets.shift();
       if (stale && stale.element && stale.element.parentNode) {
         stale.element.parentNode.removeChild(stale.element);
@@ -707,10 +1149,10 @@ function setupRouterTraffic({ pathId, color, burstColor }) {
   };
 
   const generator = setInterval(() => {
-    if (Math.random() < 0.6) {
+    if (Math.random() < 0.85) {
       spawnPacket();
     }
-  }, 900);
+  }, 600);
 
   const animator = setInterval(() => {
     for (let i = activePackets.length - 1; i >= 0; i -= 1) {
@@ -926,12 +1368,13 @@ function setupBroadcastScene() {
     line.setAttribute('x2', '50');
     line.setAttribute('y2', '12');
     line.setAttribute('stroke', '#9ca3af');
-    line.setAttribute('stroke-width', '1.8');
+    line.setAttribute('stroke-width', '5');
     line.setAttribute('stroke-linecap', 'round');
+    line.setAttribute('vector-effect', 'non-scaling-stroke');
     lineLayer.appendChild(line);
   });
 
-  broadcastGenerator = setInterval(() => {
+  const spawnPacket = () => {
     const fromIndex = Math.floor(Math.random() * originalDevices.length);
     const startPos = getDevicePosition(fromIndex);
 
@@ -951,24 +1394,31 @@ function setupBroadcastScene() {
       targetPos
     };
 
-    packet.element.setAttribute('r', '2.2');
+    packet.element.setAttribute('r', '2.6');
     packet.element.setAttribute('class', 'packet');
     packet.element.setAttribute('cx', startPos.x);
     packet.element.setAttribute('cy', startPos.y);
     packetLayer.appendChild(packet.element);
     broadcastPackets.push(packet);
 
-    if (broadcastPackets.length > 12) {
+    if (broadcastPackets.length > 20) {
       const removed = broadcastPackets.shift();
       if (removed && removed.element && removed.element.parentNode) {
         removed.element.parentNode.removeChild(removed.element);
       }
     }
-  }, 450);
+  };
+
+  broadcastGenerator = setInterval(() => {
+    spawnPacket();
+    if (Math.random() < 0.45) {
+      spawnPacket();
+    }
+  }, 220);
 
   broadcastAnimator = setInterval(() => {
     broadcastPackets = broadcastPackets.filter((packet) => {
-      const nextProgress = packet.progress + 0.05;
+      const nextProgress = packet.progress + 0.065;
       packet.progress = nextProgress;
 
       if (nextProgress > 2) {
@@ -1021,6 +1471,8 @@ nextBtn.addEventListener('click', () => {
     state.calculationMode = 'subnets';
     state.customSubnets = 2;
     state.customHosts = 126;
+    state.networkClass = 'C';
+    state.taskStatuses = {};
     updateUI();
     return;
   }
