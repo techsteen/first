@@ -53,36 +53,63 @@ body::-webkit-scrollbar-thumb {
     color: var(--muted);
 }
 
-.site-nav {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.75rem;
-    margin-top: 1rem;
-}
-
-.site-nav a {
-    color: var(--accent);
-    text-decoration: none;
-    font-weight: 600;
-    padding: 0.35rem 0.75rem;
-    border: 1px solid transparent;
-    border-radius: 999px;
-    transition: all 0.2s ease;
-}
-
-.site-nav a:hover,
-.site-nav a:focus {
-    border-color: var(--accent);
-    background: rgba(56, 189, 248, 0.1);
-}
-
-main {
-    max-width: 1100px;
+.content-layout {
+    max-width: 1200px;
     margin: 0 auto;
     padding: 1.5rem;
     display: grid;
+    grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
     gap: 1.5rem;
+    align-items: start;
+}
+
+.chapter-sidebar {
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(56, 189, 248, 0.15);
+    border-radius: 18px;
+    box-shadow: 0 25px 40px rgba(8, 47, 73, 0.35);
+    padding: 1.5rem 1.25rem;
+    position: sticky;
+    top: 7.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.chapter-sidebar h2 {
+    font-size: 1.15rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+
+.chapter-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.chapter-nav a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.45rem 0.75rem;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    display: block;
+}
+
+.chapter-nav a:hover,
+.chapter-nav a:focus {
+    border-color: var(--accent);
+    background: rgba(56, 189, 248, 0.12);
+}
+
+main {
+    display: grid;
+    gap: 1.5rem;
+    min-width: 0;
 }
 
 .section-card {
@@ -354,21 +381,45 @@ table.data-table thead {
     border: 0;
 }
 
+@media (max-width: 1024px) {
+    .content-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .chapter-sidebar {
+        position: static;
+        top: auto;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .chapter-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .chapter-nav a {
+        flex: 1 1 48%;
+        text-align: center;
+    }
+}
+
 @media (max-width: 768px) {
     .site-header h1 {
         font-size: 1.5rem;
+    }
+
+    .content-layout {
+        padding: 1.25rem;
     }
 
     .section-card {
         padding: 1.25rem;
     }
 
-    .site-nav {
-        gap: 0.5rem;
-    }
-
-    .site-nav a {
-        font-size: 0.85rem;
+    .chapter-nav a {
+        flex: 1 1 100%;
     }
 
     #chat-window {
