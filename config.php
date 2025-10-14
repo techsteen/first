@@ -13,12 +13,14 @@ $ALLOWED_TOPICS = [
     'ai',
     'undervisning',
     'differentiering',
-    'subnetting',
+    'didaktik',
     'netværk',
     'programmering',
     'prompting',
     'dhcp',
     'dns',
     'kritisk tænkning',
-    'læring'
+    'læring',
+    'dannelse',
+    'feedback'
 ];

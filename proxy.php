@@ -51,7 +51,7 @@ try {
             }
 
             if (!isTopicAllowed($message, $ALLOWED_TOPICS)) {
-                echo json_encode(['error' => 'Spørgsmålet ligger uden for sidens fokus. Prøv med et emne om AI, subnetting, programmering eller differentiering.']);
+                echo json_encode(['error' => 'Spørgsmålet ligger uden for sidens fokus. Prøv med et emne om AI i undervisning, didaktik, programmering eller differentiering.']);
                 exit;
             }
 
@@ -139,7 +139,7 @@ function isTopicAllowed(string $message, array $allowedTopics): bool
 
 function buildChatPrompt(string $message): array
 {
-    $system = 'Du er en dansk undervisningsassistent for GF2 Data-elever. Svar kort, venligt og opmuntrende, og hjælp eleven til selv at tænke videre. Brug maks. 80 ord og fokuser på AI i undervisning, differentiering, subnetting, programmering, netværk og prompting. Afvis andre emner høfligt.';
+    $system = 'Du er en dansk undervisningsassistent for GF2 Data-elever. Svar kort, venligt og opmuntrende, og hjælp eleven til selv at tænke videre. Brug maks. 80 ord og fokuser på AI i undervisning, didaktik, differentiering, netværk, programmering og prompting. Afvis andre emner høfligt.';
     return [
         'model' => 'gpt-4o-mini',
         'messages' => [

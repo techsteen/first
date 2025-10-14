@@ -122,7 +122,7 @@ function setupAntiCopy() {
 }
 
 function moderateClientSide(message) {
-    const whitelist = ['ai', 'undervis', 'differentier', 'subnet', 'netværk', 'programmer', 'prompt', 'dns', 'dhcp', 'kritisk', 'læring'];
+    const whitelist = ['ai', 'undervis', 'differentier', 'netværk', 'programmer', 'prompt', 'dns', 'dhcp', 'kritisk', 'læring', 'didakt', 'dannelse', 'feedback'];
     const normalized = message.toLowerCase();
     return whitelist.some((keyword) => normalized.includes(keyword));
 }
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!message) return;
 
         if (!moderateClientSide(message)) {
-            addMessage('bot', 'Spørgsmålet ligger uden for sidens fokus. Prøv igen med et emne om AI, subnetting, programmering eller differentiering.');
+            addMessage('bot', 'Spørgsmålet ligger uden for sidens fokus. Prøv igen med et emne om AI i undervisning, didaktik, programmering eller differentiering.');
             chatInput.value = '';
             return;
         }

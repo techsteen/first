@@ -91,6 +91,7 @@ main {
     border-radius: 16px;
     box-shadow: 0 20px 45px rgba(8, 47, 73, 0.35);
     border: 1px solid rgba(56, 189, 248, 0.08);
+    scroll-margin-top: 7rem;
 }
 
 .section-card h2 {
