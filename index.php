@@ -22,6 +22,9 @@
       <button id="next-step" class="btn-primary" type="button">Næste →</button>
     </footer>
   </div>
+  <footer class="site-footer">
+    <p class="site-footer__text">Steen Hansen - Techcollege</p>
+  </footer>
   <script src="assets/app.js"></script>
 </body>
 </html>
