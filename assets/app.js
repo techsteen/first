@@ -490,7 +490,7 @@ function renderStep1() {
         </div>
         <div class="router-bridge-badge">Forbinder subnettene</div>
         <div id="router-stop-indicator" class="router-stop-label">
-          <span class="router-stop-icon">🚫</span>
+          <span class="router-stop-dot" aria-hidden="true"></span>
           <span>Router stopper broadcast til andre LAN</span>
         </div>
       </div>
@@ -501,12 +501,12 @@ function renderStep1() {
         <circle cx="33" cy="43" r="1.4" fill="#0f766e" fill-opacity="0.85"></circle>
         <circle cx="67" cy="43" r="1.4" fill="#0369a1" fill-opacity="0.85"></circle>
         <g class="router-stop-marker" transform="translate(33 43)">
-          <circle r="4.1"></circle>
-          <text x="0" y="1.5">🚫</text>
+          <circle class="router-stop-marker__outer" r="4.1"></circle>
+          <circle class="router-stop-marker__inner" r="1.35"></circle>
         </g>
         <g class="router-stop-marker" transform="translate(67 43)">
-          <circle r="4.1"></circle>
-          <text x="0" y="1.5">🚫</text>
+          <circle class="router-stop-marker__outer" r="4.1"></circle>
+          <circle class="router-stop-marker__inner" r="1.35"></circle>
         </g>
       </svg>
 

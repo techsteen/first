@@ -20,50 +20,73 @@ function decodePayload(string $raw): array
     return $data;
 }
 
-function resolveConfigDir(): string
+function findConfigFile(): array
 {
     $candidates = [];
+    $checked = [];
+
+    $envFile = getenv('CONFIG_FILE');
+    if (is_string($envFile) && $envFile !== '') {
+        $candidates[] = $envFile;
+        $candidates[] = __DIR__ . '/' . ltrim($envFile, '/\\');
+        $candidates[] = dirname(__DIR__) . '/' . ltrim($envFile, '/\\');
+    }
 
     $envDir = getenv('CONFIG_DIR');
     if (is_string($envDir) && $envDir !== '') {
-        $candidates[] = rtrim($envDir, "\\/");
+        $dir = rtrim($envDir, "\\/");
+        $candidates[] = $dir . '/config.php';
+        $candidates[] = $dir . '/config.phg';
     }
 
-    $candidates[] = __DIR__ . '/config';
-    $candidates[] = dirname(__DIR__) . '/config';
-    $candidates[] = dirname(__DIR__, 2) . '/Config';
-    $candidates[] = dirname(__DIR__, 2) . '/config';
+    $bases = [__DIR__, dirname(__DIR__), dirname(__DIR__, 2), dirname(__DIR__, 3)];
+    foreach ($bases as $base) {
+        if (!is_string($base) || $base === '') {
+            continue;
+        }
+        $base = rtrim($base, "\\/");
+        if ($base === '') {
+            continue;
+        }
+        $candidates[] = $base . '/config.php';
+        $candidates[] = $base . '/Config.php';
+        $candidates[] = $base . '/config/config.php';
+        $candidates[] = $base . '/config/config.phg';
+        $candidates[] = $base . '/Config/config.php';
+        $candidates[] = $base . '/Config/config.phg';
+    }
 
-    foreach ($candidates as $dir) {
-        if ($dir && is_dir($dir)) {
-            return $dir;
+    $seen = [];
+    foreach ($candidates as $candidate) {
+        if (!$candidate) {
+            continue;
+        }
+        $normalized = preg_replace('#[\\/]+#', '/', $candidate);
+        if (isset($seen[$normalized])) {
+            continue;
+        }
+        $seen[$normalized] = true;
+        $checked[] = $normalized;
+        if (is_readable($candidate) && !is_dir($candidate)) {
+            return [$candidate, dirname($candidate), $checked];
         }
     }
 
-    return $candidates[0];
+    return [null, null, $checked];
 }
 
-function loadCredentials(string $configDir): array
+function loadCredentials(): array
 {
     $apiKey = null;
     $caBundle = null;
     $baseUrl = 'https://api.openai.com/v1';
     $model = 'gpt-4o-mini';
     $timeout = 30;
-    $configPathUsed = null;
 
-    $configFiles = ['config.php', 'config.phg'];
+    [$configPath, $configDir, $checkedPaths] = findConfigFile();
 
-    foreach ($configFiles as $candidate) {
-        $candidatePath = $configDir . '/' . $candidate;
-        if (is_readable($candidatePath)) {
-            $configPathUsed = $candidatePath;
-            break;
-        }
-    }
-
-    if ($configPathUsed) {
-        $loaded = require $configPathUsed;
+    if ($configPath) {
+        $loaded = require $configPath;
         if (is_string($loaded)) {
             $apiKey = trim($loaded);
         } elseif (is_array($loaded)) {
@@ -73,7 +96,7 @@ function loadCredentials(string $configDir): array
             if (isset($loaded['CA_BUNDLE'])) {
                 $candidate = trim((string) $loaded['CA_BUNDLE']);
                 if ($candidate !== '') {
-                    if (!is_readable($candidate)) {
+                    if (!is_readable($candidate) && $configDir) {
                         $relative = $configDir . '/' . ltrim($candidate, '/\\');
                         if (is_readable($relative)) {
                             $candidate = $relative;
@@ -104,7 +127,7 @@ function loadCredentials(string $configDir): array
         }
     }
 
-    if (!$caBundle) {
+    if (!$caBundle && $configDir) {
         $defaultCa = $configDir . '/cacert.pem';
         if (is_readable($defaultCa)) {
             $caBundle = $defaultCa;
@@ -133,7 +156,7 @@ function loadCredentials(string $configDir): array
     $envCa = getenv('OPENAI_CA_BUNDLE');
     if (!$caBundle && is_string($envCa) && trim($envCa) !== '') {
         $candidate = trim($envCa);
-        if (!is_readable($candidate)) {
+        if (!is_readable($candidate) && $configDir) {
             $relative = $configDir . '/' . ltrim($candidate, '/\\');
             if (is_readable($relative)) {
                 $candidate = $relative;
@@ -150,7 +173,8 @@ function loadCredentials(string $configDir): array
         'baseUrl' => $baseUrl,
         'model' => $model,
         'timeout' => $timeout,
-        'configPath' => $configPathUsed,
+        'configPath' => $configPath,
+        'checkedPaths' => $checkedPaths,
     ];
 }
 
@@ -207,10 +231,22 @@ $expected = (string) ($task['expectedAnswer'] ?? '');
 $explanation = (string) ($task['explanation'] ?? '');
 $prompt = (string) ($task['prompt'] ?? '');
 
-$credentials = loadCredentials(resolveConfigDir());
+$credentials = loadCredentials();
 if ($credentials['apiKey'] === '') {
+    $searched = $credentials['checkedPaths'] ?? [];
+    $hint = '';
+    if (!empty($credentials['configPath'])) {
+        $hint = ' Forsøgte at bruge: ' . $credentials['configPath'] . '.';
+    } elseif (!empty($searched)) {
+        $preview = array_slice($searched, 0, 5);
+        if (count($searched) > 5) {
+            $preview[] = '…';
+        }
+        $hint = ' Søgte i: ' . implode(', ', $preview) . '.';
+    }
+
     respond([
-        'error' => 'Serveren mangler OpenAI API-nøglen. Tjek config/config.php (feltet OPENAI_API_KEY) eller miljøvariablen OPENAI_API_KEY.'
+        'error' => 'Serveren mangler OpenAI API-nøglen. Tjek config/config.php (feltet OPENAI_API_KEY) eller miljøvariablen OPENAI_API_KEY.' . $hint
     ], 500);
 }
 
