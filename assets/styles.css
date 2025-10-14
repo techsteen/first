@@ -139,7 +139,82 @@
 
 .router-link-layer {
   z-index: 25;
-  filter: drop-shadow(0 8px 16px rgba(15, 23, 42, 0.18));
+  filter: drop-shadow(0 10px 18px rgba(15, 23, 42, 0.16));
+  pointer-events: none;
+}
+
+.router-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.router-bridge-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 9999px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  box-shadow: 0 10px 25px rgba(148, 163, 184, 0.25);
+  letter-spacing: 0.04em;
+}
+
+.router-stop-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #b91c1c;
+  border-radius: 9999px;
+  background: linear-gradient(120deg, rgba(254, 226, 226, 0.95), rgba(254, 202, 202, 0.95));
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  box-shadow: 0 16px 30px rgba(239, 68, 68, 0.2);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.router-stop-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 9999px;
+  background: #b91c1c;
+  color: #fef2f2;
+  font-size: 0.95rem;
+  box-shadow: inset 0 0 0 2px rgba(254, 242, 242, 0.6);
+}
+
+.router-stop-label--active {
+  box-shadow: 0 20px 40px rgba(239, 68, 68, 0.28);
+  transform: translateY(-2px);
+}
+
+.router-stop-label--pulse {
+  animation: routerStopPulse 0.7s ease-out;
+}
+
+@keyframes routerStopPulse {
+  0% {
+    transform: translateY(-2px) scale(0.98);
+    box-shadow: 0 12px 24px rgba(239, 68, 68, 0.22);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.04);
+    box-shadow: 0 28px 45px rgba(239, 68, 68, 0.35);
+  }
+  100% {
+    transform: translateY(-2px) scale(1);
+    box-shadow: 0 20px 40px rgba(239, 68, 68, 0.28);
+  }
 }
 
 .router-packet {
@@ -181,61 +256,7 @@
   text-anchor: middle;
 }
 
-.router-stop-banner {
-  position: absolute;
-  top: 120px;
-  max-width: 220px;
-  background: rgba(15, 118, 110, 0.92);
-  color: #ecfeff;
-  padding: 0.5rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  box-shadow: 0 10px 30px rgba(15, 118, 110, 0.2);
-  z-index: 45;
-  pointer-events: none;
-}
-
-.router-stop-banner span {
-  display: block;
-  text-align: center;
-}
-
-.router-stop-banner.left {
-  left: 8%;
-}
-
-.router-stop-banner.right {
-  right: 8%;
-  background: rgba(37, 99, 235, 0.92);
-}
-
-.router-gate-note {
-  position: absolute;
-  top: 140px;
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 0.75rem;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #334155;
-  box-shadow: 0 8px 16px rgba(51, 65, 85, 0.12);
-  z-index: 35;
-  pointer-events: none;
-}
-
-.router-gate-note span {
-  display: block;
-  text-align: center;
-}
-
-.router-gate-note.left {
-  left: 12%;
-}
-
-.router-gate-note.right {
-  right: 12%;
-}
+/* Tidligere router-banner og note-klasser er fjernet til fordel for central stop-indikator */
 
 .network-class-btn {
   display: inline-flex;

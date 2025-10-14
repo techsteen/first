@@ -451,7 +451,7 @@ function renderStep1() {
 
       return `
         <div class="relative border-4 ${subnet.panelClasses} rounded-2xl bg-gradient-to-b overflow-hidden min-h-[420px]">
-          <div class="absolute top-4 left-4 bg-white/90 border border-slate-200 rounded-lg px-4 py-2 shadow-sm z-30">
+          <div class="absolute top-4 left-4 bg-white/95 border border-slate-200 rounded-lg px-4 py-2 shadow-sm z-30">
             <p class="font-bold text-gray-800 text-sm">${subnet.title}</p>
             <p class="text-xs text-gray-600">${subnet.mask}</p>
             <p class="text-xs text-gray-500">${subnet.hostsLabel}</p>
@@ -476,9 +476,6 @@ function renderStep1() {
           <div class="absolute left-0 right-0 bottom-6 text-center z-30">
             <span class="inline-flex items-center gap-1 ${subnet.badgeClasses} px-3 py-1 rounded-full text-xs font-semibold">📶 Lokalt broadcast</span>
           </div>
-          <div class="router-gate-note ${subnet.id === 1 ? 'left' : 'right'}">
-            <span>Routeren afviser broadcast til det andet subnet</span>
-          </div>
         </div>
       `;
     })
@@ -486,27 +483,28 @@ function renderStep1() {
 
   visualizationEl.innerHTML = `
     <div class="relative min-h-[560px]">
-      <div class="absolute left-1/2 -translate-x-1/2 top-6 z-40 text-center">
+      <div class="absolute left-1/2 -translate-x-1/2 top-4 z-40 text-center router-stack">
         <div class="bg-slate-900 text-white border-4 border-slate-700 rounded-2xl px-8 py-4 shadow-2xl">
           <p class="text-sm font-bold tracking-[0.45em]">ROUTER</p>
           <div class="flex gap-1 justify-center mt-2">${routerPorts}</div>
         </div>
-        <div class="mt-2 flex flex-col items-center gap-1">
-          <span class="inline-block bg-white/90 text-xs font-semibold text-slate-600 px-3 py-1 rounded-full shadow-sm">Forbinder subnettene</span>
-          <span class="inline-block bg-emerald-50/90 text-[11px] font-semibold text-emerald-700 px-3 py-1 rounded-full shadow-sm">Router stopper broadcast til andre LAN</span>
+        <div class="router-bridge-badge">Forbinder subnettene</div>
+        <div id="router-stop-indicator" class="router-stop-label">
+          <span class="router-stop-icon">🚫</span>
+          <span>Router stopper broadcast til andre LAN</span>
         </div>
       </div>
 
       <svg class="absolute inset-0 w-full h-full pointer-events-none router-link-layer" viewBox="0 0 100 100" preserveAspectRatio="none">
-        <path id="router-path-left" d="M50 26 C44 32 38 36 34 42" stroke="#14b8a6" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.75" fill="none"></path>
-        <path id="router-path-right" d="M50 26 C56 32 62 36 66 42" stroke="#38bdf8" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.75" fill="none"></path>
-        <circle cx="34" cy="42" r="1.5" fill="#0f766e" fill-opacity="0.8"></circle>
-        <circle cx="66" cy="42" r="1.5" fill="#0369a1" fill-opacity="0.8"></circle>
-        <g class="router-stop-marker" transform="translate(34 42)">
+        <path id="router-path-left" d="M50 24 C44 31 38 36 33 43" stroke="#14b8a6" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.78" fill="none"></path>
+        <path id="router-path-right" d="M50 24 C56 31 62 36 67 43" stroke="#38bdf8" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.78" fill="none"></path>
+        <circle cx="33" cy="43" r="1.4" fill="#0f766e" fill-opacity="0.85"></circle>
+        <circle cx="67" cy="43" r="1.4" fill="#0369a1" fill-opacity="0.85"></circle>
+        <g class="router-stop-marker" transform="translate(33 43)">
           <circle r="4.1"></circle>
           <text x="0" y="1.5">🚫</text>
         </g>
-        <g class="router-stop-marker" transform="translate(66 42)">
+        <g class="router-stop-marker" transform="translate(67 43)">
           <circle r="4.1"></circle>
           <text x="0" y="1.5">🚫</text>
         </g>
@@ -514,13 +512,6 @@ function renderStep1() {
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-40">
         ${panels}
-      </div>
-
-      <div class="router-stop-banner left">
-        <span>🚫 Routeren stopper broadcast videre mod Subnet 2</span>
-      </div>
-      <div class="router-stop-banner right">
-        <span>🚫 Ingen broadcast sendes videre til Subnet 1</span>
       </div>
     </div>
   `;
@@ -539,13 +530,15 @@ function renderStep1() {
   setupRouterTraffic({
     pathId: 'router-path-left',
     color: '#0f766e',
-    burstColor: '#14b8a6'
+    burstColor: '#14b8a6',
+    indicatorId: 'router-stop-indicator'
   });
 
   setupRouterTraffic({
     pathId: 'router-path-right',
     color: '#0369a1',
-    burstColor: '#38bdf8'
+    burstColor: '#38bdf8',
+    indicatorId: 'router-stop-indicator'
   });
 }
 
@@ -1111,7 +1104,7 @@ function renderVisualization() {
   }
 }
 
-function setupRouterTraffic({ pathId, color, burstColor }) {
+function setupRouterTraffic({ pathId, color, burstColor, indicatorId }) {
   const path = document.getElementById(pathId);
   if (!path) {
     return;
@@ -1124,6 +1117,8 @@ function setupRouterTraffic({ pathId, color, burstColor }) {
 
   const pathLength = path.getTotalLength();
   const activePackets = [];
+  const indicator = indicatorId ? document.getElementById(indicatorId) : null;
+  let activeIndicatorBursts = 0;
 
   const spawnPacket = () => {
     const packet = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -1182,6 +1177,19 @@ function setupRouterTraffic({ pathId, color, burstColor }) {
         burst.setAttribute('stroke-width', '1.4');
         svg.appendChild(burst);
 
+        if (indicator) {
+          activeIndicatorBursts += 1;
+          indicator.classList.add('router-stop-label--active');
+          indicator.classList.add('router-stop-label--pulse');
+          setTimeout(() => {
+            activeIndicatorBursts = Math.max(activeIndicatorBursts - 1, 0);
+            indicator.classList.remove('router-stop-label--pulse');
+            if (activeIndicatorBursts === 0) {
+              indicator.classList.remove('router-stop-label--active');
+            }
+          }, 700);
+        }
+
         setTimeout(() => {
           if (burst.parentNode) {
             burst.parentNode.removeChild(burst);
@@ -1204,6 +1212,11 @@ function setupRouterTraffic({ pathId, color, burstColor }) {
         burst.parentNode.removeChild(burst);
       }
     });
+    if (indicator) {
+      activeIndicatorBursts = 0;
+      indicator.classList.remove('router-stop-label--pulse');
+      indicator.classList.remove('router-stop-label--active');
+    }
   };
 
   routerTrafficGenerators.push(generator);

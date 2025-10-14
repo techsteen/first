@@ -47,20 +47,23 @@ function loadCredentials(string $configDir): array
 {
     $apiKey = null;
     $caBundle = null;
+    $baseUrl = 'https://api.openai.com/v1';
+    $model = 'gpt-4o-mini';
+    $timeout = 30;
+    $configPathUsed = null;
 
     $configFiles = ['config.php', 'config.phg'];
-    $configPath = null;
 
     foreach ($configFiles as $candidate) {
         $candidatePath = $configDir . '/' . $candidate;
         if (is_readable($candidatePath)) {
-            $configPath = $candidatePath;
+            $configPathUsed = $candidatePath;
             break;
         }
     }
 
-    if ($configPath) {
-        $loaded = require $configPath;
+    if ($configPathUsed) {
+        $loaded = require $configPathUsed;
         if (is_string($loaded)) {
             $apiKey = trim($loaded);
         } elseif (is_array($loaded)) {
@@ -81,6 +84,23 @@ function loadCredentials(string $configDir): array
                     }
                 }
             }
+            if (isset($loaded['OPENAI_BASE'])) {
+                $trimmedBase = trim((string) $loaded['OPENAI_BASE']);
+                if ($trimmedBase !== '') {
+                    $baseUrl = $trimmedBase;
+                }
+            }
+            if (isset($loaded['OPENAI_MODEL'])) {
+                $trimmedModel = trim((string) $loaded['OPENAI_MODEL']);
+                if ($trimmedModel !== '') {
+                    $model = $trimmedModel;
+                }
+            }
+            if (isset($loaded['TIMEOUT'])) {
+                $timeout = max(0, (int) $loaded['TIMEOUT']);
+            } elseif (isset($loaded['OPENAI_TIMEOUT'])) {
+                $timeout = max(0, (int) $loaded['OPENAI_TIMEOUT']);
+            }
         }
     }
 
@@ -95,7 +115,43 @@ function loadCredentials(string $configDir): array
         $apiKey = getenv('OPENAI_API_KEY') ?: '';
     }
 
-    return [$apiKey, $caBundle];
+    $envBase = getenv('OPENAI_BASE');
+    if (is_string($envBase) && trim($envBase) !== '') {
+        $baseUrl = trim($envBase);
+    }
+
+    $envModel = getenv('OPENAI_MODEL');
+    if (is_string($envModel) && trim($envModel) !== '') {
+        $model = trim($envModel);
+    }
+
+    $envTimeout = getenv('OPENAI_TIMEOUT');
+    if (is_string($envTimeout) && trim($envTimeout) !== '') {
+        $timeout = max(0, (int) $envTimeout);
+    }
+
+    $envCa = getenv('OPENAI_CA_BUNDLE');
+    if (!$caBundle && is_string($envCa) && trim($envCa) !== '') {
+        $candidate = trim($envCa);
+        if (!is_readable($candidate)) {
+            $relative = $configDir . '/' . ltrim($candidate, '/\\');
+            if (is_readable($relative)) {
+                $candidate = $relative;
+            }
+        }
+        if (is_readable($candidate)) {
+            $caBundle = $candidate;
+        }
+    }
+
+    return [
+        'apiKey' => $apiKey ?: '',
+        'caBundle' => $caBundle,
+        'baseUrl' => $baseUrl,
+        'model' => $model,
+        'timeout' => $timeout,
+        'configPath' => $configPathUsed,
+    ];
 }
 
 function loadTasks(string $path): array
@@ -151,13 +207,17 @@ $expected = (string) ($task['expectedAnswer'] ?? '');
 $explanation = (string) ($task['explanation'] ?? '');
 $prompt = (string) ($task['prompt'] ?? '');
 
-[$apiKey, $caBundle] = loadCredentials(resolveConfigDir());
-if ($apiKey === '') {
-    respond(['error' => 'Serveren mangler OpenAI API-nøglen.'], 500);
+$credentials = loadCredentials(resolveConfigDir());
+if ($credentials['apiKey'] === '') {
+    respond([
+        'error' => 'Serveren mangler OpenAI API-nøglen. Tjek config/config.php (feltet OPENAI_API_KEY) eller miljøvariablen OPENAI_API_KEY.'
+    ], 500);
 }
 
+$endpoint = rtrim($credentials['baseUrl'], '/') . '/chat/completions';
+
 $requestBody = [
-    'model' => 'gpt-4o-mini',
+    'model' => $credentials['model'] !== '' ? $credentials['model'] : 'gpt-4o-mini',
     'temperature' => 0.2,
     'max_tokens' => 280,
     'messages' => [
@@ -178,19 +238,23 @@ $requestBody = [
     ]
 ];
 
-$ch = curl_init('https://api.openai.com/v1/chat/completions');
+$ch = curl_init($endpoint);
 $curlOptions = [
     CURLOPT_POST => true,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HTTPHEADER => [
         'Content-Type: application/json',
-        'Authorization: Bearer ' . $apiKey,
+        'Authorization: Bearer ' . $credentials['apiKey'],
     ],
     CURLOPT_POSTFIELDS => json_encode($requestBody, JSON_UNESCAPED_UNICODE),
 ];
 
-if ($caBundle) {
-    $curlOptions[CURLOPT_CAINFO] = $caBundle;
+if ($credentials['caBundle']) {
+    $curlOptions[CURLOPT_CAINFO] = $credentials['caBundle'];
+}
+
+if ($credentials['timeout'] > 0) {
+    $curlOptions[CURLOPT_TIMEOUT] = $credentials['timeout'];
 }
 
 curl_setopt_array($ch, $curlOptions);
