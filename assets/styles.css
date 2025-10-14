@@ -551,11 +551,20 @@
   gap: 2.5rem;
 }
 
-.tutorial-intro,
-.tutorial-body {
+.tutorial-intro {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+.tutorial-body {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 1.25rem;
+  min-height: 0;
+  align-content: stretch;
+  flex: 1 1 auto;
+  height: 100%;
 }
 
 .tutorial-intro__content {
@@ -603,7 +612,7 @@
 }
 
 .tutorial-panel--split .tutorial-panel__footer {
-  margin-top: auto;
+  margin-top: 0;
 }
 
 @media (min-width: 1024px) {
@@ -618,6 +627,7 @@
 
   .tutorial-body {
     flex: 1 1 0%;
+    min-height: 0;
   }
 }
 
@@ -667,10 +677,11 @@
   overflow-y: auto;
   padding-right: 0.75rem;
   margin-top: 0.5rem;
-  max-height: 360px;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  min-height: 0;
+  height: 100%;
 }
 
 .tutorial-scroll > * {
@@ -679,7 +690,7 @@
 
 @media (min-width: 1024px) {
   .tutorial-scroll {
-    max-height: 420px;
+    height: 100%;
   }
 }
 
