@@ -668,6 +668,13 @@
   padding-right: 0.75rem;
   margin-top: 0.5rem;
   max-height: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.tutorial-scroll > * {
+  width: 100%;
 }
 
 @media (min-width: 1024px) {
