@@ -530,19 +530,10 @@
   letter-spacing: 0.02em;
 }
 
-.tutorial-grid {
+.step0-stack {
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
-}
-
-@media (min-width: 1024px) {
-  .tutorial-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-    align-items: stretch;
-    gap: 2.5rem;
-  }
 }
 
 .tutorial-panel {
@@ -554,6 +545,11 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.tutorial-panel--stacked {
+  max-height: 560px;
+  padding-bottom: 1.5rem;
 }
 
 .tutorial-panel__header {
@@ -595,6 +591,38 @@
   font-weight: 700;
   color: #312e81;
   margin-bottom: 0.6rem;
+}
+
+.tutorial-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-right: 0.75rem;
+  margin-top: 0.5rem;
+  max-height: 360px;
+}
+
+@media (min-width: 1024px) {
+  .tutorial-scroll {
+    max-height: 420px;
+  }
+}
+
+.tutorial-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tutorial-scroll::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.7);
+  border-radius: 999px;
+}
+
+.tutorial-scroll::-webkit-scrollbar-thumb {
+  background: rgba(79, 70, 229, 0.4);
+  border-radius: 999px;
+}
+
+.tutorial-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(79, 70, 229, 0.55);
 }
 
 .tutorial-list {
@@ -655,6 +683,18 @@
   border-radius: 1rem;
   padding: 1rem 1.25rem;
   border: 1px dashed rgba(79, 70, 229, 0.35);
+}
+
+.tutorial-callout {
+  background: linear-gradient(135deg, rgba(254, 240, 138, 0.82), rgba(253, 224, 71, 0.82));
+  border-radius: 1.1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid rgba(202, 138, 4, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  display: grid;
+  gap: 0.45rem;
+  font-size: 0.94rem;
+  color: #78350f;
 }
 
 .term-button {

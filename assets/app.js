@@ -544,56 +544,7 @@ function renderStep0() {
   const deviceGrid = createDeviceCards(originalDevices);
 
   visualizationEl.innerHTML = `
-    <div class="tutorial-grid">
-      <article class="tutorial-panel">
-        <header class="tutorial-panel__header">
-          <p class="tutorial-panel__kicker">Hej hold!</p>
-          <h2 class="tutorial-panel__title">Hvorfor skal vi lære subnetting?</h2>
-        </header>
-        <p>
-          Når vi samler alle maskiner i ét <button type="button" class="term-button" data-term="LAN" data-context="Definér begrebet Local Area Network for elever på et grundforløb og giv et letforståeligt eksempel.">lokalt netværk</button>,
-          råber hver enhed ud i rummet, når den sender en <button type="button" class="term-button" data-term="Broadcast" data-context="Forklar hvad broadcast betyder i et LAN, hvorfor det kan skabe støj, og hvordan det opleves af nye elever.">broadcast</button>.
-          På et Grundforløb betyder det langsomme filer, nervøse printere og elever der mister fokus. Som underviser er mit mål, at I kan se problemet og selv foreslå en løsning.
-        </p>
-        <section class="tutorial-section">
-          <h3>Udfordringen i værkstedet</h3>
-          <p>
-            Forestil jer vores Techcollege Makerspace: 24 pc'er, en 3D-printer og nogle tablets. Alt er sat i ét netværk <span class="tutorial-highlight">192.168.1.0/24</span>.
-            Når en elev spejler sin skærm, ender signalet hos alle andre – uanset om de har brug for det eller ej. Det slider på både udstyr og tålmodighed.
-          </p>
-          <ul class="tutorial-list">
-            <li>Mere unødvendig trafik = langsommere svar fra servere.</li>
-            <li>Fejl ét sted kan smitte hele netværket.</li>
-            <li>Det er svært at finde ud af, hvem der skaber støjen.</li>
-          </ul>
-        </section>
-        <section class="tutorial-section">
-          <h3>Løsningen vi arbejder hen imod</h3>
-          <p>
-            Vi deler netværket i mindre <button type="button" class="term-button" data-term="Subnet" data-context="Forklar hvad et subnet er, og hvordan det hjælper med at reducere broadcast-trafik. Brug et pædagogisk hverdagseksempel.">subnets</button>. Hvert subnet er som sin egen klasse – roligere og lettere at styre.
-            I dag undersøger vi, hvordan <button type="button" class="term-button" data-term="CIDR" data-context="Forklar Classless Inter-Domain Routing kort og i et sprog som en Grundforløbselev kan forstå. Giv et nemt eksempel.">CIDR-notation</button>
-            og en ny <button type="button" class="term-button" data-term="Subnetmaske" data-context="Forklar hvad en subnetmaske er, hvordan man læser den, og hvorfor den er vigtig når man opdeler netværk.">subnetmaske</button> hjælper os med at låne bits fra host-delen.
-          </p>
-          <p>
-            Når vi har delt os i to grupper, sørger en <button type="button" class="term-button" data-term="Gateway" data-context="Forklar gateway-begrebet for en ny elev og hvorfor den er nødvendig når vi forbinder flere subnets.">gateway</button> eller router for at sende trafikken de rigtige steder hen.
-          </p>
-        </section>
-        <section class="tutorial-section">
-          <h3>Sådan gør vi i fællesskab</h3>
-          <ol class="tutorial-steps">
-            <li>Observer den massive broadcast-trafik i animationen til højre.</li>
-            <li>Diskutér i grupper hvorfor det er et problem for vores elever og udstyr.</li>
-            <li>Lav en hurtig skitse af, hvordan to subnets kunne fordeles i jeres praksis.</li>
-            <li>Brug beregneren i trin 5 til at teste jeres idéer.</li>
-          </ol>
-        </section>
-        <footer class="tutorial-panel__footer">
-          <p>
-            Husk: subnetting handler ikke kun om tal – det handler om at give vores læringsmiljø ro. Stil spørgsmål, klik på fagordene for ekstra forklaringer, og vær nysgerrige!
-          </p>
-        </footer>
-      </article>
-
+    <div class="step0-stack">
       <div class="relative min-h-[500px] tutorial-visual">
         <div class="border-4 border-red-400 rounded-xl p-4 md:p-6 bg-red-50 relative overflow-hidden min-h-[500px]">
           <div class="callout-box absolute top-4 left-4 z-10">
@@ -631,6 +582,97 @@ function renderStep0() {
           <p class="text-sm text-gray-700">"Vi har et problem! Alt for meget broadcast-trafik gennem switchen. Vi skal opdele netværket i mindre subnets!"</p>
         </div>
       </div>
+      <article class="tutorial-panel tutorial-panel--stacked">
+        <header class="tutorial-panel__header">
+          <p class="tutorial-panel__kicker">Grundforløb – lektion 1</p>
+          <h2 class="tutorial-panel__title">Introduktion til subnetting</h2>
+        </header>
+        <p>
+          I dag arbejder vi sammen om at forstå, hvorfor vi opdeler et netværk. Forestil jer, at hele værkstedet kun er forbundet via ét
+          <button type="button" class="term-button" data-term="LAN" data-context="Definér begrebet Local Area Network for elever på et grundforløb og giv et letforståeligt eksempel.">LAN</button>.
+          Når nogen sender en besked, hører alle den. Det kan være hyggeligt, men det bliver hurtigt larm. Subnetting er teknikken, der hjælper os med at styre den larm.
+        </p>
+        <div class="tutorial-scroll">
+          <section class="tutorial-section">
+            <h3>1. Hvad er en IP-adresse?</h3>
+            <p>
+              Hver computer får en unik <button type="button" class="term-button" data-term="IP-adresse" data-context="Forklar hvad en IPv4-adresse er, hvorfor den har fire tal, og hvordan elever kan læse den.">IP-adresse</button>, fx
+              <span class="tutorial-highlight">192.168.1.23</span>. De første tal fortæller, hvilket område vi er i, og de sidste tal peger på den konkrete enhed. Vi kalder det
+              <button type="button" class="term-button" data-term="Netværksdel" data-context="Forklar forskellen på netværksdel og hostdel i et sprog der passer til grundforløbs-elever.">netværksdel</button>
+              og <button type="button" class="term-button" data-term="Hostdel" data-context="Forklar hvad hostdelen er i en IPv4-adresse og hvorfor den begrænser hvor mange enheder der kan være i et subnet.">hostdel</button>.
+            </p>
+            <ul class="tutorial-list">
+              <li><strong>Netværksdel:</strong> hvem er med i gruppen?</li>
+              <li><strong>Hostdel:</strong> hvilken elev i gruppen taler vi med?</li>
+              <li><strong>Eksempel:</strong> 192.168.1.<em>x</em> – de tre første tal er fælles, det sidste <em>x</em> skifter mellem 1 og 254.</li>
+            </ul>
+          </section>
+          <section class="tutorial-section">
+            <h3>2. Hvorfor bliver der larm?</h3>
+            <p>
+              Når en enhed sender en <button type="button" class="term-button" data-term="Broadcast" data-context="Forklar hvad broadcast betyder i et LAN, hvorfor det kan skabe støj, og hvordan det opleves af nye elever.">broadcast</button>,
+              spørger den: “Er du der?” til alle på én gang. På små hold er det fint, men med 24 pc'er, printere og IoT-enheder betyder det mange afbrydelser.
+            </p>
+            <div class="tutorial-callout">
+              <p><strong>Konsekvens:</strong> Filer åbner langsomt, og fejlsøgning bliver svært, fordi alle ser hinandens beskeder.</p>
+              <p><strong>Observation:</strong> Kig på animationen ovenfor og bemærk, hvordan hver rød pakke rammer alle maskiner.</p>
+            </div>
+          </section>
+          <section class="tutorial-section">
+            <h3>3. Hvad gør subnetting?</h3>
+            <p>
+              Subnetting betyder, at vi deler hostdelen op i mindre grupper ved hjælp af en
+              <button type="button" class="term-button" data-term="Subnetmaske" data-context="Forklar hvad en subnetmaske er, hvordan man læser den, og hvorfor den er vigtig når man opdeler netværk.">subnetmaske</button>.
+              Vi “låner” bits fra hostdelen til netværksdelen, så vi får flere grupper men færre pladser i hver gruppe.
+            </p>
+            <ol class="tutorial-steps">
+              <li>Start med et <span class="tutorial-highlight">/24</span>-netværk (255.255.255.0) – 254 mulige enheder.</li>
+              <li>Lån én bit → <span class="tutorial-highlight">/25</span> (255.255.255.128) – nu har vi to grupper med plads til 126 enheder hver.</li>
+              <li>Hver gruppe får sin egen <button type="button" class="term-button" data-term="Gateway" data-context="Forklar gateway-begrebet for en ny elev og hvorfor den er nødvendig når vi forbinder flere subnets.">gateway</button> for at tale med resten af verden.</li>
+            </ol>
+          </section>
+          <section class="tutorial-section">
+            <h3>4. Eksempel fra vores værksted</h3>
+            <p>
+              Vi deler 24 pc'er i to hold:
+            </p>
+            <ul class="tutorial-list">
+              <li><strong>Subnet 1:</strong> 192.168.1.0 – 192.168.1.127 til teori-lokalet.</li>
+              <li><strong>Subnet 2:</strong> 192.168.1.128 – 192.168.1.255 til værkstedet.</li>
+              <li>Begge subnets taler med en fælles router, men <em>broadcasts</em> bliver i deres egen gruppe.</li>
+            </ul>
+            <p>
+              Resultatet er roligere netværk, hurtigere svar fra serverne og lettere fejlsøgning.
+            </p>
+          </section>
+          <section class="tutorial-section">
+            <h3>5. Sådan øver vi os</h3>
+            <p>
+              Følg disse aktiviteter i klassen:
+            </p>
+            <ol class="tutorial-steps">
+              <li>Notér hvilke enheder der er vigtige i jeres lokale. Hvor mange adresser skal de bruge?</li>
+              <li>Brug beregneren i trin 5 til at finde et subnet, der passer til jeres tal.</li>
+              <li>Sammenlign jeres svar med makkeren og forklar forskellen.</li>
+              <li>Test viden i opgavebanken på trin 6 – klik på “Vis forklaring”, hvis I går i stå.</li>
+            </ol>
+          </section>
+          <section class="tutorial-section">
+            <h3>6. Opsummering før vi går videre</h3>
+            <p>
+              Subnetting hjælper os med at holde styr på trafikken, beskytte udstyr og skabe et godt læringsmiljø. Klik på fagordene, hvis noget er uklart – AI-assistenten giver en kort forklaring målrettet jer som Grundforløbshold.
+            </p>
+            <p>
+              Når I er klar, går vi videre til næste trin og ser, hvordan netværket ændrer sig i praksis.
+            </p>
+          </section>
+        </div>
+        <footer class="tutorial-panel__footer">
+          <p>
+            Spørgsmål er velkomne! Jo bedre vi forstår grundideen, desto nemmere bliver resten af forløbet.
+          </p>
+        </footer>
+      </article>
     </div>
   `;
 
