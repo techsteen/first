@@ -1,5 +1,5 @@
 (function() {
-    const tagButtons = document.querySelectorAll('#tagCloud .tag');
+    const tagButtons = document.querySelectorAll('#tagCloud .tag[data-tag]');
     const clearButton = document.querySelector('.tag--clear');
     const cards = document.querySelectorAll('.card');
 
