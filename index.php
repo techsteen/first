@@ -542,6 +542,7 @@ function createFallbackEntry(
             <span class="stamp">Opdateret <?php echo $generatedAt->format('d. M Y \k\l. H:i'); ?> CET</span>
             <nav class="utility">
                 <a href="admin/feeds.php">Tilføj kilde</a>
+                <a href="ai_digest.php">AI-overblik</a>
                 <a href="#">Om projektet</a>
                 <a href="#">Abonnér via RSS</a>
             </nav>

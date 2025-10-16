@@ -7,10 +7,16 @@ Dette repo indeholder et PHP-baseret layout til en kurateret AI-nyhedsavis. Fors
 - `index.php` – læser feed-konfigurationen, henter/normaliserer historier og genererer forsiden.
 - `data/feeds.json` – JSON-fil med sektioner, feeds og valgfri manuelle links. Filen oprettes automatisk hvis den mangler.
 - `includes/feed_config.php` – fælles hjælper-funktioner til at indlæse og gemme feed-konfiguration.
+- `includes/ai_digest.php` – indkapsler kaldet til ChatGPT API’et og normaliserer AI-resultater til kort.
 - `admin/feeds.php` – enkelt admin-interface til at tilføje, redigere og slette sektioner, feeds samt direkte links til podcasts/videoer.
 - `partials/` – genanvendelige kort-komponenter til top- og standardartikler.
 - `assets/styles.css` – avisinspireret styling.
 - `assets/app.js` – simpel tag-filtrering på klientsiden.
+- `ai_digest.php` – værktøjsside hvor du kan generere et midlertidigt AI-feed ud fra en vilkårlig URL.
+
+## Hvor ligger dine data?
+
+Alle sektioner, feeds og manuelle links gemmes i filen `data/feeds.json`. Når du opdaterer indhold via admin-siden, er det denne fil, der bliver ændret. Tag en backup af den fil, før du uploader nye versioner af koden, så du ikke overskriver dine egne data.
 
 ## Sådan fungerer forsiden
 
@@ -28,3 +34,10 @@ Dette repo indeholder et PHP-baseret layout til en kurateret AI-nyhedsavis. Fors
 - Brug `feedErrors`-sektionen i UI til at se hvilke feeds der fejler – nyttigt ved debugging.
 
 Upload filerne til din PHP-server for at se prototypen i aktion, og udbyg efter behov med lagring, AI-summeringer eller mere avanceret administration.
+
+## AI-genereret nyhedsudtræk
+
+- Opret en miljøvariabel `OPENAI_API_KEY` på dit webhotel (fx via kontrolpanelet eller `.htaccess` med `SetEnv`), så nøglen aldrig ligger i selve PHP-filerne.
+- Besøg `ai_digest.php`, indsæt en URL til en nyhedsside og tryk **Generér** for at lade ChatGPT skabe et overblik.
+- Hvis kilden angiver publiceringsdatoer, filtreres resultatet automatisk til de seneste to døgn. Ellers vises de vigtigste fem historier.
+- Brug resultatet som inspiration og kopier relevante links/resuméer ind i `admin/feeds.php` efter behov – intet gemmes automatisk.
