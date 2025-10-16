@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * @return array{sections: array<int,array{id?:string,title:string,max_items:int,feeds:array<int,array{id?:string,name:string,url:string,tags?:array<int,string>,limit?:int}>,manual_items?:array<int,array{id?:string,title:string,url:string,source?:string,summary?:string,tags?:array<int,string>,published_at?:string}>>}>}
+ * @return array{sections: array<int,array{id?:string,title:string,max_items:int,feeds:array<int,array{id?:string,type?:string,name:string,url:string,tags?:array<int,string>,limit?:int}>,manual_items?:array<int,array{id?:string,title:string,url:string,source?:string,summary?:string,tags?:array<int,string>,published_at?:string}>>}>}
  */
 function defaultFeedConfig(): array
 {
@@ -123,7 +123,7 @@ function defaultFeedConfig(): array
 /**
  * @param string $path
  * @param array<int,string> $errors
- * @return array{sections: array<int,array{id?:string,title:string,max_items:int,feeds:array<int,array{id?:string,name:string,url:string,tags?:array<int,string>,limit?:int}>,manual_items?:array<int,array{id?:string,title:string,url:string,source?:string,summary?:string,tags?:array<int,string>,published_at?:string}>>}>}
+ * @return array{sections: array<int,array{id?:string,title:string,max_items:int,feeds:array<int,array{id?:string,type?:string,name:string,url:string,tags?:array<int,string>,limit?:int}>,manual_items?:array<int,array{id?:string,title:string,url:string,source?:string,summary?:string,tags?:array<int,string>,published_at?:string}>>}>}
  */
 function readFeedConfig(string $path, array &$errors): array
 {
@@ -149,9 +149,9 @@ function readFeedConfig(string $path, array &$errors): array
 }
 
 /**
- * @param array{sections: array<int,array{id?:string,title:string,max_items?:int,feeds?:array<int,array{id?:string,name?:string,url?:string,tags?:array<int,string>,limit?:int}>,manual_items?:array<int,array{id?:string,title?:string,url?:string,source?:string,summary?:string,tags?:array<int,string>,published_at?:string>}>>} $config
+ * @param array{sections: array<int,array{id?:string,title:string,max_items?:int,feeds?:array<int,array{id?:string,type?:string,name?:string,url?:string,tags?:array<int,string>,limit?:int}>,manual_items?:array<int,array{id?:string,title?:string,url?:string,source?:string,summary?:string,tags?:array<int,string>,published_at?:string>}>>} $config
  * @param array<int,string> $errors
- * @return array<string,array{max_items:int,feeds:array<int,array{id?:string,name:string,url:string,tags:array<int,string>,limit:int}>,manual_items:array<int,array{id:string,title:string,url:string,source:string,summary:string,tags:array<int,string>,published_at:string,timestamp:int}>}>
+ * @return array<string,array{max_items:int,feeds:array<int,array{id?:string,type:string,name:string,url:string,tags:array<int,string>,limit:int}>,manual_items:array<int,array{id:string,title:string,url:string,source:string,summary:string,tags:array<int,string>,published_at:string,timestamp:int}>}>
  */
 function normaliseFeedSections(array $config, array &$errors): array
 {
@@ -187,6 +187,11 @@ function normaliseFeedSections(array $config, array &$errors): array
                 continue;
             }
 
+            $type = isset($feed['type']) ? strtolower((string) $feed['type']) : 'rss';
+            if (!in_array($type, ['rss', 'ai_digest'], true)) {
+                $type = 'rss';
+            }
+
             $limit = isset($feed['limit']) ? (int) $feed['limit'] : 5;
             if ($limit <= 0) {
                 $limit = 5;
@@ -201,6 +206,7 @@ function normaliseFeedSections(array $config, array &$errors): array
 
             $feeds[] = [
                 'id' => ensureFeedId($feed, $name, $url),
+                'type' => $type,
                 'name' => $name,
                 'url' => $url,
                 'tags' => $tags,

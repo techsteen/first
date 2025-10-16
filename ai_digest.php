@@ -23,45 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-
-/**
- * @return string|null
- */
-function fetchPageForDigest(string $url, array &$errors): ?string
-{
-    $contextOptions = [
-        'http' => [
-            'timeout' => 8,
-            'user_agent' => 'AI-Avisen/1.0 (+https://example.com)',
-        ],
-        'https' => [
-            'timeout' => 8,
-            'user_agent' => 'AI-Avisen/1.0 (+https://example.com)',
-        ],
-    ];
-
-    $context = stream_context_create($contextOptions);
-    $raw = @file_get_contents($url, false, $context);
-
-    if ($raw === false) {
-        $errors[] = 'Kunne ikke hente siden. Tjek om adressen er korrekt, eller prøv igen senere.';
-        return null;
-    }
-
-    $encoding = mb_detect_encoding($raw, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true) ?: 'UTF-8';
-    $converted = mb_convert_encoding($raw, 'UTF-8', $encoding);
-
-    $text = strip_tags($converted);
-    $text = html_entity_decode($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-    $text = preg_replace('/\s+/', ' ', $text);
-
-    if ($text === null) {
-        $errors[] = 'Kunne ikke klargøre siden til AI-resumé.';
-        return null;
-    }
-
-    return mb_substr(trim($text), 0, 12000);
-}
 ?>
 <!DOCTYPE html>
 <html lang="da">
@@ -89,6 +50,7 @@ function fetchPageForDigest(string $url, array &$errors): ?string
     <section class="panel">
         <h2>Fremstil et AI-overblik</h2>
         <p>Indsæt en URL til en artikeloversigt, og lad ChatGPT udtrække de vigtigste nyheder som et midlertidigt feed. Hvis artiklerne har angivet publiceringsdatoer, vises kun poster fra de seneste to døgn.</p>
+        <p>Når resultatet ser rigtigt ud, kan du gemme den samme URL som et <strong>AI-overblik</strong>-feed i admin-panelet, så indholdet automatisk vises på forsiden.</p>
         <form method="post" class="form">
             <label for="source_url">Sideadresse</label>
             <div class="form__row">

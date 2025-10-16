@@ -53,38 +53,9 @@ function loadOpenAIConfig(array &$errors): ?array
  */
 function generateDigestFromPage(string $url, string $content, DateTimeZone $timezone, array &$errors): ?array
 {
-    $config = loadOpenAIConfig($errors);
-    if ($config === null) {
+    $connection = resolveOpenAIConnection($errors);
+    if ($connection === null) {
         return null;
-    }
-
-    $apiKey = trim((string) $config['OPENAI_API_KEY']);
-    if ($apiKey === '') {
-        $errors[] = 'OpenAI API-nøglen er ikke udfyldt i /config/config.php.';
-        return null;
-    }
-
-    $apiBase = rtrim((string) $config['OPENAI_BASE'], '/');
-    if ($apiBase === '') {
-        $errors[] = 'OPENAI_BASE i /config/config.php må ikke være tom.';
-        return null;
-    }
-
-    $model = trim((string) $config['OPENAI_MODEL']);
-    if ($model === '') {
-        $errors[] = 'OPENAI_MODEL i /config/config.php må ikke være tom.';
-        return null;
-    }
-
-    $timeout = isset($config['TIMEOUT']) ? (int) $config['TIMEOUT'] : 60;
-    if ($timeout <= 0) {
-        $timeout = 60;
-    }
-
-    $caBundle = isset($config['CA_BUNDLE']) ? (string) $config['CA_BUNDLE'] : '';
-    if ($caBundle !== '' && !is_file($caBundle)) {
-        $errors[] = 'CA_BUNDLE peger på en fil, der ikke findes. Upload certifikatfilen, eller opdater stien. For nu bruges PHPs standard-certifikat.';
-        $caBundle = '';
     }
 
     $now = new DateTimeImmutable('now', $timezone);
@@ -93,7 +64,8 @@ function generateDigestFromPage(string $url, string $content, DateTimeZone $time
         . 'Hvert element skal have mindst title, summary, url. '
         . 'Medtag kilde-navn hvis det kan findes, og publiceringsdato hvis den er tilgængelig som ISO-8601. '
         . 'Filtrer artikler, så kun indhold publiceret inden for de seneste 2 døgn fra "current_time" bevares. '
-        . 'Hvis ingen datoer findes, vælg de vigtigste 5 punkter.';
+        . 'Hvis ingen datoer findes, vælg de vigtigste 5 punkter. '
+        . 'Skriv alle titler og resuméer på dansk.';
 
     $userPrompt = sprintf(
         "current_time: %s\nsource_url: %s\n---\n%s",
@@ -103,7 +75,6 @@ function generateDigestFromPage(string $url, string $content, DateTimeZone $time
     );
 
     $payload = [
-        'model' => $model,
         'response_format' => ['type' => 'json_object'],
         'messages' => [
             ['role' => 'system', 'content' => $systemPrompt],
@@ -113,57 +84,8 @@ function generateDigestFromPage(string $url, string $content, DateTimeZone $time
         'max_tokens' => 600,
     ];
 
-    $jsonPayload = json_encode($payload, JSON_THROW_ON_ERROR);
-
-    $endpoint = $apiBase . '/chat/completions';
-    $ch = curl_init($endpoint);
-    if ($ch === false) {
-        $errors[] = 'Kunne ikke initialisere forbindelsen til OpenAI.';
-        return null;
-    }
-
-    $headers = [
-        'Content-Type: application/json',
-        'Authorization: Bearer ' . $apiKey,
-    ];
-
-    $options = [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_HTTPHEADER => $headers,
-        CURLOPT_POSTFIELDS => $jsonPayload,
-        CURLOPT_TIMEOUT => $timeout,
-    ];
-
-    if ($caBundle !== '') {
-        $options[CURLOPT_CAINFO] = $caBundle;
-    }
-
-    curl_setopt_array($ch, $options);
-
-    $response = curl_exec($ch);
-    if ($response === false) {
-        $errors[] = 'OpenAI API-kaldet fejlede: ' . curl_error($ch);
-        curl_close($ch);
-        return null;
-    }
-
-    $statusCode = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-    curl_close($ch);
-
-    if ($statusCode < 200 || $statusCode >= 300) {
-        $decodedError = json_decode($response, true);
-        if (is_array($decodedError) && isset($decodedError['error']['message'])) {
-            $errors[] = 'OpenAI API returnerede en fejl (status ' . $statusCode . '): ' . trim((string) $decodedError['error']['message']);
-        } else {
-            $errors[] = 'OpenAI API returnerede en fejl (status ' . $statusCode . ').';
-        }
-        return null;
-    }
-
-    $data = json_decode($response, true);
-    if (!is_array($data)) {
-        $errors[] = 'Kunne ikke læse svaret fra OpenAI.';
+    $data = callOpenAIChat($connection, $payload, $errors);
+    if ($data === null) {
         return null;
     }
 
@@ -243,4 +165,283 @@ function parsePublishedDate(string $value, DateTimeZone $timezone): ?DateTimeImm
     } catch (Exception $e) {
         return null;
     }
+}
+
+/**
+ * @return array{apiKey:string,apiBase:string,model:string,timeout:int,caBundle:string}|null
+ */
+function resolveOpenAIConnection(array &$errors): ?array
+{
+    static $connection = null;
+    static $attempted = false;
+
+    if ($connection !== null) {
+        return $connection;
+    }
+
+    if ($attempted) {
+        return null;
+    }
+
+    $attempted = true;
+
+    $configErrors = [];
+    $config = loadOpenAIConfig($configErrors);
+    if ($config === null) {
+        foreach ($configErrors as $configError) {
+            $errors[] = $configError;
+        }
+        return null;
+    }
+
+    $apiKey = trim((string) ($config['OPENAI_API_KEY'] ?? ''));
+    if ($apiKey === '') {
+        $errors[] = 'OpenAI API-nøglen er ikke udfyldt i /config/config.php.';
+        return null;
+    }
+
+    $apiBase = rtrim((string) ($config['OPENAI_BASE'] ?? ''), '/');
+    if ($apiBase === '') {
+        $errors[] = 'OPENAI_BASE i /config/config.php må ikke være tom.';
+        return null;
+    }
+
+    $model = trim((string) ($config['OPENAI_MODEL'] ?? ''));
+    if ($model === '') {
+        $errors[] = 'OPENAI_MODEL i /config/config.php må ikke være tom.';
+        return null;
+    }
+
+    $timeout = isset($config['TIMEOUT']) ? (int) $config['TIMEOUT'] : 60;
+    if ($timeout <= 0) {
+        $timeout = 60;
+    }
+
+    $caBundle = isset($config['CA_BUNDLE']) ? (string) $config['CA_BUNDLE'] : '';
+    if ($caBundle !== '' && !is_file($caBundle)) {
+        $errors[] = 'CA_BUNDLE peger på en fil, der ikke findes. Upload certifikatfilen, eller opdater stien. For nu bruges PHPs standard-certifikat.';
+        $caBundle = '';
+    }
+
+    $connection = [
+        'apiKey' => $apiKey,
+        'apiBase' => $apiBase,
+        'model' => $model,
+        'timeout' => $timeout,
+        'caBundle' => $caBundle,
+    ];
+
+    return $connection;
+}
+
+/**
+ * @param array{apiKey:string,apiBase:string,model:string,timeout:int,caBundle:string} $connection
+ * @return array<string,mixed>|null
+ */
+function callOpenAIChat(array $connection, array $payload, array &$errors): ?array
+{
+    $payload['model'] = $connection['model'];
+
+    try {
+        $jsonPayload = json_encode($payload, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        $errors[] = 'Kunne ikke forberede forespørgslen til OpenAI: ' . $exception->getMessage();
+        return null;
+    }
+
+    $endpoint = $connection['apiBase'] . '/chat/completions';
+    $ch = curl_init($endpoint);
+    if ($ch === false) {
+        $errors[] = 'Kunne ikke initialisere forbindelsen til OpenAI.';
+        return null;
+    }
+
+    $headers = [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . $connection['apiKey'],
+    ];
+
+    $options = [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_POSTFIELDS => $jsonPayload,
+        CURLOPT_TIMEOUT => $connection['timeout'],
+    ];
+
+    if ($connection['caBundle'] !== '') {
+        $options[CURLOPT_CAINFO] = $connection['caBundle'];
+    }
+
+    curl_setopt_array($ch, $options);
+
+    $response = curl_exec($ch);
+    if ($response === false) {
+        $errors[] = 'OpenAI API-kaldet fejlede: ' . curl_error($ch);
+        curl_close($ch);
+        return null;
+    }
+
+    $statusCode = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+
+    if ($statusCode < 200 || $statusCode >= 300) {
+        $decodedError = json_decode($response, true);
+        if (is_array($decodedError) && isset($decodedError['error']['message'])) {
+            $errors[] = 'OpenAI API returnerede en fejl (status ' . $statusCode . '): ' . trim((string) $decodedError['error']['message']);
+        } else {
+            $errors[] = 'OpenAI API returnerede en fejl (status ' . $statusCode . ').';
+        }
+        return null;
+    }
+
+    $data = json_decode($response, true);
+    if (!is_array($data)) {
+        $errors[] = 'Kunne ikke læse svaret fra OpenAI.';
+        return null;
+    }
+
+    return $data;
+}
+
+/**
+ * @return string|null
+ */
+function fetchPageForDigest(string $url, array &$errors): ?string
+{
+    $contextOptions = [
+        'http' => [
+            'timeout' => 8,
+            'user_agent' => 'AI-Avisen/1.0 (+https://example.com)',
+        ],
+        'https' => [
+            'timeout' => 8,
+            'user_agent' => 'AI-Avisen/1.0 (+https://example.com)',
+        ],
+    ];
+
+    $context = stream_context_create($contextOptions);
+    $raw = @file_get_contents($url, false, $context);
+
+    if ($raw === false) {
+        $errors[] = 'Kunne ikke hente siden. Tjek om adressen er korrekt, eller prøv igen senere.';
+        return null;
+    }
+
+    $encoding = mb_detect_encoding($raw, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true) ?: 'UTF-8';
+    $converted = mb_convert_encoding($raw, 'UTF-8', $encoding);
+
+    $text = strip_tags($converted);
+    $text = html_entity_decode($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $text = preg_replace('/\s+/', ' ', $text);
+
+    if ($text === null) {
+        $errors[] = 'Kunne ikke klargøre siden til AI-resumé.';
+        return null;
+    }
+
+    return mb_substr(trim($text), 0, 12000);
+}
+
+/**
+ * @param array<int,array{title:string,url:string,source:string,summary:string,tags:array<int,string>,published_at:string,timestamp:int}> $items
+ * @return array<int,array{title:string,url:string,source:string,summary:string,tags:array<int,string>,published_at:string,timestamp:int}>
+ */
+function translateFeedItemsToDanish(array $items, string $feedName, array &$errors): array
+{
+    static $translationDisabled = false;
+
+    if ($translationDisabled || empty($items)) {
+        return $items;
+    }
+
+    $connectionErrors = [];
+    $connection = resolveOpenAIConnection($connectionErrors);
+    if ($connection === null) {
+        foreach ($connectionErrors as $error) {
+            $errors[] = $error;
+        }
+        $translationDisabled = true;
+        return $items;
+    }
+
+    $payloadItems = [];
+    foreach ($items as $index => $item) {
+        $payloadItems[] = [
+            'index' => $index,
+            'title' => $item['title'],
+            'summary' => $item['summary'],
+        ];
+    }
+
+    try {
+        $encodedItems = json_encode(['items' => $payloadItems], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    } catch (JsonException $exception) {
+        $errors[] = 'Kunne ikke klargøre tekster til oversættelse: ' . $exception->getMessage();
+        $translationDisabled = true;
+        return $items;
+    }
+
+    $feedLabel = $feedName !== '' ? $feedName : 'ukendt kilde';
+    $systemPrompt = 'Du oversætter journalistiske overskrifter og resuméer til dansk. '
+        . 'Returnér JSON med feltet "items" som en liste af objekter med index, title og summary. '
+        . 'Bevar navne på personer, organisationer og produkter. '
+        . 'Oversæt kun teksten; ændr ikke URL’er eller rækkefølgen.';
+
+    $userPrompt = 'Feed: ' . $feedLabel . "\n" . 'Indhold:' . "\n" . $encodedItems;
+
+    $payload = [
+        'response_format' => ['type' => 'json_object'],
+        'messages' => [
+            ['role' => 'system', 'content' => $systemPrompt],
+            ['role' => 'user', 'content' => $userPrompt],
+        ],
+        'temperature' => 0.0,
+        'max_tokens' => 800,
+    ];
+
+    $responseErrors = [];
+    $data = callOpenAIChat($connection, $payload, $responseErrors);
+    if ($data === null) {
+        foreach ($responseErrors as $error) {
+            $errors[] = $error;
+        }
+        $translationDisabled = true;
+        return $items;
+    }
+
+    $content = $data['choices'][0]['message']['content'] ?? '';
+    if (!is_string($content) || trim($content) === '') {
+        $errors[] = 'Oversættelsen fra OpenAI manglede indhold.';
+        $translationDisabled = true;
+        return $items;
+    }
+
+    $decoded = json_decode($content, true);
+    if (!is_array($decoded) || !isset($decoded['items']) || !is_array($decoded['items'])) {
+        $errors[] = 'Oversættelsen fra OpenAI havde et uventet format.';
+        $translationDisabled = true;
+        return $items;
+    }
+
+    foreach ($decoded['items'] as $translated) {
+        if (!is_array($translated) || !isset($translated['index'])) {
+            continue;
+        }
+
+        $index = (int) $translated['index'];
+        if (!isset($items[$index])) {
+            continue;
+        }
+
+        if (isset($translated['title']) && is_string($translated['title']) && trim($translated['title']) !== '') {
+            $items[$index]['title'] = trim($translated['title']);
+        }
+
+        if (isset($translated['summary']) && is_string($translated['summary']) && trim($translated['summary']) !== '') {
+            $items[$index]['summary'] = trim($translated['summary']);
+        }
+    }
+
+    return $items;
 }

@@ -174,6 +174,10 @@ function handleAddFeed(array &$config, array $payload): array
     $url = trim((string) ($payload['url'] ?? ''));
     $tagsInput = trim((string) ($payload['tags'] ?? ''));
     $limit = (int) ($payload['limit'] ?? 5);
+    $type = strtolower(trim((string) ($payload['type'] ?? 'rss')));
+    if (!in_array($type, ['rss', 'ai_digest'], true)) {
+        $type = 'rss';
+    }
 
     $errors = [];
     if ($name === '') {
@@ -217,6 +221,7 @@ function handleAddFeed(array &$config, array $payload): array
 
     $feeds[] = [
         'id' => $feedId,
+        'type' => $type,
         'name' => $name,
         'url' => $url,
         'tags' => $tags,
@@ -248,6 +253,10 @@ function handleUpdateFeed(array &$config, array $payload): array
     $url = trim((string) ($payload['url'] ?? ''));
     $tagsInput = trim((string) ($payload['tags'] ?? ''));
     $limit = (int) ($payload['limit'] ?? 5);
+    $type = strtolower(trim((string) ($payload['type'] ?? 'rss')));
+    if (!in_array($type, ['rss', 'ai_digest'], true)) {
+        $type = 'rss';
+    }
 
     $errors = [];
     if ($name === '') {
@@ -280,6 +289,7 @@ function handleUpdateFeed(array &$config, array $payload): array
     $config['sections'][$sectionIndex]['feeds'][$feedIndex]['url'] = $url;
     $config['sections'][$sectionIndex]['feeds'][$feedIndex]['limit'] = $limit;
     $config['sections'][$sectionIndex]['feeds'][$feedIndex]['tags'] = $tags;
+    $config['sections'][$sectionIndex]['feeds'][$feedIndex]['type'] = $type;
 
     return [true, [], ['Feedet blev opdateret.']];
 }
@@ -686,6 +696,12 @@ function renderPublishedValue(?string $value): string
             min-height: 90px;
             resize: vertical;
         }
+        .form-help {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--color-muted);
+            margin-top: 0.25rem;
+        }
         .manual-add {
             margin-top: 1.5rem;
             padding-top: 1.5rem;
@@ -768,10 +784,17 @@ function renderPublishedValue(?string $value): string
             </header>
 
             <div class="feed-list">
-                <h3>RSS / Atom feeds</h3>
+                <h3>Automatiske feeds (RSS &amp; AI)</h3>
                 <?php if (!empty($feeds)): ?>
                     <?php foreach ($feeds as $feed): ?>
-                        <?php $feedId = (string) ($feed['id'] ?? ''); ?>
+                        <?php
+                            $feedId = (string) ($feed['id'] ?? '');
+                            $feedType = isset($feed['type']) ? (string) $feed['type'] : 'rss';
+                            if ($feedType !== 'ai_digest') {
+                                $feedType = 'rss';
+                            }
+                            $urlLabel = $feedType === 'ai_digest' ? 'Sideadresse til AI-udtræk' : 'Feed-URL';
+                        ?>
                         <div class="feed-item">
                             <form method="post">
                                 <input type="hidden" name="section_id" value="<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">
@@ -781,8 +804,18 @@ function renderPublishedValue(?string $value): string
                                     <input id="feed-name-<?php echo htmlspecialchars($feedId, ENT_QUOTES, 'UTF-8'); ?>" type="text" name="name" value="<?php echo htmlspecialchars((string) ($feed['name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" required>
                                 </div>
                                 <div>
-                                    <label for="feed-url-<?php echo htmlspecialchars($feedId, ENT_QUOTES, 'UTF-8'); ?>">URL</label>
+                                    <label for="feed-type-<?php echo htmlspecialchars($feedId, ENT_QUOTES, 'UTF-8'); ?>">Kildetype</label>
+                                    <select id="feed-type-<?php echo htmlspecialchars($feedId, ENT_QUOTES, 'UTF-8'); ?>" name="type">
+                                        <option value="rss" <?php echo $feedType === 'rss' ? 'selected' : ''; ?>>RSS / Atom</option>
+                                        <option value="ai_digest" <?php echo $feedType === 'ai_digest' ? 'selected' : ''; ?>>AI-overblik (ChatGPT)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="feed-url-<?php echo htmlspecialchars($feedId, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($urlLabel, ENT_QUOTES, 'UTF-8'); ?></label>
                                     <input id="feed-url-<?php echo htmlspecialchars($feedId, ENT_QUOTES, 'UTF-8'); ?>" type="url" name="url" value="<?php echo htmlspecialchars((string) ($feed['url'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" required>
+                                    <?php if ($feedType === 'ai_digest'): ?>
+                                        <small class="form-help">AI’en analyserer siden og viser kun indhold fra de seneste to døgn.</small>
+                                    <?php endif; ?>
                                 </div>
                                 <div>
                                     <label for="feed-tags-<?php echo htmlspecialchars($feedId, ENT_QUOTES, 'UTF-8'); ?>">Tags (komma-separeret)</label>
@@ -813,8 +846,16 @@ function renderPublishedValue(?string $value): string
                                 <input id="new-feed-name-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>" type="text" name="name" required>
                             </div>
                             <div>
+                                <label for="new-feed-type-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">Kildetype</label>
+                                <select id="new-feed-type-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>" name="type">
+                                    <option value="rss" selected>RSS / Atom</option>
+                                    <option value="ai_digest">AI-overblik (ChatGPT)</option>
+                                </select>
+                            </div>
+                            <div>
                                 <label for="new-feed-url-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">URL</label>
                                 <input id="new-feed-url-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>" type="url" name="url" required>
+                                <small class="form-help">Vælg AI-overblik for at bruge ChatGPT på en side uden RSS.</small>
                             </div>
                             <div>
                                 <label for="new-feed-tags-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">Tags (komma-separeret)</label>

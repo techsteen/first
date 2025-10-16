@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/includes/feed_config.php';
+require_once __DIR__ . '/includes/ai_digest.php';
 
 $timezone = new DateTimeZone('Europe/Copenhagen');
 $generatedAt = new DateTimeImmutable('now', $timezone);
@@ -103,10 +104,30 @@ $tags = array_keys($tagSet);
 sort($tags);
 
 /**
- * @param array{name?:string,url?:string,tags?:array<int,string>,limit?:int} $feed
+ * @param array{name?:string,type?:string,url?:string,tags?:array<int,string>,limit?:int} $feed
  * @return array<int,array{title:string,url:string,source:string,summary:string,tags:array<int,string>,published_at:string,timestamp:int}>
  */
 function fetchFeedItems(array $feed, DateTimeZone $timezone, array &$errors): array
+{
+    $type = isset($feed['type']) ? strtolower((string) $feed['type']) : 'rss';
+    if ($type === 'ai_digest') {
+        return fetchAiDigestItems($feed, $timezone, $errors);
+    }
+
+    $items = fetchRssFeedItems($feed, $timezone, $errors);
+    if (empty($items)) {
+        return $items;
+    }
+
+    $feedName = isset($feed['name']) ? (string) $feed['name'] : '';
+    return translateFeedItemsToDanish($items, $feedName, $errors);
+}
+
+/**
+ * @param array{name?:string,url?:string,tags?:array<int,string>,limit?:int} $feed
+ * @return array<int,array{title:string,url:string,source:string,summary:string,tags:array<int,string>,published_at:string,timestamp:int}>
+ */
+function fetchRssFeedItems(array $feed, DateTimeZone $timezone, array &$errors): array
 {
     $url = $feed['url'] ?? '';
     if (!filter_var($url, FILTER_VALIDATE_URL)) {
@@ -257,6 +278,101 @@ function fetchFeedItems(array $feed, DateTimeZone $timezone, array &$errors): ar
                 'timestamp' => $publishedAt->getTimestamp(),
             ];
         }
+    }
+
+    return $items;
+}
+
+/**
+ * @param array{name?:string,url?:string,tags?:array<int,string>,limit?:int} $feed
+ * @return array<int,array{title:string,url:string,source:string,summary:string,tags:array<int,string>,published_at:string,timestamp:int}>
+ */
+function fetchAiDigestItems(array $feed, DateTimeZone $timezone, array &$errors): array
+{
+    $targetUrl = $feed['url'] ?? '';
+    if (!filter_var($targetUrl, FILTER_VALIDATE_URL)) {
+        $errors[] = sprintf('AI-overblikket "%s" blev ignoreret, fordi URL mangler/er ugyldig.', $feed['name'] ?? 'uden navn');
+        return [];
+    }
+
+    $limit = isset($feed['limit']) ? (int) $feed['limit'] : 5;
+    if ($limit <= 0) {
+        $limit = 5;
+    }
+
+    $pageContent = fetchPageForDigest($targetUrl, $errors);
+    if ($pageContent === null) {
+        return [];
+    }
+
+    $digest = generateDigestFromPage($targetUrl, $pageContent, $timezone, $errors);
+    if ($digest === null || empty($digest['items'])) {
+        return [];
+    }
+
+    $feedTags = isset($feed['tags']) && is_array($feed['tags']) ? $feed['tags'] : [];
+    $name = isset($feed['name']) ? (string) $feed['name'] : '';
+
+    $items = [];
+    foreach ($digest['items'] as $item) {
+        if (!is_array($item) || !isset($item['title'], $item['summary'], $item['url'])) {
+            continue;
+        }
+
+        $title = trim((string) $item['title']);
+        $summary = trim((string) $item['summary']);
+        $url = trim((string) $item['url']);
+
+        if ($title === '' || $summary === '' || !filter_var($url, FILTER_VALIDATE_URL)) {
+            continue;
+        }
+
+        $source = isset($item['source']) && trim((string) $item['source']) !== ''
+            ? trim((string) $item['source'])
+            : ($name !== '' ? $name : hostFromUrl($url));
+
+        $itemTags = [];
+        if (!empty($item['tags']) && is_array($item['tags'])) {
+            foreach ($item['tags'] as $tag) {
+                $itemTags[] = (string) $tag;
+            }
+        }
+
+        $normalisedTags = normaliseTags(array_merge($feedTags, $itemTags));
+        if (empty($normalisedTags)) {
+            $normalisedTags = ['ai-digest'];
+        }
+
+        $published = null;
+        if (!empty($item['published_at'])) {
+            $published = parsePublishedDate((string) $item['published_at'], $timezone);
+        }
+
+        if ($published === null) {
+            $published = new DateTimeImmutable('now', $timezone);
+        }
+
+        $items[] = [
+            'title' => $title,
+            'url' => $url,
+            'source' => $source,
+            'summary' => $summary,
+            'tags' => $normalisedTags,
+            'published_at' => $published->format('Y-m-d H:i:s'),
+            'timestamp' => $published->getTimestamp(),
+        ];
+    }
+
+    if (empty($items)) {
+        return [];
+    }
+
+    usort($items, static function (array $a, array $b): int {
+        return $b['timestamp'] <=> $a['timestamp'];
+    });
+
+    if ($limit > 0) {
+        $items = array_slice($items, 0, $limit);
     }
 
     return $items;
