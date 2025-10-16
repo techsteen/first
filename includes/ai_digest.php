@@ -110,7 +110,7 @@ function generateDigestFromPage(string $url, string $content, DateTimeZone $time
             ['role' => 'user', 'content' => $userPrompt],
         ],
         'temperature' => 0.2,
-        'max_output_tokens' => 600,
+        'max_tokens' => 600,
     ];
 
     $jsonPayload = json_encode($payload, JSON_THROW_ON_ERROR);
@@ -152,7 +152,12 @@ function generateDigestFromPage(string $url, string $content, DateTimeZone $time
     curl_close($ch);
 
     if ($statusCode < 200 || $statusCode >= 300) {
-        $errors[] = 'OpenAI API returnerede en fejl (status ' . $statusCode . ').';
+        $decodedError = json_decode($response, true);
+        if (is_array($decodedError) && isset($decodedError['error']['message'])) {
+            $errors[] = 'OpenAI API returnerede en fejl (status ' . $statusCode . '): ' . trim((string) $decodedError['error']['message']);
+        } else {
+            $errors[] = 'OpenAI API returnerede en fejl (status ' . $statusCode . ').';
+        }
         return null;
     }
 
