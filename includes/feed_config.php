@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * @return array{sections: array<int,array{id?:string,title:string,max_items:int,feeds:array<int,array{id?:string,name:string,url:string,tags?:array<int,string>,limit?:int}>}>}
+ * @return array{sections: array<int,array{id?:string,title:string,max_items:int,feeds:array<int,array{id?:string,name:string,url:string,tags?:array<int,string>,limit?:int}>,manual_items?:array<int,array{id?:string,title:string,url:string,source?:string,summary?:string,tags?:array<int,string>,published_at?:string}>>}>}
  */
 function defaultFeedConfig(): array
 {
@@ -29,6 +29,7 @@ function defaultFeedConfig(): array
                         'limit' => 3,
                     ],
                 ],
+                'manual_items' => [],
             ],
             [
                 'id' => 'tools',
@@ -50,6 +51,7 @@ function defaultFeedConfig(): array
                         'limit' => 3,
                     ],
                 ],
+                'manual_items' => [],
             ],
             [
                 'id' => 'research',
@@ -71,6 +73,7 @@ function defaultFeedConfig(): array
                         'limit' => 4,
                     ],
                 ],
+                'manual_items' => [],
             ],
             [
                 'id' => 'media',
@@ -92,6 +95,26 @@ function defaultFeedConfig(): array
                         'limit' => 3,
                     ],
                 ],
+                'manual_items' => [
+                    [
+                        'id' => 'state-of-ai-report',
+                        'title' => 'Video: State of AI Report 2024',
+                        'url' => 'https://www.youtube.com/watch?v=W0GX0CwW8lA',
+                        'source' => 'YouTube',
+                        'summary' => 'Årets gennemgang af de største AI-trends med fokus på anvendelser og politiske konsekvenser.',
+                        'tags' => ['video', 'trend'],
+                        'published_at' => '2024-10-03 09:00:00',
+                    ],
+                    [
+                        'id' => 'poddige-samtale-med-dataetiker',
+                        'title' => 'Podcast: Samtale med dataetiker Marie Rossen',
+                        'url' => 'https://podcasts.apple.com/dk/podcast/episode-58-marie-rossen-om-ansvarlig-ai/id1498926385?i=1000642012345',
+                        'source' => 'Podcast Player',
+                        'summary' => 'Hvordan danske virksomheder kan sikre ansvarlig brug af AI i produktteamet.',
+                        'tags' => ['podcast', 'etik'],
+                        'published_at' => '2024-09-25 08:30:00',
+                    ],
+                ],
             ],
         ],
     ];
@@ -100,7 +123,7 @@ function defaultFeedConfig(): array
 /**
  * @param string $path
  * @param array<int,string> $errors
- * @return array{sections: array<int,array{id?:string,title:string,max_items:int,feeds:array<int,array{id?:string,name:string,url:string,tags?:array<int,string>,limit?:int}>}>}
+ * @return array{sections: array<int,array{id?:string,title:string,max_items:int,feeds:array<int,array{id?:string,name:string,url:string,tags?:array<int,string>,limit?:int}>,manual_items?:array<int,array{id?:string,title:string,url:string,source?:string,summary?:string,tags?:array<int,string>,published_at?:string}>>}>}
  */
 function readFeedConfig(string $path, array &$errors): array
 {
@@ -126,9 +149,9 @@ function readFeedConfig(string $path, array &$errors): array
 }
 
 /**
- * @param array{sections: array<int,array{id?:string,title:string,max_items?:int,feeds?:array<int,array{id?:string,name?:string,url?:string,tags?:array<int,string>,limit?:int}>}>} $config
+ * @param array{sections: array<int,array{id?:string,title:string,max_items?:int,feeds?:array<int,array{id?:string,name?:string,url?:string,tags?:array<int,string>,limit?:int}>,manual_items?:array<int,array{id?:string,title?:string,url?:string,source?:string,summary?:string,tags?:array<int,string>,published_at?:string>}>>} $config
  * @param array<int,string> $errors
- * @return array<string,array{max_items:int,feeds:array<int,array{id?:string,name:string,url:string,tags:array<int,string>,limit:int}>}>
+ * @return array<string,array{max_items:int,feeds:array<int,array{id?:string,name:string,url:string,tags:array<int,string>,limit:int}>,manual_items:array<int,array{id:string,title:string,url:string,source:string,summary:string,tags:array<int,string>,published_at:string,timestamp:int}>}>
  */
 function normaliseFeedSections(array $config, array &$errors): array
 {
@@ -185,10 +208,53 @@ function normaliseFeedSections(array $config, array &$errors): array
             ];
         }
 
+        $manualItems = [];
+        $rawManualItems = isset($section['manual_items']) && is_array($section['manual_items']) ? $section['manual_items'] : [];
+        foreach ($rawManualItems as $manual) {
+            if (!is_array($manual)) {
+                continue;
+            }
+
+            $manualTitle = trim((string) ($manual['title'] ?? ''));
+            $manualUrl = trim((string) ($manual['url'] ?? ''));
+            if ($manualTitle === '' || !filter_var($manualUrl, FILTER_VALIDATE_URL)) {
+                $sectionLabel = $title !== '' ? $title : (isset($section['title']) ? (string) $section['title'] : 'Uden titel');
+                $errors[] = sprintf('Et manuelt link i sektionen "%s" blev ignoreret, fordi titel eller URL mangler/er ugyldig.', $sectionLabel);
+                continue;
+            }
+
+            $source = trim((string) ($manual['source'] ?? ''));
+            $summary = trim((string) ($manual['summary'] ?? ''));
+
+            $tags = [];
+            if (isset($manual['tags']) && is_array($manual['tags'])) {
+                foreach ($manual['tags'] as $tag) {
+                    $tagValue = trim((string) $tag);
+                    if ($tagValue !== '') {
+                        $tags[] = $tagValue;
+                    }
+                }
+            }
+
+            [$publishedAt, $timestamp] = normaliseManualPublishedAt(isset($manual['published_at']) ? (string) $manual['published_at'] : '');
+
+            $manualItems[] = [
+                'id' => ensureManualItemId($manual, $manualTitle, $manualUrl),
+                'title' => $manualTitle,
+                'url' => $manualUrl,
+                'source' => $source,
+                'summary' => $summary,
+                'tags' => $tags,
+                'published_at' => $publishedAt,
+                'timestamp' => $timestamp,
+            ];
+        }
+
         $sections[$title] = [
             'id' => isset($section['id']) ? (string) $section['id'] : slugify($title),
             'max_items' => $maxItems,
             'feeds' => $feeds,
+            'manual_items' => $manualItems,
         ];
     }
 
@@ -243,5 +309,55 @@ function saveFeedConfig(string $path, array $config): bool
     }
 
     return file_put_contents($path, $encoded . "\n") !== false;
+}
+
+/**
+ * @param array{id?:string} $item
+ */
+function ensureManualItemId(array $item, string $title, string $url): string
+{
+    $id = isset($item['id']) ? trim((string) $item['id']) : '';
+    if ($id !== '') {
+        return $id;
+    }
+
+    $slug = slugify($title);
+    if ($slug !== '') {
+        return $slug;
+    }
+
+    return 'manual_' . substr(sha1($url), 0, 8);
+}
+
+/**
+ * @return array{0:string,1:int}
+ */
+function normaliseManualPublishedAt(?string $value, ?DateTimeZone $timezone = null): array
+{
+    $timezoneString = $timezone instanceof DateTimeZone ? $timezone->getName() : date_default_timezone_get();
+    if ($timezoneString === false || $timezoneString === '') {
+        $timezoneString = 'UTC';
+    }
+
+    $tz = $timezone instanceof DateTimeZone ? $timezone : new DateTimeZone($timezoneString);
+
+    $raw = trim((string) $value);
+    if ($raw === '') {
+        $date = new DateTimeImmutable('now', $tz);
+        return [$date->format('Y-m-d H:i:s'), $date->getTimestamp()];
+    }
+
+    try {
+        $date = new DateTimeImmutable($raw, $tz);
+    } catch (Exception $exception) {
+        try {
+            $date = new DateTimeImmutable($raw);
+            $date = $date->setTimezone($tz);
+        } catch (Exception $fallbackException) {
+            $date = new DateTimeImmutable('now', $tz);
+        }
+    }
+
+    return [$date->format('Y-m-d H:i:s'), $date->getTimestamp()];
 }
 

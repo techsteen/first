@@ -25,6 +25,36 @@ foreach ($feedSections as $sectionTitle => $sectionConfig) {
         $sectionItems = array_merge($sectionItems, fetchFeedItems($feed, $timezone, $feedErrors));
     }
 
+    $manualItems = isset($sectionConfig['manual_items']) && is_array($sectionConfig['manual_items']) ? $sectionConfig['manual_items'] : [];
+    foreach ($manualItems as $manualItem) {
+        if (!isset($manualItem['url']) || !filter_var($manualItem['url'], FILTER_VALIDATE_URL)) {
+            continue;
+        }
+
+        $manualItem['source'] = isset($manualItem['source']) && $manualItem['source'] !== ''
+            ? (string) $manualItem['source']
+            : hostFromUrl((string) $manualItem['url']);
+
+        $manualItem['summary'] = isset($manualItem['summary']) && trim((string) $manualItem['summary']) !== ''
+            ? (string) $manualItem['summary']
+            : 'Direkte link til podcast eller video.';
+
+        $manualItem['tags'] = isset($manualItem['tags']) && is_array($manualItem['tags']) ? normaliseTags($manualItem['tags']) : ['media'];
+        if (empty($manualItem['tags'])) {
+            $manualItem['tags'] = ['media'];
+        }
+
+        if (!isset($manualItem['published_at'])) {
+            [$manualItem['published_at'], $manualItem['timestamp']] = normaliseManualPublishedAt(null, $timezone);
+        }
+
+        if (!isset($manualItem['timestamp']) || !is_int($manualItem['timestamp'])) {
+            [$manualItem['published_at'], $manualItem['timestamp']] = normaliseManualPublishedAt((string) $manualItem['published_at'], $timezone);
+        }
+
+        $sectionItems[] = $manualItem;
+    }
+
     if (!empty($sectionItems)) {
         usort($sectionItems, static function (array $a, array $b): int {
             return $b['timestamp'] <=> $a['timestamp'];

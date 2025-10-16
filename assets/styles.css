@@ -218,14 +218,35 @@ main {
 
 .top-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 1.5rem;
+    grid-template-columns: 1fr;
 }
 
 .section-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 1.25rem;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+    .top-grid,
+    .section-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 960px) {
+    .top-grid,
+    .section-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1200px) {
+    .top-grid,
+    .section-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
 }
 
 .section-header {

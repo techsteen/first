@@ -19,7 +19,8 @@
           "tags": ["nyhedsbrev", "analyse"],
           "limit": 3
         }
-      ]
+      ],
+      "manual_items": []
     },
     {
       "id": "tools",
@@ -40,7 +41,8 @@
           "tags": ["produkt", "opsummering"],
           "limit": 3
         }
-      ]
+      ],
+      "manual_items": []
     },
     {
       "id": "research",
@@ -61,7 +63,8 @@
           "tags": ["forskning", "anvendelse"],
           "limit": 4
         }
-      ]
+      ],
+      "manual_items": []
     },
     {
       "id": "media",
@@ -81,6 +84,26 @@
           "url": "https://feeds.megaphone.fm/eye-on-ai",
           "tags": ["podcast", "branche"],
           "limit": 3
+        }
+      ],
+      "manual_items": [
+        {
+          "id": "state-of-ai-report",
+          "title": "Video: State of AI Report 2024",
+          "url": "https://www.youtube.com/watch?v=W0GX0CwW8lA",
+          "source": "YouTube",
+          "summary": "\u00c5rets gennemgang af de st\u00f8rste AI-trends med fokus p\u00e5 anvendelser og politiske konsekvenser.",
+          "tags": ["video", "trend"],
+          "published_at": "2024-10-03 09:00:00"
+        },
+        {
+          "id": "poddige-samtale-med-dataetiker",
+          "title": "Podcast: Samtale med dataetiker Marie Rossen",
+          "url": "https://podcasts.apple.com/dk/podcast/episode-58-marie-rossen-om-ansvarlig-ai/id1498926385?i=1000642012345",
+          "source": "Podcast Player",
+          "summary": "Hvordan danske virksomheder kan sikre ansvarlig brug af AI i produktteamet.",
+          "tags": ["podcast", "etik"],
+          "published_at": "2024-09-25 08:30:00"
         }
       ]
     }

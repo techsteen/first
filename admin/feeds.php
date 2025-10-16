@@ -35,6 +35,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         case 'delete-feed':
             [$changed, $postErrors, $postSuccess] = handleDeleteFeed($config, $_POST);
             break;
+        case 'add-manual-item':
+            [$changed, $postErrors, $postSuccess] = handleAddManualItem($config, $_POST);
+            break;
+        case 'update-manual-item':
+            [$changed, $postErrors, $postSuccess] = handleUpdateManualItem($config, $_POST);
+            break;
+        case 'delete-manual-item':
+            [$changed, $postErrors, $postSuccess] = handleDeleteManualItem($config, $_POST);
+            break;
         default:
             if ($action !== '') {
                 $postErrors[] = 'Ukendt handling.';
@@ -129,6 +138,7 @@ function handleAddSection(array &$config, array $payload): array
         'title' => $title,
         'max_items' => $maxItems,
         'feeds' => [],
+        'manual_items' => [],
     ];
 
     return [true, [], ['Sektionen blev oprettet.']];
@@ -296,6 +306,154 @@ function handleDeleteFeed(array &$config, array $payload): array
     return [true, [], ['Feedet blev slettet.']];
 }
 
+function handleAddManualItem(array &$config, array $payload): array
+{
+    $sectionId = trim((string) ($payload['section_id'] ?? ''));
+    $sectionIndex = findSectionIndex($config['sections'] ?? [], $sectionId);
+    if ($sectionIndex === -1) {
+        return [false, ['Sektionen blev ikke fundet.'], []];
+    }
+
+    $title = trim((string) ($payload['title'] ?? ''));
+    $url = trim((string) ($payload['url'] ?? ''));
+    $source = trim((string) ($payload['source'] ?? ''));
+    $summary = trim((string) ($payload['summary'] ?? ''));
+    $tagsInput = trim((string) ($payload['tags'] ?? ''));
+    $publishedRaw = trim((string) ($payload['published_at'] ?? ''));
+
+    $errors = [];
+    if ($title === '') {
+        $errors[] = 'Titlen skal udfyldes.';
+    }
+    if (!filter_var($url, FILTER_VALIDATE_URL)) {
+        $errors[] = 'Linkets URL er ikke gyldig.';
+    }
+
+    if (!empty($errors)) {
+        return [false, $errors, []];
+    }
+
+    $tags = [];
+    if ($tagsInput !== '') {
+        foreach (explode(',', $tagsInput) as $tag) {
+            $clean = trim($tag);
+            if ($clean !== '') {
+                $tags[] = $clean;
+            }
+        }
+    }
+
+    [$publishedAt, $timestamp] = normaliseManualPublishedAt($publishedRaw);
+
+    $manualItems = $config['sections'][$sectionIndex]['manual_items'] ?? [];
+    $manualId = slugify($title);
+    if ($manualId === '') {
+        $manualId = 'manual_' . substr(sha1($url), 0, 8);
+    }
+
+    $originalId = $manualId;
+    $suffix = 1;
+    while (findManualItemIndex($manualItems, $manualId) !== -1) {
+        $manualId = $originalId . '-' . $suffix;
+        $suffix++;
+    }
+
+    $manualItems[] = [
+        'id' => $manualId,
+        'title' => $title,
+        'url' => $url,
+        'source' => $source,
+        'summary' => $summary,
+        'tags' => $tags,
+        'published_at' => $publishedAt,
+        'timestamp' => $timestamp,
+    ];
+
+    $config['sections'][$sectionIndex]['manual_items'] = $manualItems;
+
+    return [true, [], ['Det manuelle link blev tilføjet.']];
+}
+
+function handleUpdateManualItem(array &$config, array $payload): array
+{
+    $sectionId = trim((string) ($payload['section_id'] ?? ''));
+    $manualId = trim((string) ($payload['manual_id'] ?? ''));
+
+    $sectionIndex = findSectionIndex($config['sections'] ?? [], $sectionId);
+    if ($sectionIndex === -1) {
+        return [false, ['Sektionen blev ikke fundet.'], []];
+    }
+
+    $manualItems = $config['sections'][$sectionIndex]['manual_items'] ?? [];
+    $manualIndex = findManualItemIndex($manualItems, $manualId);
+    if ($manualIndex === -1) {
+        return [false, ['Det manuelle link blev ikke fundet.'], []];
+    }
+
+    $title = trim((string) ($payload['title'] ?? ''));
+    $url = trim((string) ($payload['url'] ?? ''));
+    $source = trim((string) ($payload['source'] ?? ''));
+    $summary = trim((string) ($payload['summary'] ?? ''));
+    $tagsInput = trim((string) ($payload['tags'] ?? ''));
+    $publishedRaw = trim((string) ($payload['published_at'] ?? ''));
+
+    $errors = [];
+    if ($title === '') {
+        $errors[] = 'Titlen skal udfyldes.';
+    }
+    if (!filter_var($url, FILTER_VALIDATE_URL)) {
+        $errors[] = 'Linkets URL er ikke gyldig.';
+    }
+
+    if (!empty($errors)) {
+        return [false, $errors, []];
+    }
+
+    $tags = [];
+    if ($tagsInput !== '') {
+        foreach (explode(',', $tagsInput) as $tag) {
+            $clean = trim($tag);
+            if ($clean !== '') {
+                $tags[] = $clean;
+            }
+        }
+    }
+
+    [$publishedAt, $timestamp] = normaliseManualPublishedAt($publishedRaw);
+
+    $config['sections'][$sectionIndex]['manual_items'][$manualIndex]['title'] = $title;
+    $config['sections'][$sectionIndex]['manual_items'][$manualIndex]['url'] = $url;
+    $config['sections'][$sectionIndex]['manual_items'][$manualIndex]['source'] = $source;
+    $config['sections'][$sectionIndex]['manual_items'][$manualIndex]['summary'] = $summary;
+    $config['sections'][$sectionIndex]['manual_items'][$manualIndex]['tags'] = $tags;
+    $config['sections'][$sectionIndex]['manual_items'][$manualIndex]['published_at'] = $publishedAt;
+    $config['sections'][$sectionIndex]['manual_items'][$manualIndex]['timestamp'] = $timestamp;
+
+    return [true, [], ['Det manuelle link blev opdateret.']];
+}
+
+function handleDeleteManualItem(array &$config, array $payload): array
+{
+    $sectionId = trim((string) ($payload['section_id'] ?? ''));
+    $manualId = trim((string) ($payload['manual_id'] ?? ''));
+
+    $sectionIndex = findSectionIndex($config['sections'] ?? [], $sectionId);
+    if ($sectionIndex === -1) {
+        return [false, ['Sektionen blev ikke fundet.'], []];
+    }
+
+    $manualItems = $config['sections'][$sectionIndex]['manual_items'] ?? [];
+    $manualIndex = findManualItemIndex($manualItems, $manualId);
+    if ($manualIndex === -1) {
+        return [false, ['Det manuelle link blev ikke fundet.'], []];
+    }
+
+    unset($config['sections'][$sectionIndex]['manual_items'][$manualIndex]);
+    $config['sections'][$sectionIndex]['manual_items'] = array_values($config['sections'][$sectionIndex]['manual_items']);
+
+    return [true, [], ['Det manuelle link blev slettet.']];
+}
+
 /**
  * @param array<int,array{id?:string}> $sections
  */
@@ -324,6 +482,20 @@ function findFeedIndex(array $feeds, string $feedId): int
     return -1;
 }
 
+/**
+ * @param array<int,array{id?:string}> $items
+ */
+function findManualItemIndex(array $items, string $itemId): int
+{
+    foreach ($items as $index => $item) {
+        if (isset($item['id']) && (string) $item['id'] === $itemId) {
+            return (int) $index;
+        }
+    }
+
+    return -1;
+}
+
 function renderTags(array $tags): string
 {
     if (empty($tags)) {
@@ -335,6 +507,20 @@ function renderTags(array $tags): string
     }, $tags);
 
     return implode(', ', $escaped);
+}
+
+function renderPublishedValue(?string $value): string
+{
+    if ($value === null || $value === '') {
+        return '';
+    }
+
+    $timestamp = strtotime($value);
+    if ($timestamp === false) {
+        return '';
+    }
+
+    return date('Y-m-d\TH:i', $timestamp);
 }
 
 ?><!DOCTYPE html>
@@ -412,6 +598,8 @@ function renderTags(array $tags): string
         }
         .feed-item label,
         .feed-add label,
+        .manual-item label,
+        .manual-add label,
         .section-form label,
         .new-section-form label {
             font-weight: 600;
@@ -421,9 +609,17 @@ function renderTags(array $tags): string
         .feed-item input[type="text"],
         .feed-item input[type="url"],
         .feed-item input[type="number"],
+        .manual-item input[type="text"],
+        .manual-item input[type="url"],
+        .manual-item input[type="datetime-local"],
+        .manual-item textarea,
         .feed-add input[type="text"],
         .feed-add input[type="url"],
         .feed-add input[type="number"],
+        .manual-add input[type="text"],
+        .manual-add input[type="url"],
+        .manual-add input[type="datetime-local"],
+        .manual-add textarea,
         .section-form input[type="text"],
         .section-form input[type="number"],
         .new-section-form input[type="text"],
@@ -463,6 +659,44 @@ function renderTags(array $tags): string
             padding-top: 1rem;
             border-top: 1px dashed #cbd5f5;
         }
+        .manual-list {
+            margin-top: 2rem;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 1.5rem;
+        }
+        .manual-list h3 {
+            margin-bottom: 1rem;
+        }
+        .manual-item {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            align-items: start;
+            padding: 1rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .manual-item:last-child {
+            border-bottom: none;
+        }
+        .manual-item form {
+            display: contents;
+        }
+        .manual-item textarea,
+        .manual-add textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+        .manual-add {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px dashed #cbd5f5;
+        }
+        .manual-add .manual-fields {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            align-items: start;
+        }
         .new-section-form {
             margin-top: 2rem;
             border: 1px dashed #cbd5f5;
@@ -472,6 +706,10 @@ function renderTags(array $tags): string
         }
         @media (max-width: 640px) {
             .feed-item {
+                grid-template-columns: 1fr;
+            }
+            .manual-item,
+            .manual-add .manual-fields {
                 grid-template-columns: 1fr;
             }
             .form-actions {
@@ -530,6 +768,7 @@ function renderTags(array $tags): string
             </header>
 
             <div class="feed-list">
+                <h3>RSS / Atom feeds</h3>
                 <?php if (!empty($feeds)): ?>
                     <?php foreach ($feeds as $feed): ?>
                         <?php $feedId = (string) ($feed['id'] ?? ''); ?>
@@ -588,6 +827,88 @@ function renderTags(array $tags): string
                             <div class="form-actions">
                                 <button type="submit" name="action" value="add-feed" class="btn-secondary">Tilføj feed</button>
                             </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <?php $manualItems = isset($section['manual_items']) && is_array($section['manual_items']) ? $section['manual_items'] : []; ?>
+            <div class="manual-list">
+                <h3>Manuelle links (video/podcast)</h3>
+                <?php if (!empty($manualItems)): ?>
+                    <?php foreach ($manualItems as $manual): ?>
+                        <?php $manualId = (string) ($manual['id'] ?? ''); ?>
+                        <div class="manual-item">
+                            <form method="post">
+                                <input type="hidden" name="section_id" value="<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">
+                                <input type="hidden" name="manual_id" value="<?php echo htmlspecialchars($manualId, ENT_QUOTES, 'UTF-8'); ?>">
+                                <div>
+                                    <label for="manual-title-<?php echo htmlspecialchars($manualId, ENT_QUOTES, 'UTF-8'); ?>">Titel</label>
+                                    <input id="manual-title-<?php echo htmlspecialchars($manualId, ENT_QUOTES, 'UTF-8'); ?>" type="text" name="title" value="<?php echo htmlspecialchars((string) ($manual['title'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" required>
+                                </div>
+                                <div>
+                                    <label for="manual-url-<?php echo htmlspecialchars($manualId, ENT_QUOTES, 'UTF-8'); ?>">URL</label>
+                                    <input id="manual-url-<?php echo htmlspecialchars($manualId, ENT_QUOTES, 'UTF-8'); ?>" type="url" name="url" value="<?php echo htmlspecialchars((string) ($manual['url'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" required>
+                                </div>
+                                <div>
+                                    <label for="manual-source-<?php echo htmlspecialchars($manualId, ENT_QUOTES, 'UTF-8'); ?>">Kilde</label>
+                                    <input id="manual-source-<?php echo htmlspecialchars($manualId, ENT_QUOTES, 'UTF-8'); ?>" type="text" name="source" value="<?php echo htmlspecialchars((string) ($manual['source'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" placeholder="fx YouTube, Spotify">
+                                </div>
+                                <div>
+                                    <label for="manual-tags-<?php echo htmlspecialchars($manualId, ENT_QUOTES, 'UTF-8'); ?>">Tags (komma-separeret)</label>
+                                    <input id="manual-tags-<?php echo htmlspecialchars($manualId, ENT_QUOTES, 'UTF-8'); ?>" type="text" name="tags" value="<?php echo renderTags(isset($manual['tags']) && is_array($manual['tags']) ? $manual['tags'] : []); ?>" placeholder="fx podcast, video">
+                                </div>
+                                <div>
+                                    <label for="manual-published-<?php echo htmlspecialchars($manualId, ENT_QUOTES, 'UTF-8'); ?>">Publiceret</label>
+                                    <input id="manual-published-<?php echo htmlspecialchars($manualId, ENT_QUOTES, 'UTF-8'); ?>" type="datetime-local" name="published_at" value="<?php echo htmlspecialchars(renderPublishedValue(isset($manual['published_at']) ? (string) $manual['published_at'] : null), ENT_QUOTES, 'UTF-8'); ?>">
+                                </div>
+                                <div style="grid-column:1/-1;">
+                                    <label for="manual-summary-<?php echo htmlspecialchars($manualId, ENT_QUOTES, 'UTF-8'); ?>">Kort beskrivelse</label>
+                                    <textarea id="manual-summary-<?php echo htmlspecialchars($manualId, ENT_QUOTES, 'UTF-8'); ?>" name="summary" rows="3"><?php echo htmlspecialchars((string) ($manual['summary'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></textarea>
+                                </div>
+                                <div class="form-actions" style="grid-column:1/-1;">
+                                    <button type="submit" name="action" value="update-manual-item" class="btn-primary">Gem</button>
+                                    <button type="submit" name="action" value="delete-manual-item" class="btn-danger" formnovalidate onclick="return confirm('Vil du slette dette link?');">Slet</button>
+                                </div>
+                            </form>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <p>Ingen manuelle links endnu.</p>
+                <?php endif; ?>
+
+                <div class="manual-add">
+                    <h4>Tilføj manuelt link</h4>
+                    <form method="post">
+                        <input type="hidden" name="section_id" value="<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">
+                        <div class="manual-fields">
+                            <div>
+                                <label for="manual-new-title-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">Titel</label>
+                                <input id="manual-new-title-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>" type="text" name="title" required>
+                            </div>
+                            <div>
+                                <label for="manual-new-url-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">URL</label>
+                                <input id="manual-new-url-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>" type="url" name="url" required>
+                            </div>
+                            <div>
+                                <label for="manual-new-source-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">Kilde</label>
+                                <input id="manual-new-source-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>" type="text" name="source" placeholder="fx YouTube, Spotify">
+                            </div>
+                            <div>
+                                <label for="manual-new-tags-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">Tags (komma-separeret)</label>
+                                <input id="manual-new-tags-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>" type="text" name="tags" placeholder="fx podcast, video">
+                            </div>
+                            <div>
+                                <label for="manual-new-published-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">Publiceret</label>
+                                <input id="manual-new-published-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>" type="datetime-local" name="published_at">
+                            </div>
+                            <div style="grid-column:1/-1;">
+                                <label for="manual-new-summary-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">Kort beskrivelse</label>
+                                <textarea id="manual-new-summary-<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>" name="summary" rows="3" placeholder="Opsummer linket i et par linjer"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" name="action" value="add-manual-item" class="btn-secondary">Tilføj link</button>
                         </div>
                     </form>
                 </div>

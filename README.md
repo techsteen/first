@@ -1,13 +1,13 @@
 # AI Avisen prototype
 
-Dette repo indeholder et PHP-baseret layout til en kurateret AI-nyhedsavis. Forsiden henter nu rigtige RSS-/Atom-feeds, normaliserer artiklerne og viser dem i et avisinspireret layout med tag-filtrering og roadmap. Fra og med denne version kan feeds konfigureres via en JSON-fil og et simpelt admin-interface.
+Dette repo indeholder et PHP-baseret layout til en kurateret AI-nyhedsavis. Forsiden henter nu rigtige RSS-/Atom-feeds, normaliserer artiklerne og viser dem i et avisinspireret layout med tag-filtrering og roadmap. Fra og med denne version kan feeds konfigureres via en JSON-fil og et simpelt admin-interface – og redaktionen kan supplere med manuelle video-/podcast-links direkte fra admin-panelet.
 
 ## Struktur
 
 - `index.php` – læser feed-konfigurationen, henter/normaliserer historier og genererer forsiden.
-- `data/feeds.json` – JSON-fil med sektioner og feeds. Filen oprettes automatisk hvis den mangler.
+- `data/feeds.json` – JSON-fil med sektioner, feeds og valgfri manuelle links. Filen oprettes automatisk hvis den mangler.
 - `includes/feed_config.php` – fælles hjælper-funktioner til at indlæse og gemme feed-konfiguration.
-- `admin/feeds.php` – enkelt admin-interface til at tilføje, redigere og slette sektioner eller feeds.
+- `admin/feeds.php` – enkelt admin-interface til at tilføje, redigere og slette sektioner, feeds samt direkte links til podcasts/videoer.
 - `partials/` – genanvendelige kort-komponenter til top- og standardartikler.
 - `assets/styles.css` – avisinspireret styling.
 - `assets/app.js` – simpel tag-filtrering på klientsiden.
@@ -22,7 +22,7 @@ Dette repo indeholder et PHP-baseret layout til en kurateret AI-nyhedsavis. Fors
 
 ## Tilpasning og drift
 
-- Redigér feeds via `admin/feeds.php` (beskyt siden med adgangskode på dit webhotel). Her kan du oprette, redigere og slette sektioner eller enkelt-feeds. Alternativt kan `data/feeds.json` tilpasses direkte.
+- Redigér alt indhold via `admin/feeds.php` (beskyt siden med adgangskode på dit webhotel). Her kan du oprette, redigere og slette sektioner, feeds og manuelle links til podcasts/videoer. Alternativt kan `data/feeds.json` tilpasses direkte.
 - Læg en cron-job ovenpå (fx via cron-job.org) til at cache resultatet i en database, hvis du vil undgå at hente feeds ved hver sideindlæsning.
 - Aktiver serverens `allow_url_fopen` eller brug cURL, hvis dit webhotel kræver det.
 - Brug `feedErrors`-sektionen i UI til at se hvilke feeds der fejler – nyttigt ved debugging.
