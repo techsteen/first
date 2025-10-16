@@ -41,3 +41,10 @@ Upload filerne til din PHP-server for at se prototypen i aktion, og udbyg efter 
 - Besøg `ai_digest.php`, indsæt en URL til en nyhedsside og tryk **Generér** for at lade ChatGPT skabe et overblik.
 - Hvis kilden angiver publiceringsdatoer, filtreres resultatet automatisk til de seneste to døgn. Ellers vises de vigtigste fem historier.
 - Brug resultatet som inspiration og kopier relevante links/resuméer ind i `admin/feeds.php` efter behov – intet gemmes automatisk.
+
+### Hvor gemmer jeg API-nøglen?
+
+- **Kontrolpanel:** De fleste webhoteller giver mulighed for at sætte miljøvariabler via deres administrationspanel. Opret en variabel med navnet `OPENAI_API_KEY` og indsæt din nøgle her.
+- **.htaccess:** Hvis du har adgang til `.htaccess`, kan du tilføje linjen `SetEnv OPENAI_API_KEY "din-super-hemmelige-nøgle"`. Apache gør variablen tilgængelig for PHP, og nøglen ligger ikke i koden.
+- **php.ini / konfiguration:** Har du adgang til en brugerdefineret `php.ini`, kan du tilføje `env[OPENAI_API_KEY] = din-nøgle`.
+- Når du har sat variablen, kan PHP læse den via `getenv('OPENAI_API_KEY')`. Se `includes/ai_digest.php` for et eksempel på brugen. Hvis variablen ikke findes, viser siden en fejl, så du bliver mindet om at sætte den korrekt.
