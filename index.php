@@ -1,89 +1,27 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/includes/feed_config.php';
+
 $timezone = new DateTimeZone('Europe/Copenhagen');
 $generatedAt = new DateTimeImmutable('now', $timezone);
 
-$feedSections = [
-    'Trends' => [
-        'max_items' => 6,
-        'feeds' => [
-            [
-                'name' => 'The Decoder – AI News',
-                'url' => 'https://the-decoder.com/en/feed/',
-                'tags' => ['trends', 'international'],
-                'limit' => 5,
-            ],
-            [
-                'name' => 'AI Weekly',
-                'url' => 'https://aiweekly.co/feed/',
-                'tags' => ['nyhedsbrev', 'analyse'],
-                'limit' => 3,
-            ],
-        ],
-    ],
-    'Værktøjer' => [
-        'max_items' => 6,
-        'feeds' => [
-            [
-                'name' => 'Zapier – AI Workflow Tips',
-                'url' => 'https://zapier.com/blog/tag/artificial-intelligence/rss/',
-                'tags' => ['værktøjer', 'workflow'],
-                'limit' => 4,
-            ],
-            [
-                'name' => 'Ben\'s Bites',
-                'url' => 'https://bensbites.beehiiv.com/feed',
-                'tags' => ['produkt', 'opsummering'],
-                'limit' => 3,
-            ],
-        ],
-    ],
-    'Forskning' => [
-        'max_items' => 6,
-        'feeds' => [
-            [
-                'name' => 'arXiv cs.AI',
-                'url' => 'https://export.arxiv.org/rss/cs.AI',
-                'tags' => ['forskning', 'arxiv'],
-                'limit' => 6,
-            ],
-            [
-                'name' => 'ScienceDaily – AI',
-                'url' => 'https://www.sciencedaily.com/rss/computers_math/artificial_intelligence.xml',
-                'tags' => ['forskning', 'anvendelse'],
-                'limit' => 4,
-            ],
-        ],
-    ],
-    'Video & Podcasts' => [
-        'max_items' => 4,
-        'feeds' => [
-            [
-                'name' => 'Practical AI',
-                'url' => 'https://feeds.simplecast.com/tOjNXec5',
-                'tags' => ['podcast', 'praktisk'],
-                'limit' => 4,
-            ],
-            [
-                'name' => 'Eye on AI',
-                'url' => 'https://feeds.megaphone.fm/eye-on-ai',
-                'tags' => ['podcast', 'branche'],
-                'limit' => 3,
-            ],
-        ],
-    ],
-];
+$feedConfigPath = __DIR__ . '/data/feeds.json';
+$configNotices = [];
+$feedConfig = readFeedConfig($feedConfigPath, $configNotices);
+$feedSections = normaliseFeedSections($feedConfig, $configNotices);
 
-$feedErrors = [];
+$feedErrors = $configNotices;
 $sections = [];
 $allItems = [];
 $tagSet = [];
 
-foreach ($feedSections as $sectionTitle => $config) {
+foreach ($feedSections as $sectionTitle => $sectionConfig) {
     $sectionItems = [];
 
-    foreach ($config['feeds'] as $feed) {
+    $feeds = isset($sectionConfig['feeds']) && is_array($sectionConfig['feeds']) ? $sectionConfig['feeds'] : [];
+
+    foreach ($feeds as $feed) {
         $sectionItems = array_merge($sectionItems, fetchFeedItems($feed, $timezone, $feedErrors));
     }
 
@@ -92,8 +30,8 @@ foreach ($feedSections as $sectionTitle => $config) {
             return $b['timestamp'] <=> $a['timestamp'];
         });
 
-        if (!empty($config['max_items'])) {
-            $sectionItems = array_slice($sectionItems, 0, (int) $config['max_items']);
+        if (!empty($sectionConfig['max_items'])) {
+            $sectionItems = array_slice($sectionItems, 0, (int) $sectionConfig['max_items']);
         }
 
         foreach ($sectionItems as $item) {
@@ -573,7 +511,7 @@ function createFallbackEntry(
         <div class="meta">
             <span class="stamp">Opdateret <?php echo $generatedAt->format('d. M Y \k\l. H:i'); ?> CET</span>
             <nav class="utility">
-                <a href="#">Tilføj kilde</a>
+                <a href="admin/feeds.php">Tilføj kilde</a>
                 <a href="#">Om projektet</a>
                 <a href="#">Abonnér via RSS</a>
             </nav>

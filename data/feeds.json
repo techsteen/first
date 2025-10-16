@@ -1,0 +1,88 @@
+{
+  "sections": [
+    {
+      "id": "trends",
+      "title": "Trends",
+      "max_items": 6,
+      "feeds": [
+        {
+          "id": "the-decoder-ai-news",
+          "name": "The Decoder – AI News",
+          "url": "https://the-decoder.com/en/feed/",
+          "tags": ["trends", "international"],
+          "limit": 5
+        },
+        {
+          "id": "ai-weekly",
+          "name": "AI Weekly",
+          "url": "https://aiweekly.co/feed/",
+          "tags": ["nyhedsbrev", "analyse"],
+          "limit": 3
+        }
+      ]
+    },
+    {
+      "id": "tools",
+      "title": "V\u00e6rkt\u00f8jer",
+      "max_items": 6,
+      "feeds": [
+        {
+          "id": "zapier-ai-workflow",
+          "name": "Zapier – AI Workflow Tips",
+          "url": "https://zapier.com/blog/tag/artificial-intelligence/rss/",
+          "tags": ["v\u00e6rkt\u00f8jer", "workflow"],
+          "limit": 4
+        },
+        {
+          "id": "bens-bites",
+          "name": "Ben's Bites",
+          "url": "https://bensbites.beehiiv.com/feed",
+          "tags": ["produkt", "opsummering"],
+          "limit": 3
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "title": "Forskning",
+      "max_items": 6,
+      "feeds": [
+        {
+          "id": "arxiv-cs-ai",
+          "name": "arXiv cs.AI",
+          "url": "https://export.arxiv.org/rss/cs.AI",
+          "tags": ["forskning", "arxiv"],
+          "limit": 6
+        },
+        {
+          "id": "sciencedaily-ai",
+          "name": "ScienceDaily – AI",
+          "url": "https://www.sciencedaily.com/rss/computers_math/artificial_intelligence.xml",
+          "tags": ["forskning", "anvendelse"],
+          "limit": 4
+        }
+      ]
+    },
+    {
+      "id": "media",
+      "title": "Video & Podcasts",
+      "max_items": 4,
+      "feeds": [
+        {
+          "id": "practical-ai",
+          "name": "Practical AI",
+          "url": "https://feeds.simplecast.com/tOjNXec5",
+          "tags": ["podcast", "praktisk"],
+          "limit": 4
+        },
+        {
+          "id": "eye-on-ai",
+          "name": "Eye on AI",
+          "url": "https://feeds.megaphone.fm/eye-on-ai",
+          "tags": ["podcast", "branche"],
+          "limit": 3
+        }
+      ]
+    }
+  ]
+}
