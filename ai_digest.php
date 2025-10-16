@@ -96,7 +96,7 @@ function fetchPageForDigest(string $url, array &$errors): ?string
                 <button type="submit">Generér</button>
             </div>
         </form>
-        <p class="help-text">API-nøglen læses fra serverens miljøvariabel <code>OPENAI_API_KEY</code> og gemmes ikke i denne fil.</p>
+        <p class="help-text">API-nøglen hentes fra <code>/config/config.php</code>, som er blokeret for direkte webadgang.</p>
     </section>
 
     <?php if (!empty($errors)): ?>

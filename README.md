@@ -13,6 +13,7 @@ Dette repo indeholder et PHP-baseret layout til en kurateret AI-nyhedsavis. Fors
 - `assets/styles.css` – avisinspireret styling.
 - `assets/app.js` – simpel tag-filtrering på klientsiden.
 - `ai_digest.php` – værktøjsside hvor du kan generere et midlertidigt AI-feed ud fra en vilkårlig URL.
+- `config/` – konfigurationsmappe til API-nøgler og certifikater. `config.php` returnerer et array med OpenAI-indstillingerne og blokeres fra webadgang via `.htaccess`/`web.config`.
 
 ## Hvor ligger dine data?
 
@@ -37,14 +38,8 @@ Upload filerne til din PHP-server for at se prototypen i aktion, og udbyg efter 
 
 ## AI-genereret nyhedsudtræk
 
-- Opret en miljøvariabel `OPENAI_API_KEY` på dit webhotel (fx via kontrolpanelet eller `.htaccess` med `SetEnv`), så nøglen aldrig ligger i selve PHP-filerne.
+- Udfyld `config/config.php` med din OpenAI API-nøgle, ønsket model, base-URL og tidsgrænse. Filen returnerer et array og er beskyttet mod direkte adgang via de medfølgende `.htaccess`/`web.config`-regler.
+- Hvis dit webhotel kræver eget certifikat, upload et `cacert-YYYY-MM-DD.pem` i `config/` og opdater `CA_BUNDLE`-stien. Filen er på forhånd ignoreret i Git, så den bliver ikke committet.
 - Besøg `ai_digest.php`, indsæt en URL til en nyhedsside og tryk **Generér** for at lade ChatGPT skabe et overblik.
 - Hvis kilden angiver publiceringsdatoer, filtreres resultatet automatisk til de seneste to døgn. Ellers vises de vigtigste fem historier.
 - Brug resultatet som inspiration og kopier relevante links/resuméer ind i `admin/feeds.php` efter behov – intet gemmes automatisk.
-
-### Hvor gemmer jeg API-nøglen?
-
-- **Kontrolpanel:** De fleste webhoteller giver mulighed for at sætte miljøvariabler via deres administrationspanel. Opret en variabel med navnet `OPENAI_API_KEY` og indsæt din nøgle her.
-- **.htaccess:** Hvis du har adgang til `.htaccess`, kan du tilføje linjen `SetEnv OPENAI_API_KEY "din-super-hemmelige-nøgle"`. Apache gør variablen tilgængelig for PHP, og nøglen ligger ikke i koden.
-- **php.ini / konfiguration:** Har du adgang til en brugerdefineret `php.ini`, kan du tilføje `env[OPENAI_API_KEY] = din-nøgle`.
-- Når du har sat variablen, kan PHP læse den via `getenv('OPENAI_API_KEY')`. Se `includes/ai_digest.php` for et eksempel på brugen. Hvis variablen ikke findes, viser siden en fejl, så du bliver mindet om at sætte den korrekt.

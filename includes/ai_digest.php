@@ -4,14 +4,87 @@ declare(strict_types=1);
 require_once __DIR__ . '/feed_config.php';
 
 /**
+ * @return array<string,mixed>|null
+ */
+function loadOpenAIConfig(array &$errors): ?array
+{
+    static $config = null;
+
+    if ($config !== null) {
+        return $config;
+    }
+
+    $basePath = dirname(__DIR__) . '/config/config.php';
+    if (!is_file($basePath)) {
+        $errors[] = 'Konfigurationsfilen /config/config.php blev ikke fundet. Upload den, og indsæt din OpenAI API-nøgle.';
+        return null;
+    }
+
+    $loaded = include $basePath;
+    if (!is_array($loaded)) {
+        $errors[] = 'Konfigurationsfilen /config/config.php skal returnere et array med indstillinger.';
+        return null;
+    }
+
+    $overridePath = dirname(__DIR__) . '/config/config.local.php';
+    if (is_file($overridePath)) {
+        $override = include $overridePath;
+        if (is_array($override)) {
+            $loaded = array_merge($loaded, $override);
+        } else {
+            $errors[] = 'config.local.php blev ignoreret, fordi filen ikke returnerede et array.';
+        }
+    }
+
+    $required = ['OPENAI_API_KEY', 'OPENAI_MODEL', 'OPENAI_BASE'];
+    foreach ($required as $key) {
+        if (!array_key_exists($key, $loaded) || trim((string) $loaded[$key]) === '') {
+            $errors[] = sprintf('Indstillingen %s mangler i /config/config.php.', $key);
+            return null;
+        }
+    }
+
+    $config = $loaded;
+    return $config;
+}
+
+/**
  * @return array{items:array<int,array{title:string,summary:string,url:string,source?:string,published_at?:string,tags?:array<int,string>}>}|null
  */
 function generateDigestFromPage(string $url, string $content, DateTimeZone $timezone, array &$errors): ?array
 {
-    $apiKey = getenv('OPENAI_API_KEY');
-    if ($apiKey === false || $apiKey === '') {
-        $errors[] = 'OpenAI API-nøglen er ikke sat på serveren. Tilføj den som en miljøvariabel (OPENAI_API_KEY).';
+    $config = loadOpenAIConfig($errors);
+    if ($config === null) {
         return null;
+    }
+
+    $apiKey = trim((string) $config['OPENAI_API_KEY']);
+    if ($apiKey === '') {
+        $errors[] = 'OpenAI API-nøglen er ikke udfyldt i /config/config.php.';
+        return null;
+    }
+
+    $apiBase = rtrim((string) $config['OPENAI_BASE'], '/');
+    if ($apiBase === '') {
+        $errors[] = 'OPENAI_BASE i /config/config.php må ikke være tom.';
+        return null;
+    }
+
+    $model = trim((string) $config['OPENAI_MODEL']);
+    if ($model === '') {
+        $errors[] = 'OPENAI_MODEL i /config/config.php må ikke være tom.';
+        return null;
+    }
+
+    $timeout = isset($config['TIMEOUT']) ? (int) $config['TIMEOUT'] : 60;
+    if ($timeout <= 0) {
+        $timeout = 60;
+    }
+
+    $caBundle = isset($config['CA_BUNDLE']) ? (string) $config['CA_BUNDLE'] : '';
+    if ($caBundle !== '' && !is_file($caBundle)) {
+        $errors[] = 'CA_BUNDLE peger på en fil, der ikke findes. Upload certifikatfilen, eller opdater stien. For nu bruges PHPs standard-certifikat.';
+        $caBundle = '';
     }
 
     $now = new DateTimeImmutable('now', $timezone);
@@ -30,7 +103,7 @@ function generateDigestFromPage(string $url, string $content, DateTimeZone $time
     );
 
     $payload = [
-        'model' => 'gpt-4.1-mini',
+        'model' => $model,
         'response_format' => ['type' => 'json_object'],
         'messages' => [
             ['role' => 'system', 'content' => $systemPrompt],
@@ -42,7 +115,8 @@ function generateDigestFromPage(string $url, string $content, DateTimeZone $time
 
     $jsonPayload = json_encode($payload, JSON_THROW_ON_ERROR);
 
-    $ch = curl_init('https://api.openai.com/v1/chat/completions');
+    $endpoint = $apiBase . '/chat/completions';
+    $ch = curl_init($endpoint);
     if ($ch === false) {
         $errors[] = 'Kunne ikke initialisere forbindelsen til OpenAI.';
         return null;
@@ -53,13 +127,19 @@ function generateDigestFromPage(string $url, string $content, DateTimeZone $time
         'Authorization: Bearer ' . $apiKey,
     ];
 
-    curl_setopt_array($ch, [
+    $options = [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_HTTPHEADER => $headers,
         CURLOPT_POSTFIELDS => $jsonPayload,
-        CURLOPT_TIMEOUT => 30,
-    ]);
+        CURLOPT_TIMEOUT => $timeout,
+    ];
+
+    if ($caBundle !== '') {
+        $options[CURLOPT_CAINFO] = $caBundle;
+    }
+
+    curl_setopt_array($ch, $options);
 
     $response = curl_exec($ch);
     if ($response === false) {
