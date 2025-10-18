@@ -1,6 +1,9 @@
 (function () {
   'use strict';
 
+  const hasWindow = typeof window !== 'undefined';
+  const hasThreeGlobal = hasWindow && typeof window.THREE !== 'undefined';
+
   const COLORS = {
     background: 0x1a1a2e,
     ground: 0x1a1a2e,
@@ -130,6 +133,7 @@
 
   class DeviceBuilder {
     static createPC(name) {
+      if (!hasThreeGlobal) return null;
       const group = new THREE.Group();
       const color = name === 'Attacker' ? COLORS.attacker : name === 'PC1' ? COLORS.pc1 : COLORS.pc2;
 
@@ -167,6 +171,7 @@
     }
 
     static createPrinter() {
+      if (!hasThreeGlobal) return null;
       const group = new THREE.Group();
       const body = new THREE.Mesh(
         new THREE.BoxGeometry(2.2, 1, 2),
@@ -202,6 +207,7 @@
     }
 
     static createRouter() {
+      if (!hasThreeGlobal) return null;
       const group = new THREE.Group();
       const body = new THREE.Mesh(
         new THREE.BoxGeometry(2.5, 0.8, 1.6),
@@ -249,6 +255,7 @@
     }
 
     static createSwitch() {
+      if (!hasThreeGlobal) return null;
       const group = new THREE.Group();
       const body = new THREE.Mesh(
         new THREE.BoxGeometry(4, 0.6, 2),
@@ -278,6 +285,7 @@
     }
 
     static createServer() {
+      if (!hasThreeGlobal) return null;
       const group = new THREE.Group();
       const body = new THREE.Mesh(
         new THREE.BoxGeometry(2, 2.5, 1.5),
@@ -307,8 +315,9 @@
     }
 
     static create(device) {
+      if (!hasThreeGlobal) return null;
       switch (device.type) {
-        case 'PC': return this.createPC(device.name);
+      case 'PC': return this.createPC(device.name);
         case 'Printer': return this.createPrinter();
         case 'Router': return this.createRouter();
         case 'Switch': return this.createSwitch();
@@ -320,6 +329,7 @@
 
   class LabelBuilder {
     static create(name, ip, mac, position, deviceId) {
+      if (!hasThreeGlobal) return null;
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
       canvas.width = 768;
@@ -1004,7 +1014,8 @@
   class ARPSimulator {
     constructor() {
       this.currentScenario = 'pc-to-pc';
-      this.is3DMode = true;
+      this.hasThree = hasThreeGlobal;
+      this.is3DMode = this.hasThree;
       this.steps = [];
       this.currentStep = 0;
       this.isPlaying = false;
@@ -1024,8 +1035,8 @@
       this.cables = [];
       this.packets = [];
       this.packets2D = [];
-      this.raycaster = new THREE.Raycaster();
-      this.mouseVector = new THREE.Vector2();
+      this.raycaster = this.hasThree ? new THREE.Raycaster() : null;
+      this.mouseVector = this.hasThree ? new THREE.Vector2() : { x: 0, y: 0 };
       this.mouseState = { isDragging: false, hasMoved: false, lastX: 0, lastY: 0, yaw: 0, pitch: 0 };
 
       this.isRunning = true;
@@ -1036,8 +1047,10 @@
       this.populateScenarioSelect();
       this.populateTutorial();
       this.bindEvents();
-      this.setupThreeScene();
-      this.start3DLoop();
+      if (this.hasThree) {
+        this.setupThreeScene();
+        this.start3DLoop();
+      }
       this.start2DLoop();
       this.updateMode();
       this.updateUI();
@@ -1064,6 +1077,16 @@
       this.tutorialModal = document.getElementById('tutorial-modal');
       this.tutorialBody = document.getElementById('tutorial-body');
       this.closeTutorialBtn = document.getElementById('close-tutorial');
+
+      if (!this.hasThree) {
+        this.is3DMode = false;
+        const option3d = this.modeSelect?.querySelector?.('option[value="3d"]');
+        if (option3d) {
+          option3d.textContent = '🎮 3D Mode (kræver Three.js)';
+          option3d.disabled = true;
+        }
+        this.modeSelect.value = '2d';
+      }
     }
 
     populateScenarioSelect() {
@@ -1138,6 +1161,11 @@
       });
 
       this.modeSelect.addEventListener('change', () => {
+        if (!this.hasThree && this.modeSelect.value === '3d') {
+          this.modeSelect.value = '2d';
+          this.showThreeUnavailableNotice();
+          return;
+        }
         this.is3DMode = this.modeSelect.value === '3d';
         this.updateMode();
       });
@@ -1160,19 +1188,21 @@
         this.toggleSidebarBtn.title = collapsed ? 'Vis sidebar' : 'Skjul sidebar';
       });
 
-      const canvas = this.threeContainer;
-      canvas.addEventListener('mousedown', (event) => this.onMouseDown(event));
-      canvas.addEventListener('mousemove', (event) => this.onMouseMove(event));
-      canvas.addEventListener('mouseup', () => this.onMouseUp());
-      canvas.addEventListener('mouseleave', () => this.onMouseUp());
-      canvas.addEventListener('wheel', (event) => this.onMouseWheel(event), { passive: false });
-      canvas.addEventListener('click', (event) => this.onCanvasClick(event));
-      window.addEventListener('keydown', (event) => this.onKeyDown(event));
-
-      window.addEventListener('resize', () => this.onResize());
+      if (this.hasThree) {
+        const canvas = this.threeContainer;
+        canvas.addEventListener('mousedown', (event) => this.onMouseDown(event));
+        canvas.addEventListener('mousemove', (event) => this.onMouseMove(event));
+        canvas.addEventListener('mouseup', () => this.onMouseUp());
+        canvas.addEventListener('mouseleave', () => this.onMouseUp());
+        canvas.addEventListener('wheel', (event) => this.onMouseWheel(event), { passive: false });
+        canvas.addEventListener('click', (event) => this.onCanvasClick(event));
+        window.addEventListener('keydown', (event) => this.onKeyDown(event));
+        window.addEventListener('resize', () => this.onResize());
+      }
     }
 
     setupThreeScene() {
+      if (!this.hasThree) return;
       this.scene = new THREE.Scene();
       this.scene.background = new THREE.Color(COLORS.background);
 
@@ -1215,6 +1245,7 @@
     }
 
     start3DLoop() {
+      if (!this.hasThree) return;
       const animate = () => {
         if (!this.isRunning) return;
         requestAnimationFrame(animate);
@@ -1338,12 +1369,20 @@
     }
 
     updateMode() {
-      if (this.is3DMode) {
+      if (this.is3DMode && this.hasThree) {
         this.canvas2D.style.display = 'none';
         this.threeContainer.style.display = 'block';
+        this.threeContainer.style.pointerEvents = 'auto';
+        this.hideThreeUnavailableNotice();
       } else {
         this.canvas2D.style.display = 'block';
-        this.threeContainer.style.display = 'block';
+        this.threeContainer.style.display = this.hasThree ? 'none' : 'block';
+        this.threeContainer.style.pointerEvents = 'none';
+        if (!this.hasThree) {
+          this.showThreeUnavailableNotice();
+        } else {
+          this.hideThreeUnavailableNotice();
+        }
       }
       this.clearPackets();
     }
@@ -1361,7 +1400,7 @@
       this.nextBtn.disabled = this.currentStep >= this.steps.length;
       this.autoplayBtn.disabled = this.currentStep >= this.steps.length || this.isPlaying;
       this.prepareBtn.disabled = this.steps.length > 0 && this.currentStep < this.steps.length;
-      this.modeSelect.disabled = this.steps.length > 0 && this.currentStep < this.steps.length;
+      this.modeSelect.disabled = (this.steps.length > 0 && this.currentStep < this.steps.length) || !this.hasThree;
       this.scenarioSelect.disabled = this.steps.length > 0 && this.currentStep < this.steps.length;
       if (this.eventLog.length > 0) {
         const last = this.eventLog[this.eventLog.length - 1];
@@ -1463,7 +1502,12 @@
     }
 
     clearScene() {
-      if (!this.scene) return;
+      if (!this.scene || !this.hasThree) {
+        this.deviceMeshes = {};
+        this.labels = {};
+        this.cables = [];
+        return;
+      }
       Object.values(this.deviceMeshes).forEach(mesh => {
         if (!mesh) return;
         mesh.traverse(child => {
@@ -1500,6 +1544,7 @@
     }
 
     createDevices(scenarioKey) {
+      if (!this.hasThree) return;
       this.clearScene();
       const scenario = SCENARIOS[scenarioKey];
       if (!scenario) return;
@@ -1508,14 +1553,17 @@
         const device = DEVICES[deviceId];
         if (!device) return;
         const mesh = DeviceBuilder.create(device);
+        if (!mesh) return;
         mesh.position.set(...device.position);
         mesh.userData.deviceId = device.id;
         this.scene.add(mesh);
         this.deviceMeshes[device.id] = mesh;
 
         const label = LabelBuilder.create(device.name, device.ip, device.mac, device.position, device.id);
-        this.scene.add(label);
-        this.labels[device.id] = label;
+        if (label) {
+          this.scene.add(label);
+          this.labels[device.id] = label;
+        }
       });
 
       CONNECTIONS.forEach(conn => {
@@ -1523,6 +1571,7 @@
         if (!scenario.devices.includes(conn.from) || !scenario.devices.includes(conn.to)) return;
         const from = DEVICES[conn.from];
         const to = DEVICES[conn.to];
+        if (!from || !to) return;
         const curve = new THREE.QuadraticBezierCurve3(
           new THREE.Vector3(from.position[0], 0.3, from.position[2]),
           new THREE.Vector3((from.position[0] + to.position[0]) / 2, 2, (from.position[2] + to.position[2]) / 2),
@@ -1554,7 +1603,7 @@
         }
       }
 
-      if (this.is3DMode) {
+      if (this.is3DMode && this.hasThree) {
         const geometry = new THREE.SphereGeometry(0.4, 32, 32);
         const color = COLORS.packet[type] || 0xffffff;
         const material = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.8, metalness: 0.4, roughness: 0.3 });
@@ -1581,7 +1630,7 @@
 
     animatePrinting(printerId) {
       const printer = DEVICES[printerId];
-      if (!printer || !this.is3DMode || !this.scene) return;
+      if (!printer || !this.is3DMode || !this.scene || !this.hasThree) return;
       const paper = new THREE.Mesh(
         new THREE.PlaneGeometry(0.8, 1.2),
         new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide, metalness: 0.1, roughness: 0.9 })
@@ -1628,11 +1677,13 @@
     }
 
     clearPackets() {
-      this.packets.forEach(packet => {
-        if (packet.geometry) packet.geometry.dispose();
-        if (packet.material) packet.material.dispose();
-        this.scene.remove(packet);
-      });
+      if (this.hasThree && this.scene) {
+        this.packets.forEach(packet => {
+          if (packet.geometry) packet.geometry.dispose();
+          if (packet.material) packet.material.dispose();
+          this.scene.remove(packet);
+        });
+      }
       this.packets = [];
       this.packets2D = [];
     }
@@ -1746,7 +1797,7 @@
     prepareScenario() {
       this.reset(false);
       this.eventLog = [];
-      if (this.is3DMode) {
+      if (this.is3DMode && this.hasThree) {
         this.createDevices(this.currentScenario);
       }
       const generator = new ScenarioStepGenerator(
@@ -1811,7 +1862,7 @@
       this.clearPackets();
       this.clearScene();
       this.updateLabelsVisibility();
-      if (this.camera) {
+      if (this.hasThree && this.camera) {
         this.camera.position.set(0, 12, 20);
         this.mouseState.yaw = 0;
         this.mouseState.pitch = -Math.PI / 6;
@@ -1829,10 +1880,39 @@
         this.tutorialModal.classList.add('hidden');
       }
     }
+
+    showThreeUnavailableNotice() {
+      if (this.hasThree) return;
+      if (!this.threeUnavailableNotice) {
+        const notice = document.createElement('div');
+        notice.className = 'three-unavailable-notice';
+        notice.innerHTML = '<strong>3D visning utilgængelig.</strong><span>Three.js kunne ikke indlæses, så simulatoren kører i 2D.</span><span>Kontrollér internetforbindelsen eller host en lokal kopi af three.min.js for at aktivere 3D.</span>';
+        this.threeContainer.appendChild(notice);
+        this.threeUnavailableNotice = notice;
+      }
+      if (this.threeUnavailableNotice) {
+        this.threeUnavailableNotice.classList.remove('hidden');
+      }
+    }
+
+    hideThreeUnavailableNotice() {
+      if (this.threeUnavailableNotice) {
+        this.threeUnavailableNotice.classList.add('hidden');
+      }
+    }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  const bootstrap = () => {
     const simulator = new ARPSimulator();
     simulator.init();
-  });
+    if (!simulator.hasThree) {
+      simulator.showThreeUnavailableNotice();
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootstrap);
+  } else {
+    bootstrap();
+  }
 })();

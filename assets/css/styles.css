@@ -139,6 +139,8 @@ body {
 .three-container {
     width: 100%;
     height: 100%;
+    position: absolute;
+    inset: 0;
 }
 
 .canvas-2d {
@@ -147,6 +149,32 @@ body {
     display: none;
     background: #111827;
     border: 1px solid #1f2937;
+    position: absolute;
+    inset: 0;
+}
+
+.three-unavailable-notice {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    max-width: 24rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    text-align: left;
+    background: rgba(15, 23, 42, 0.95);
+    color: #facc15;
+    font-weight: 600;
+    padding: 1rem 1.25rem;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-radius: 0.75rem;
+    pointer-events: none;
+    font-size: 0.95rem;
+    box-shadow: 0 12px 30px rgba(30, 64, 175, 0.35);
+}
+
+.three-unavailable-notice.hidden {
+    display: none;
 }
 
 .step-banner {
