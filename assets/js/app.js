@@ -1,0 +1,829 @@
+(function () {
+  const DIRECTIONS = ["north", "east", "south", "west"];
+  const ARROWS = {
+    north: "↑",
+    east: "→",
+    south: "↓",
+    west: "←"
+  };
+
+  const LANGUAGE_CONFIG = {
+    c: {
+      label: "C",
+      commandReference: [
+        {
+          code: "frem();",
+          description: "Flytter robotten et felt frem i den retning, den vender."
+        },
+        {
+          code: "venstre();",
+          description: "Drejer robotten 90° mod venstre."
+        },
+        {
+          code: "højre();",
+          description: "Drejer robotten 90° mod højre."
+        },
+        {
+          code: "blokering(\"retning\");",
+          description: "Returnerer true hvis der er en blokering i retningen. Brug f.eks. \"frem\", \"venstre\", \"højre\" eller \"mål\"."
+        }
+      ]
+    },
+    powershell: {
+      label: "PowerShell",
+      commandReference: [
+        {
+          code: "frem",
+          description: "Flytter robotten et felt frem i den retning, den vender. Skriv kommandoen på en linje for sig."
+        },
+        {
+          code: "venstre",
+          description: "Drejer robotten 90° mod venstre."
+        },
+        {
+          code: "højre",
+          description: "Drejer robotten 90° mod højre."
+        },
+        {
+          code: "blokering \"retning\"",
+          description: "Returnerer $true hvis der er en blokering i retningen. Brug f.eks. \"frem\", \"venstre\", \"højre\" eller \"mål\"."
+        }
+      ]
+    }
+  };
+
+  const state = {
+    selectedLevel: null,
+    selectedTask: null,
+    boardState: null,
+    codeByTaskLanguage: {},
+    logEntries: [],
+    selectedLanguage: "c"
+  };
+
+  const dom = {};
+
+  document.addEventListener("DOMContentLoaded", init);
+
+  function init() {
+    dom.levelSelector = document.getElementById("level-selector");
+    dom.taskList = document.getElementById("task-list");
+    dom.taskDetails = document.getElementById("task-details");
+    dom.board = document.getElementById("board");
+    dom.editor = document.getElementById("code-editor");
+    dom.runBtn = document.getElementById("run-btn");
+    dom.resetBtn = document.getElementById("reset-btn");
+    dom.feedback = document.getElementById("feedback");
+    dom.log = document.getElementById("log");
+    dom.commandReference = document.getElementById("command-reference");
+    dom.languageInputs = document.querySelectorAll('input[name="language"]');
+
+    const initialLanguage = Array.from(dom.languageInputs || []).find(input => input.checked);
+    if (initialLanguage) {
+      state.selectedLanguage = initialLanguage.value;
+    }
+
+    renderCommandReference();
+    renderLevelButtons();
+    bindEvents();
+
+    const defaultLevel = Math.min(...TASKS.map(t => t.level));
+    selectLevel(defaultLevel);
+  }
+
+  function bindEvents() {
+    dom.runBtn.addEventListener("click", handleRun);
+    dom.resetBtn.addEventListener("click", handleReset);
+    dom.editor.addEventListener("input", () => {
+      if (state.selectedTask) {
+        storeCurrentCode();
+      }
+    });
+    Array.from(dom.languageInputs || []).forEach(input => {
+      input.addEventListener("change", event => {
+        if (event.target.checked) {
+          setLanguage(event.target.value);
+        }
+      });
+    });
+  }
+
+  function getCodeKey(taskId, language = state.selectedLanguage) {
+    return `${taskId}::${language}`;
+  }
+
+  function getStoredCode(taskId) {
+    return state.codeByTaskLanguage[getCodeKey(taskId)];
+  }
+
+  function storeCurrentCode() {
+    if (!state.selectedTask) return;
+    state.codeByTaskLanguage[getCodeKey(state.selectedTask.id)] = dom.editor.value;
+  }
+
+  function getTemplateForTask(task) {
+    if (!task) return "";
+    if (task.templates && task.templates[state.selectedLanguage]) {
+      return task.templates[state.selectedLanguage];
+    }
+    if (task.template) {
+      return task.template;
+    }
+    return "";
+  }
+
+  function renderCommandReference() {
+    if (!dom.commandReference) return;
+    const config = LANGUAGE_CONFIG[state.selectedLanguage];
+    if (!config) {
+      dom.commandReference.innerHTML = "";
+      return;
+    }
+    dom.commandReference.innerHTML = config.commandReference
+      .map(item => `<li><code>${item.code}</code><span>${item.description}</span></li>`)
+      .join("");
+  }
+
+  function setLanguage(language) {
+    if (!language || language === state.selectedLanguage) {
+      return;
+    }
+
+    if (state.selectedTask) {
+      storeCurrentCode();
+    }
+
+    state.selectedLanguage = language;
+    renderCommandReference();
+
+    if (state.selectedTask) {
+      const stored = getStoredCode(state.selectedTask.id);
+      dom.editor.value = stored !== undefined ? stored : getTemplateForTask(state.selectedTask);
+    }
+  }
+
+  function renderLevelButtons() {
+    const levels = [...new Set(TASKS.map(t => t.level))].sort((a, b) => a - b);
+    dom.levelSelector.innerHTML = "";
+    levels.forEach(level => {
+      const btn = document.createElement("button");
+      btn.textContent = `Niveau ${level}`;
+      btn.addEventListener("click", () => selectLevel(level));
+      btn.dataset.level = level;
+      dom.levelSelector.appendChild(btn);
+    });
+  }
+
+  function updateLevelButtonState() {
+    Array.from(dom.levelSelector.children).forEach(btn => {
+      btn.classList.toggle("active", Number(btn.dataset.level) === state.selectedLevel);
+    });
+  }
+
+  function selectLevel(level) {
+    state.selectedLevel = level;
+    updateLevelButtonState();
+    renderTaskButtons();
+
+    const tasksForLevel = TASKS.filter(t => t.level === level);
+    if (tasksForLevel.length) {
+      selectTask(tasksForLevel[0].id);
+    }
+  }
+
+  function renderTaskButtons() {
+    const tasks = TASKS.filter(t => t.level === state.selectedLevel);
+    dom.taskList.innerHTML = "";
+    tasks.forEach(task => {
+      const btn = document.createElement("button");
+      btn.textContent = `${task.id} • ${task.title}`;
+      btn.dataset.taskId = task.id;
+      btn.addEventListener("click", () => selectTask(task.id));
+      dom.taskList.appendChild(btn);
+    });
+    updateTaskButtonState();
+  }
+
+  function updateTaskButtonState() {
+    Array.from(dom.taskList.children).forEach(btn => {
+      btn.classList.toggle("active", state.selectedTask && btn.dataset.taskId === state.selectedTask.id);
+    });
+  }
+
+  function selectTask(taskId) {
+    if (state.selectedTask && dom.editor.value !== undefined) {
+      storeCurrentCode();
+    }
+
+    const task = TASKS.find(t => t.id === taskId);
+    if (!task) {
+      return;
+    }
+
+    state.selectedTask = task;
+    updateTaskButtonState();
+    renderTaskDetails(task);
+    state.boardState = createBoardState(task);
+    buildBoardGrid(state.boardState.size);
+    drawBoard();
+    dom.feedback.textContent = "";
+    dom.feedback.className = "feedback";
+    state.logEntries = [];
+    updateLog();
+
+    const stored = getStoredCode(task.id);
+    const template = getTemplateForTask(task);
+    dom.editor.value = stored !== undefined ? stored : template;
+  }
+
+  function renderTaskDetails(task) {
+    const tipsList = (task.tips || []).map(tip => `<li>${tip}</li>`).join("");
+    dom.taskDetails.innerHTML = `
+      <h2>Niveau ${task.level}: ${task.title}</h2>
+      <p><strong>Mål:</strong> ${task.objective}</p>
+      <p><strong>Læringsfokus:</strong> ${task.learningFocus}</p>
+      ${tipsList ? `<h3>Tips</h3><ul>${tipsList}</ul>` : ""}
+      <p class="task-meta">Hold <kbd>Shift</kbd> nede når du klikker på "Nulstil" for at gendanne startkoden.</p>
+    `;
+  }
+
+  function createBoardState(task) {
+    const board = task.board || {};
+    const cloneObstacles = (board.obstacles || []).map(ob => ({ ...ob }));
+    const cloneCheckpoints = (board.checkpoints || []).map(cp => ({ ...cp }));
+
+    return {
+      size: board.size || 8,
+      start: { ...board.start },
+      goal: board.goal ? { ...board.goal } : null,
+      agent: { ...board.start },
+      baseObstacles: cloneObstacles,
+      obstacles: cloneObstacles.map(ob => ({ ...ob })),
+      checkpoints: cloneCheckpoints,
+      revealOnRun: Boolean(board.revealOnRun),
+      randomizeObstacles: Boolean(board.randomizeObstacles),
+      obstaclesVisible: !board.revealOnRun
+    };
+  }
+
+  function buildBoardGrid(size) {
+    dom.board.innerHTML = "";
+    const cellSize = 100 / size;
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const cell = document.createElement("div");
+        cell.className = `cell ${(x + y) % 2 === 0 ? "light" : "dark"}`;
+        cell.style.left = `${x * cellSize}%`;
+        cell.style.top = `${y * cellSize}%`;
+        cell.style.width = `${cellSize}%`;
+        cell.style.height = `${cellSize}%`;
+        cell.dataset.x = x;
+        cell.dataset.y = y;
+
+        const content = document.createElement("div");
+        content.className = "content";
+        cell.appendChild(content);
+        dom.board.appendChild(cell);
+      }
+    }
+
+    if (!dom.agent) {
+      dom.agent = document.createElement("div");
+      dom.agent.className = "agent";
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      dom.agent.appendChild(avatar);
+    }
+    dom.board.appendChild(dom.agent);
+  }
+
+  function drawBoard() {
+    if (!state.boardState) return;
+    const { size, start, goal, obstacles, obstaclesVisible, checkpoints, agent } = state.boardState;
+
+    const cells = dom.board.querySelectorAll(".cell");
+    cells.forEach(cell => {
+      cell.classList.remove("start", "goal", "obstacle", "checkpoint");
+      const content = cell.querySelector(".content");
+      if (content) {
+        content.textContent = "";
+      }
+    });
+
+    const startCell = getCell(start.x, start.y);
+    if (startCell) {
+      startCell.classList.add("start");
+      const content = startCell.querySelector(".content");
+      if (content) content.textContent = "S";
+    }
+
+    if (goal) {
+      const goalCell = getCell(goal.x, goal.y);
+      if (goalCell) {
+        goalCell.classList.add("goal");
+        const content = goalCell.querySelector(".content");
+        if (content) content.textContent = "M";
+      }
+    }
+
+    checkpoints.forEach(cp => {
+      const cell = getCell(cp.x, cp.y);
+      if (cell) {
+        cell.classList.add("checkpoint");
+        const content = cell.querySelector(".content");
+        if (content) content.textContent = "C";
+      }
+    });
+
+    if (obstaclesVisible) {
+      obstacles.forEach(ob => {
+        const cell = getCell(ob.x, ob.y);
+        if (cell) {
+          cell.classList.add("obstacle");
+          const content = cell.querySelector(".content");
+          if (content) content.textContent = "X";
+        }
+      });
+    }
+
+    positionAgent(agent, size);
+  }
+
+  function getCell(x, y) {
+    return dom.board.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+  }
+
+  function positionAgent(agent, size) {
+    if (!dom.agent) return;
+    const cellSize = 100 / size;
+    dom.agent.style.left = `${agent.x * cellSize}%`;
+    dom.agent.style.top = `${agent.y * cellSize}%`;
+    dom.agent.style.width = `${cellSize}%`;
+    dom.agent.style.height = `${cellSize}%`;
+
+    const avatar = dom.agent.querySelector(".avatar");
+    if (avatar) {
+      avatar.textContent = ARROWS[agent.direction];
+    }
+  }
+
+  function handleRun() {
+    if (!state.selectedTask || !state.boardState) return;
+    const task = state.selectedTask;
+    const boardState = state.boardState;
+
+    resetBoardState(boardState);
+    state.logEntries = [];
+    updateLog();
+    dom.feedback.textContent = "Programmet kører…";
+    dom.feedback.className = "feedback";
+
+    appendLog("▶️ Ny kørsel startet");
+
+    if (boardState.randomizeObstacles) {
+      boardState.obstacles = randomizeObstacles(boardState);
+      appendLog("Forhindringerne er blevet flyttet tilfældigt");
+    }
+
+    if (boardState.revealOnRun) {
+      boardState.obstaclesVisible = true;
+      appendLog("Skjulte forhindringer er nu synlige");
+    }
+
+    drawBoard();
+
+    const sandbox = createSandbox(boardState);
+
+    const rawCode = dom.editor.value;
+    let userCode;
+    try {
+      userCode = transformCode(rawCode, state.selectedLanguage);
+    } catch (translationError) {
+      appendLog(`⚠️ Oversættelsesfejl: ${translationError.message}`);
+      dom.feedback.textContent = "Koden kunne ikke oversættes til simulatoren. Tjek syntaksen for det valgte sprog.";
+      dom.feedback.className = "feedback error";
+      drawBoard();
+      return;
+    }
+
+    let success = false;
+    try {
+      const fn = new Function(...sandbox.argNames, `"use strict";\n${userCode}`);
+      fn(...sandbox.argValues);
+      success = isAtGoal(boardState);
+    } catch (error) {
+      appendLog(`⚠️ Fejl: ${error.message}`);
+      dom.feedback.textContent = "Der opstod en fejl i programmet. Tjek loggen.";
+      dom.feedback.className = "feedback error";
+      drawBoard();
+      return;
+    }
+
+    drawBoard();
+
+    if (success) {
+      dom.feedback.textContent = "Godt gået! Robotten nåede målet.";
+      dom.feedback.className = "feedback success";
+    } else {
+      dom.feedback.textContent = "Programmet er kørt færdigt. Robotten nåede endnu ikke målet.";
+      dom.feedback.className = "feedback";
+    }
+  }
+
+  function handleReset(event) {
+    if (!state.boardState || !state.selectedTask) return;
+    resetBoardState(state.boardState);
+    drawBoard();
+    state.logEntries = [];
+    updateLog();
+    dom.feedback.textContent = "";
+    dom.feedback.className = "feedback";
+
+    if (event && event.shiftKey) {
+      const template = getTemplateForTask(state.selectedTask);
+      dom.editor.value = template;
+      storeCurrentCode();
+    }
+  }
+
+  function resetBoardState(boardState) {
+    boardState.agent = { ...boardState.start };
+    boardState.obstacles = boardState.baseObstacles.map(ob => ({ ...ob }));
+    boardState.obstaclesVisible = !boardState.revealOnRun;
+  }
+
+  function randomizeObstacles(boardState) {
+    const { baseObstacles, size, start, goal } = boardState;
+    const taken = new Set([`${start.x},${start.y}`, goal ? `${goal.x},${goal.y}` : ""]);
+    const result = [];
+
+    baseObstacles.forEach(ob => {
+      let attempts = 0;
+      let newX = ob.x;
+      let newY = ob.y;
+      do {
+        attempts++;
+        const dx = Math.floor(Math.random() * 3) - 1;
+        const dy = Math.floor(Math.random() * 3) - 1;
+        newX = clamp(ob.x + dx, 0, size - 1);
+        newY = clamp(ob.y + dy, 0, size - 1);
+      } while (attempts < 5 && taken.has(`${newX},${newY}`));
+
+      const key = `${newX},${newY}`;
+      if (!taken.has(key)) {
+        taken.add(key);
+        result.push({ x: newX, y: newY });
+      } else {
+        result.push({ x: ob.x, y: ob.y });
+      }
+    });
+
+    return result;
+  }
+
+  function createSandbox(boardState) {
+    const api = {
+      frem,
+      venstre,
+      højre,
+      blokering
+    };
+
+    const argNames = Object.keys(api);
+    const argValues = argNames.map(key => api[key]);
+
+    return { argNames, argValues };
+
+    function frem() {
+      const { agent } = boardState;
+      const target = nextCoordinate(agent.x, agent.y, agent.direction);
+      if (isOutOfBounds(boardState, target.x, target.y) || isBlocked(boardState, target.x, target.y)) {
+        throw new Error("Robotten kan ikke gå fremad – der er en blokering.");
+      }
+      agent.x = target.x;
+      agent.y = target.y;
+      appendLog("frem()");
+      drawBoard();
+    }
+
+    function venstre() {
+      const { agent } = boardState;
+      const index = DIRECTIONS.indexOf(agent.direction);
+      agent.direction = DIRECTIONS[(index + 3) % 4];
+      appendLog("venstre()");
+      drawBoard();
+    }
+
+    function højre() {
+      const { agent } = boardState;
+      const index = DIRECTIONS.indexOf(agent.direction);
+      agent.direction = DIRECTIONS[(index + 1) % 4];
+      appendLog("højre()");
+      drawBoard();
+    }
+
+    function blokering(direction) {
+      const { agent, goal } = boardState;
+      const dir = (direction || "frem").toLowerCase();
+      if (dir === "mål") {
+        const reached = goal ? agent.x === goal.x && agent.y === goal.y : false;
+        appendLog(`blokering("mål") → ${reached}`);
+        return reached;
+      }
+
+      const relativeDirection = resolveDirection(agent.direction, dir);
+      if (!relativeDirection) {
+        throw new Error(`Ukendt retning til blokering(): ${direction}`);
+      }
+      const target = nextCoordinate(agent.x, agent.y, relativeDirection);
+      if (isOutOfBounds(boardState, target.x, target.y)) {
+        appendLog(`blokering("${dir}") → true (uden for brættet)`);
+        return true;
+      }
+      const blocked = isBlocked(boardState, target.x, target.y);
+      appendLog(`blokering("${dir}") → ${blocked}`);
+      return blocked;
+    }
+  }
+
+  function resolveDirection(currentDirection, relative) {
+    const index = DIRECTIONS.indexOf(currentDirection);
+    switch (relative) {
+      case "frem":
+        return currentDirection;
+      case "højre":
+        return DIRECTIONS[(index + 1) % 4];
+      case "venstre":
+        return DIRECTIONS[(index + 3) % 4];
+      case "bag":
+      case "tilbage":
+        return DIRECTIONS[(index + 2) % 4];
+      default:
+        return null;
+    }
+  }
+
+  function nextCoordinate(x, y, direction) {
+    switch (direction) {
+      case "north":
+        return { x, y: y - 1 };
+      case "south":
+        return { x, y: y + 1 };
+      case "east":
+        return { x: x + 1, y };
+      case "west":
+        return { x: x - 1, y };
+      default:
+        return { x, y };
+    }
+  }
+
+  function isOutOfBounds(boardState, x, y) {
+    return x < 0 || y < 0 || x >= boardState.size || y >= boardState.size;
+  }
+
+  function isBlocked(boardState, x, y) {
+    const obstacleMatch = boardState.obstacles.some(ob => ob.x === x && ob.y === y);
+    if (obstacleMatch) {
+      return true;
+    }
+    if (boardState.checkpoints && boardState.checkpoints.some(cp => cp.x === x && cp.y === y)) {
+      return false;
+    }
+    return false;
+  }
+
+  function isAtGoal(boardState) {
+    const { goal, agent } = boardState;
+    if (!goal) return false;
+    return agent.x === goal.x && agent.y === goal.y;
+  }
+
+  function appendLog(message) {
+    state.logEntries.push(`${state.logEntries.length + 1}. ${message}`);
+    updateLog();
+  }
+
+  function updateLog() {
+    dom.log.textContent = state.logEntries.join("\n");
+    dom.log.scrollTop = dom.log.scrollHeight;
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  function transformCode(source, language) {
+    const normalised = normaliseLineEndings(source || "");
+    switch (language) {
+      case "c":
+        return transformCCode(normalised);
+      case "powershell":
+        return transformPowerShellCode(normalised);
+      default:
+        return normalised;
+    }
+  }
+
+  function transformCCode(source) {
+    let js = source.replace(/\r/g, "");
+    js = js.replace(/^\s*#include[^\n]*\n/gm, "");
+    js = js.replace(/^\s*using\s+[^\n]*\n/gm, "");
+
+    js = js.replace(/\bvoid\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{/g, (match, name, params) => {
+      return `function ${name}(${cleanCFunctionParams(params)}) {`;
+    });
+
+    js = js.replace(/\bint\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{/g, (match, name, params) => {
+      return `function ${name}(${cleanCFunctionParams(params)}) {`;
+    });
+
+    js = js.replace(/\bconst\b/g, "");
+
+    const typeWords = [
+      "unsigned",
+      "long",
+      "short",
+      "int",
+      "float",
+      "double",
+      "size_t",
+      "char",
+      "bool"
+    ];
+
+    typeWords.forEach(type => {
+      const pattern = new RegExp(`\\b${type}\\b`, "g");
+      js = js.replace(pattern, "let");
+    });
+
+    while (/\blet\s+let\b/.test(js)) {
+      js = js.replace(/\blet\s+let\b/g, "let");
+    }
+
+    js = js.replace(/return\s+0\s*;/g, "return;");
+    js = js.replace(/->/g, ".");
+
+    return js;
+  }
+
+  function cleanCFunctionParams(params) {
+    if (!params) return "";
+    const trimmed = params.trim();
+    if (!trimmed || trimmed === "void") {
+      return "";
+    }
+
+    const typeWords = [
+      "const",
+      "unsigned",
+      "long",
+      "short",
+      "int",
+      "float",
+      "double",
+      "size_t",
+      "char",
+      "bool",
+      "void"
+    ];
+
+    return trimmed
+      .split(",")
+      .map(part => {
+        let cleaned = part.trim();
+        typeWords.forEach(type => {
+          const pattern = new RegExp(`\\b${type}\\b`, "g");
+          cleaned = cleaned.replace(pattern, "");
+        });
+        return cleaned.replace(/\s+/g, "").trim();
+      })
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  function transformPowerShellCode(source) {
+    let js = source.replace(/\r/g, "");
+
+    js = js.replace(/^\s*#(.*)$/gm, (_match, comment) => `//${comment}`);
+
+    const comparatorMap = {
+      "-eq": "===",
+      "-ne": "!==",
+      "-lt": "<",
+      "-le": "<=",
+      "-gt": ">",
+      "-ge": ">="
+    };
+
+    Object.entries(comparatorMap).forEach(([powershell, jsOp]) => {
+      const pattern = new RegExp(powershell, "gi");
+      js = js.replace(pattern, jsOp);
+    });
+
+    js = js.replace(/-not\s+/gi, "!");
+    js = js.replace(/\$true\b/gi, "true");
+    js = js.replace(/\$false\b/gi, "false");
+
+    js = js.replace(/function\s+([A-Za-z_][\w-]*)\s*\{/gi, (match, name) => {
+      return `function ${toCamelCase(name)}() {`;
+    });
+
+    js = js.replace(/for\s*\(\s*\$([A-Za-z_]\w*)\s*=\s*([^;]+);\s*\$?\1\s*([!<>=]{1,2})\s*([^;]+);\s*\$?\1\+\+\s*\)/gi, (match, variable, init, op, limit) => {
+      return `for (let ${variable} = ${init.trim()}; ${variable} ${op} ${limit.trim()}; ${variable}++)`;
+    });
+
+    js = js.replace(/for\s*\(\s*\$([A-Za-z_]\w*)\s*=\s*([^;]+);\s*\$?\1\s*-(eq|ne|lt|le|gt|ge)\s*([^;]+);\s*\$?\1\+\+\s*\)/gi, (match, variable, init, op, limit) => {
+      const opMap = {
+        eq: "===",
+        ne: "!==",
+        lt: "<",
+        le: "<=",
+        gt: ">",
+        ge: ">="
+      };
+      const comparator = opMap[op.toLowerCase()] || "<";
+      return `for (let ${variable} = ${init.trim()}; ${variable} ${comparator} ${limit.trim()}; ${variable}++)`;
+    });
+
+    js = js.replace(/while\s*\(\s*\$([A-Za-z_]\w*)\s*\)/gi, (match, variable) => {
+      return `while (${variable})`;
+    });
+
+    js = js.replace(/\$([A-Za-z_]\w*)/g, "$1");
+
+    js = js.replace(/\b([A-Za-z_][\w-]*)\s+("[^"]*"|'[^']*')/g, (match, name, argument) => {
+      return `${toCamelCase(name)}(${argument})`;
+    });
+
+    js = js.replace(/\b([A-Za-z_][\w-]*)\s*\(/g, (match, name) => {
+      return `${toCamelCase(name)}(`;
+    });
+
+    js = applyPowerShellAssignments(js);
+
+    const reservedWords = new Set([
+      "if",
+      "else",
+      "for",
+      "while",
+      "switch",
+      "case",
+      "default",
+      "break",
+      "continue",
+      "return",
+      "do",
+      "function",
+      "true",
+      "false"
+    ]);
+
+    js = js.replace(/(^|\n)(\s*)([A-Za-z_][\w-]*)\s*$/gm, (match, start, spaces, name) => {
+      const camel = toCamelCase(name);
+      if (!camel || reservedWords.has(camel)) {
+        return `${start}${spaces}${camel}`;
+      }
+      return `${start}${spaces}${camel}();`;
+    });
+
+    return js;
+  }
+
+  function toCamelCase(name) {
+    if (!name) return "";
+    return name.replace(/-([a-zA-Z])/g, (_match, letter) => letter.toUpperCase());
+  }
+
+  function applyPowerShellAssignments(source) {
+    const loopVarRegex = /for\s*\(\s*let\s+([A-Za-z_]\w*)/g;
+    const declared = new Set();
+    let match;
+    while ((match = loopVarRegex.exec(source)) !== null) {
+      declared.add(match[1]);
+    }
+
+    const lines = source.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const assignMatch = line.match(/^(\s*)([A-Za-z_]\w*)\s*=\s*/);
+      if (!assignMatch) {
+        continue;
+      }
+      const [, indent, variable] = assignMatch;
+      const remainder = line.slice(indent.length);
+      if (!declared.has(variable)) {
+        lines[i] = `${indent}let ${remainder}`;
+        declared.add(variable);
+      } else {
+        lines[i] = `${indent}${remainder}`;
+      }
+    }
+
+    return lines.join("\n");
+  }
+
+  function normaliseLineEndings(text) {
+    return (text || "").replace(/\r\n?/g, "\n");
+  }
+})();
