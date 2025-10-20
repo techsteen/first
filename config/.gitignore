@@ -1,0 +1,4 @@
+# Ignore local certificates or alternative config overrides
+cacert-*.pem
+config.local.php
+config.php
