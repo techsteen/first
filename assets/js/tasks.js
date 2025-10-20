@@ -9,11 +9,11 @@
         })
         .join("\n");
 
-    const cBody = formatBlock(cLines, "    ");
+    const csharpBody = formatBlock(cLines, "        ");
     const psBody = formatBlock(psLines, "    ");
 
     return {
-      c: `#include <stdio.h>\n\nstatic void main(void) {\n${cBody}\n}\n`,
+      csharp: `using System;\n\nclass Program\n{\n    static void Main(string[] args)\n    {\n${csharpBody}\n    }\n}\n`,
       powershell: `function Invoke-Program {\n${psBody}\n}\n\nInvoke-Program\n`
     };
   }

@@ -8,12 +8,12 @@
   };
 
   const LANGUAGE_CONFIG = {
-    c: {
-      label: "C",
+    csharp: {
+      label: "C#",
       commandReference: [
         {
-          code: "static void main(void) { … }",
-          description: "Simulatoren starter i denne funktion. Brug C-syntaks (ikke C#) og placer dine kommandoer her."
+          code: "class Program {\n    static void Main(string[] args) { … }\n}",
+          description: "Simulatoren starter i Main-metoden. Placer dine kommandoer her eller i egne hjælpefunktioner."
         },
         {
           code: "frem();",
@@ -30,6 +30,10 @@
         {
           code: "blokering(\"retning\");",
           description: "Returnerer true hvis der er en blokering i retningen. Brug f.eks. \"frem\", \"venstre\", \"højre\" eller \"mål\"."
+        },
+        {
+          code: "Console.WriteLine(\"tekst\");",
+          description: "Skriver en besked i loggen, så du kan følge programmets flow."
         }
       ]
     },
@@ -62,7 +66,7 @@
     boardState: null,
     codeByTaskLanguage: {},
     logEntries: [],
-    selectedLanguage: "c",
+    selectedLanguage: "csharp",
     tasks: normalizeTasks(Array.isArray(window.FALLBACK_TASKS) ? window.FALLBACK_TASKS : []),
     isRunning: false,
     hintIndex: 0,
@@ -181,7 +185,7 @@
 
   function normalizeTemplates(templates) {
     const fallback = {
-      c: "static void main(void) {\n    // Skriv din kode her\n}\n",
+      csharp: "class Program {\n    static void Main(string[] args) {\n        // Skriv din kode her\n    }\n}\n",
       powershell: "function Invoke-Program {\n    # Skriv din kode her\n}\n\nInvoke-Program\n"
     };
 
@@ -190,7 +194,7 @@
     }
 
     return {
-      c: typeof templates.c === "string" ? templates.c : fallback.c,
+      csharp: typeof templates.csharp === "string" ? templates.csharp : fallback.csharp,
       powershell: typeof templates.powershell === "string" ? templates.powershell : fallback.powershell
     };
   }
@@ -1075,7 +1079,8 @@
       frem,
       venstre,
       højre,
-      blokering
+      blokering,
+      skrivLog
     };
 
     const argNames = Object.keys(api);
@@ -1095,6 +1100,28 @@
     function recordLog(message) {
       if (typeof log === "function") {
         log(message, boardState, "log");
+      }
+    }
+
+    function skrivLog(...values) {
+      const text = values.length ? values.map(formatLogValue).join(" ") : "";
+      recordLog(text ? `Console.WriteLine → ${text}` : "Console.WriteLine");
+    }
+
+    function formatLogValue(value) {
+      if (typeof value === "string") {
+        return value;
+      }
+      if (typeof value === "number" || typeof value === "boolean") {
+        return String(value);
+      }
+      if (value === null || value === undefined) {
+        return String(value);
+      }
+      try {
+        return JSON.stringify(value);
+      } catch (error) {
+        return String(value);
       }
     }
 
@@ -1236,23 +1263,20 @@
       return null;
     }
 
-    if (language === "c") {
-      const csharpIndicators = [
-        /namespace\s+[A-Za-z_]\w*/i,
-        /\bclass\s+[A-Za-z_]\w*/i,
-        /\bConsole\s*\./,
-        /\busing\s+System/i,
-        /\bpublic\s+(?:static\s+)?(?:class|void|int|bool|string)\b/i,
-        /\bstatic\s+void\s+Main\s*\(/,
-        /\bstring\s*\[\s*\]\s*[A-Za-z_]\w*/i
+    if (language === "csharp") {
+      const cIndicators = [
+        /#include\s+[<"][A-Za-z0-9_.]+[>"]/i,
+        /\bstatic\s+void\s+main\s*\(\s*void?\s*\)/i,
+        /\bprintf\s*\(/i,
+        /\bscanf\s*\(/i
       ];
 
-      if (csharpIndicators.some(pattern => pattern.test(code))) {
+      if (cIndicators.some(pattern => pattern.test(code))) {
         return {
-          message: "Koden ligner C#-syntaks. Simulatoren understøtter C (ikke C#). Brug static void main(void) og klassisk C-notation eller vælg PowerShell.",
+          message: "Koden ligner C-syntaks. Vælg PowerShell eller skriv din løsning i C# med static void Main(string[] args).",
           logLines: [
-            "Koden matcher ikke sproget C.",
-            "Brug C-syntaks med static void main(void) eller vælg PowerShell for script-baseret kode."
+            "Koden matcher ikke sproget C#.",
+            "Brug C#-syntaks med static void Main(string[] args)."
           ]
         };
       }
@@ -1333,8 +1357,8 @@
   function transformCode(source, language) {
     const normalised = normaliseLineEndings(source || "");
     switch (language) {
-      case "c":
-        return transformCCode(normalised);
+      case "csharp":
+        return transformCSharpCode(normalised);
       case "powershell":
         return transformPowerShellCode(normalised);
       default:
@@ -1342,83 +1366,100 @@
     }
   }
 
-  function transformCCode(source) {
+  function transformCSharpCode(source) {
     let js = source.replace(/\r/g, "");
-    js = js.replace(/^\s*#include[^\n]*\n/gm, "");
-    js = js.replace(/^\s*using\s+[^\n]*\n/gm, "");
 
-    js = js.replace(/\b(?:static\s+)?void\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{/g, (match, name, params) => {
-      return `function ${name}(${cleanCFunctionParams(params)}) {`;
+    js = js.replace(/^\s*#(region|endregion).*$/gim, "");
+    js = js.replace(/^\s*using\s+[A-Za-z0-9_.]+\s*;\s*$/gm, "");
+    js = js.replace(/^\s*\[[^\]]+\]\s*$/gm, "");
+
+    js = js.replace(/^[\t ]*namespace\s+[A-Za-z_][\w.]*\s*\{\s*/gm, "if (true) {");
+    js = js.replace(/^[\t ]*(?:public|private|protected|internal)?\s*(?:sealed\s+|static\s+)?class\s+[A-Za-z_]\w*\s*\{\s*/gm, "if (true) {");
+
+    js = js.replace(/(public|private|protected|internal)?\s*static\s+void\s+Main\s*\(([^)]*)\)\s*\{/gi, (_match, _access, params) => {
+      return `function main(${cleanCSharpParams(params)}) {`;
     });
 
-    js = js.replace(/\b(?:static\s+)?int\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{/g, (match, name, params) => {
-      return `function ${name}(${cleanCFunctionParams(params)}) {`;
+    js = js.replace(/(public|private|protected|internal)?\s*(static\s+)?void\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{/gi, (match, _access, _staticKeyword, name, params) => {
+      if (name === "Main") {
+        return match;
+      }
+      return `function ${name}(${cleanCSharpParams(params)}) {`;
     });
 
-    js = js.replace(/\bconst\b/g, "");
-
-    const typeWords = [
-      "static",
-      "unsigned",
-      "long",
-      "short",
-      "int",
-      "float",
-      "double",
-      "size_t",
-      "char",
-      "bool"
-    ];
-
-    typeWords.forEach(type => {
-      const pattern = new RegExp(`\\b${type}\\b`, "g");
-      js = js.replace(pattern, "let");
+    js = js.replace(/(public|private|protected|internal)?\s*(static\s+)?(int|double|float|bool|string)\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{/gi, (_match, _access, _staticKeyword, _type, name, params) => {
+      return `function ${name}(${cleanCSharpParams(params)}) {`;
     });
 
-    while (/\blet\s+let\b/.test(js)) {
-      js = js.replace(/\blet\s+let\b/g, "let");
-    }
+    const typeAlternatives = csharpTypes().join("|");
 
-    js = js.replace(/return\s+0\s*;/g, "return;");
-    js = js.replace(/->/g, ".");
+    const constPattern = new RegExp(`\\bconst\\s+(?:${typeAlternatives})\\s+([A-Za-z_]\\w*)`, "g");
+    js = js.replace(constPattern, (_match, name) => `const ${name}`);
+
+    const arrayPattern = new RegExp(`\\b(?:${typeAlternatives})\\s*\\[\\s*\\]\\s+([A-Za-z_]\\w*)`, "gi");
+    js = js.replace(arrayPattern, (_match, name) => `let ${name}`);
+
+    const typePattern = new RegExp(`\\b(?:${typeAlternatives})\\s+([A-Za-z_]\\w*)`, "g");
+    js = js.replace(typePattern, (_match, name) => `let ${name}`);
+
+    js = js.replace(/\bMain\s*\(/g, "main(");
+
+    js = js.replace(/System\s*\.\s*Console\s*\.\s*Write(Line)?\s*\(/g, (_match, line) => line ? "skrivLog(" : "skrivLog(");
+    js = js.replace(/Console\s*\.\s*Write(Line)?\s*\(/g, (_match, line) => line ? "skrivLog(" : "skrivLog(");
 
     if (shouldAutoInvokeMain(js)) {
-      js += '\nif (typeof main === "function") { main(); }\n';
+      js += '\nif (typeof main === "function") { main([]); }\n';
     }
 
     return js;
   }
 
-  function cleanCFunctionParams(params) {
+  function csharpTypes() {
+    return [
+      "bool",
+      "byte",
+      "sbyte",
+      "char",
+      "decimal",
+      "double",
+      "float",
+      "int",
+      "uint",
+      "long",
+      "ulong",
+      "short",
+      "ushort",
+      "string",
+      "var"
+    ];
+  }
+
+  function cleanCSharpParams(params) {
     if (!params) return "";
     const trimmed = params.trim();
-    if (!trimmed || trimmed === "void") {
+    if (!trimmed) {
       return "";
     }
 
-    const typeWords = [
-      "const",
-      "unsigned",
-      "long",
-      "short",
-      "int",
-      "float",
-      "double",
-      "size_t",
-      "char",
-      "bool",
-      "void"
-    ];
+    const modifiers = ["params", "ref", "out", "in"];
+    const types = csharpTypes().concat(["void"]);
 
     return trimmed
       .split(",")
       .map(part => {
         let cleaned = part.trim();
-        typeWords.forEach(type => {
-          const pattern = new RegExp(`\\b${type}\\b`, "g");
-          cleaned = cleaned.replace(pattern, "");
+        modifiers.forEach(mod => {
+          const modPattern = new RegExp(`\\b${mod}\\b`, "gi");
+          cleaned = cleaned.replace(modPattern, "");
         });
-        return cleaned.replace(/\s+/g, "").trim();
+        cleaned = cleaned.replace(/\bstring\s*\[\s*\]\s*/gi, "");
+        cleaned = cleaned.replace(/\[.*?\]/g, "");
+        types.forEach(type => {
+          const typePattern = new RegExp(`\\b${type}\\b`, "gi");
+          cleaned = cleaned.replace(typePattern, "");
+        });
+        const segments = cleaned.trim().split(/\s+/).filter(Boolean);
+        return segments.length ? segments[segments.length - 1] : "";
       })
       .filter(Boolean)
       .join(", ");

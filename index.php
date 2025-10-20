@@ -16,10 +16,10 @@
             <section class="language-section">
                 <h2>Vælg sprog</h2>
                 <div class="language-options" id="language-options">
-                    <label><input type="radio" name="language" value="c" checked> C</label>
+                    <label><input type="radio" name="language" value="csharp" checked> C#</label>
                     <label><input type="radio" name="language" value="powershell"> PowerShell</label>
                 </div>
-                <p class="language-help">Vælg hvilket sprog eleverne skal kode i. Vælges C, skal eleverne bruge klassisk C-syntaks (ikke C#), og koden bliver oversat, så den kan afvikles i simulatoren.</p>
+                <p class="language-help">Vælg hvilket sprog eleverne skal kode i. C#-valget bruger en klassisk Main-metode, og simulatoren oversætter koden, så funktioner som frem(), venstre(), højre() og blokering() virker direkte. PowerShell kører som et script.</p>
             </section>
             <section>
                 <h2>Niveauer og opgaver</h2>

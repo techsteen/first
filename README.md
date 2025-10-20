@@ -10,15 +10,15 @@ En selvstændig webapplikation til at træne grundlæggende programmering på et
 - Visuel simulator med robot, startfelt, mål, checkpoints og forhindringer.
 - Seks niveauer med ti faste opgaver i hver (60 i alt). Niveau 3 har synlige forhindringer, mens højere niveauer kombinerer synlige blokke, checkpoints og avanceret styring.
 - Alle opgaver leveres statisk fra `assets/js/tasks.js`, så simulatoren kan køre uden netværksadgang.
-- Eleverne kan vælge at kode i C eller PowerShell; koden oversættes automatisk til simulatoren.
-  - Når eleverne vælger C, forventes klassisk C-syntaks (`static void main(void)`), ikke C#-struktur med klasser og `Main(string[] args)`.
+- Eleverne kan vælge at kode i C# eller PowerShell; koden oversættes automatisk til simulatoren.
+  - C#-valget understøtter `class Program` med `static void Main(string[] args)` og kender til `Console.WriteLine(...)`.
 - Før programmet kører, sendes koden til `api/validate.php`, der bruger OpenAI til at simulere en compiler og stopper kørslen ved syntaksfejl samt leverer feedback.
 - Kommandoerne `frem()`, `venstre()`, `højre()` og `blokering(...)` er tilgængelige for eleverne og dokumenteres dynamisk ud fra det valgte sprog.
 - En **Kør ét skridt**-knap lader eleverne afvikle programmet trin for trin og se brættet opdateres mellem hver kommando.
 - En **Vis hint**-knap viser gradvise hints til den valgte opgave.
 - Log over alle udførte kommandoer samt resultater fra `blokering()`.
 - Shift + klik på **Nulstil** gendanner startkoden for den aktuelle opgave.
-- C-skabelonerne bruger `static void main(void)` som entrypoint, så eleverne slipper for at håndtere `int main()`.
+- C#-skabelonerne viser `static void Main(string[] args)` som entrypoint og kaldes automatisk, så eleverne slipper for at håndtere `int Main()`.
 
 ## Opsætning
 1. Sørg for at din server har en delt konfiguration (fx `../Config/config.php`) med felterne `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE`, `TIMEOUT` og evt. `CA_BUNDLE`.
