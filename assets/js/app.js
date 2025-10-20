@@ -1373,9 +1373,6 @@
     js = js.replace(/^\s*using\s+[A-Za-z0-9_.]+\s*;\s*$/gm, "");
     js = js.replace(/^\s*\[[^\]]+\]\s*$/gm, "");
 
-    js = js.replace(/^[\t ]*namespace\s+[A-Za-z_][\w.]*\s*\{\s*/gm, "if (true) {");
-    js = js.replace(/^[\t ]*(?:public|private|protected|internal)?\s*(?:sealed\s+|static\s+)?class\s+[A-Za-z_]\w*\s*\{\s*/gm, "if (true) {");
-
     js = js.replace(/(public|private|protected|internal)?\s*static\s+void\s+Main\s*\(([^)]*)\)\s*\{/gi, (_match, _access, params) => {
       return `function main(${cleanCSharpParams(params)}) {`;
     });
@@ -1406,6 +1403,8 @@
 
     js = js.replace(/System\s*\.\s*Console\s*\.\s*Write(Line)?\s*\(/g, (_match, line) => line ? "skrivLog(" : "skrivLog(");
     js = js.replace(/Console\s*\.\s*Write(Line)?\s*\(/g, (_match, line) => line ? "skrivLog(" : "skrivLog(");
+
+    js = unwrapCSharpContainers(js);
 
     if (shouldAutoInvokeMain(js)) {
       js += '\nif (typeof main === "function") { main([]); }\n';
@@ -1463,6 +1462,69 @@
       })
       .filter(Boolean)
       .join(", ");
+  }
+
+  function unwrapCSharpContainers(source) {
+    const patterns = [
+      /\bnamespace\s+[A-Za-z_][\w.]*\s*\{/g,
+      /\b(?:public|private|protected|internal)?\s*(?:sealed\s+|static\s+)?class\s+Program\s*\{/g
+    ];
+
+    return patterns.reduce((current, pattern) => unwrapPattern(current, pattern), source);
+  }
+
+  function unwrapPattern(source, pattern) {
+    if (!source) return source;
+    let result = source;
+    let match;
+    pattern.lastIndex = 0;
+    while ((match = pattern.exec(result)) !== null) {
+      const openIndex = result.indexOf("{", match.index);
+      if (openIndex === -1) {
+        break;
+      }
+      const closeIndex = findMatchingBrace(result, openIndex);
+      if (closeIndex === -1) {
+        break;
+      }
+      const inner = result.slice(openIndex + 1, closeIndex);
+      result = result.slice(0, match.index) + inner + result.slice(closeIndex + 1);
+      pattern.lastIndex = Math.max(match.index - 1, 0);
+    }
+    return result;
+  }
+
+  function findMatchingBrace(source, openIndex) {
+    let depth = 0;
+    let inString = null;
+    for (let i = openIndex; i < source.length; i++) {
+      const char = source[i];
+      if (inString) {
+        if (char === "\\" && i + 1 < source.length) {
+          i += 1;
+          continue;
+        }
+        if (char === inString) {
+          inString = null;
+        }
+        continue;
+      }
+
+      if (char === '"' || char === "'") {
+        inString = char;
+        continue;
+      }
+
+      if (char === "{") {
+        depth += 1;
+      } else if (char === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          return i;
+        }
+      }
+    }
+    return -1;
   }
 
   function shouldAutoInvokeMain(js) {
