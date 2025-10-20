@@ -9,7 +9,7 @@
 <body>
     <header class="app-header">
         <h1>Skakbræt Simulator</h1>
-        <p>Udforsk robot-programmering gennem fem niveauer og femten udfordringer.</p>
+        <p>Udforsk robot-programmering gennem seks niveauer og atten AI-genererede udfordringer.</p>
     </header>
     <main class="app-layout">
         <aside class="sidebar">

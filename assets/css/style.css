@@ -435,6 +435,12 @@ body {
     line-height: 1.4;
 }
 
+.loading {
+    padding: 0.75rem 0;
+    color: #64707d;
+    font-style: italic;
+}
+
 .app-footer {
     margin: 0;
     padding: 1rem 2rem 2rem;

@@ -58,7 +58,11 @@
     boardState: null,
     codeByTaskLanguage: {},
     logEntries: [],
-    selectedLanguage: "c"
+    selectedLanguage: "c",
+    tasks: normalizeTasks(Array.isArray(window.FALLBACK_TASKS) ? window.FALLBACK_TASKS : []),
+    tasksLoaded: false,
+    tasksError: null,
+    isRunning: false
   };
 
   const dom = {};
@@ -84,11 +88,38 @@
     }
 
     renderCommandReference();
-    renderLevelButtons();
     bindEvents();
+    renderLoadingState();
+    loadTasks();
+  }
 
-    const defaultLevel = Math.min(...TASKS.map(t => t.level));
-    selectLevel(defaultLevel);
+  async function loadTasks() {
+    try {
+      const response = await fetch("api/tasks.php", { headers: { Accept: "application/json" } });
+      if (!response.ok) {
+        throw new Error(`Server-fejl ${response.status}`);
+      }
+      const payload = await response.json();
+      if (payload.success && Array.isArray(payload.tasks)) {
+        state.tasks = normalizeTasks(payload.tasks);
+        state.tasksLoaded = true;
+        state.tasksError = null;
+      } else {
+        throw new Error(payload.error || "Ukendt fejl ved hentning af opgaver");
+      }
+    } catch (error) {
+      state.tasksLoaded = true;
+      state.tasksError = error instanceof Error ? error.message : String(error);
+      state.tasks = normalizeTasks(Array.isArray(window.FALLBACK_TASKS) ? window.FALLBACK_TASKS : []);
+    }
+
+    renderLevelButtons();
+    const defaultLevel = getFirstLevel();
+    if (defaultLevel !== null) {
+      selectLevel(defaultLevel);
+    } else {
+      renderTaskButtons();
+    }
   }
 
   function bindEvents() {
@@ -106,6 +137,157 @@
         }
       });
     });
+  }
+
+  function renderLoadingState() {
+    if (dom.levelSelector) {
+      dom.levelSelector.innerHTML = '<div class="loading">Henter opgaver…</div>';
+    }
+    if (dom.taskList) {
+      dom.taskList.innerHTML = "";
+    }
+    if (dom.taskDetails) {
+      dom.taskDetails.innerHTML = "<p>Vælg et niveau for at se opgaverne.</p>";
+    }
+  }
+
+  function normalizeTasks(tasks) {
+    if (!Array.isArray(tasks)) return [];
+    return tasks
+      .map((task, index) => normalizeTask(task, index))
+      .filter(Boolean)
+      .sort((a, b) => {
+        if (a.level !== b.level) {
+          return a.level - b.level;
+        }
+        return a.id.localeCompare(b.id, "da", { numeric: true });
+      });
+  }
+
+  function normalizeTask(task, index) {
+    if (!task || typeof task !== "object") return null;
+    const board = task.board || {};
+    const normalized = {
+      id: typeof task.id === "string" ? task.id : `task-${index + 1}`,
+      level: Number.isFinite(task.level) ? Number(task.level) : 1,
+      title: task.title || "Opgave",
+      objective: task.objective || "", 
+      learningFocus: task.learningFocus || "",
+      templates: normalizeTemplates(task.templates),
+      tips: Array.isArray(task.tips) ? task.tips : [],
+      board: {
+        size: Number.isFinite(board.size) ? clamp(board.size, 4, 12) : 8,
+        start: normalizeCoordinate(board.start, { x: 0, y: 7, direction: "east" }),
+        goal: normalizeGoal(board.goal),
+        obstacles: normalizePoints(board.obstacles),
+        checkpoints: normalizePoints(board.checkpoints),
+        revealOnRun: Boolean(board.revealOnRun),
+        randomizeObstacles: Boolean(board.randomizeObstacles)
+      }
+    };
+
+    if (normalized.level === 3) {
+      normalized.board.revealOnRun = false;
+      normalized.board.obstacles = ensureLevelThreeObstacles(normalized.board);
+    }
+
+    return normalized;
+  }
+
+  function normalizeTemplates(templates) {
+    const fallback = {
+      c: "void program(void) {\n    // Skriv din kode her\n}\n\nprogram();\n",
+      powershell: "function Invoke-Program {\n    # Skriv din kode her\n}\n\nInvoke-Program\n"
+    };
+
+    if (!templates || typeof templates !== "object") {
+      return fallback;
+    }
+
+    return {
+      c: typeof templates.c === "string" ? templates.c : fallback.c,
+      powershell: typeof templates.powershell === "string" ? templates.powershell : fallback.powershell
+    };
+  }
+
+  function normalizeCoordinate(coordinate, fallback) {
+    if (!coordinate || typeof coordinate !== "object") {
+      return { ...fallback };
+    }
+    const parsedX = Number(coordinate.x);
+    const parsedY = Number(coordinate.y);
+    return {
+      x: clamp(Number.isFinite(parsedX) ? parsedX : fallback.x, 0, 7),
+      y: clamp(Number.isFinite(parsedY) ? parsedY : fallback.y, 0, 7),
+      direction: typeof coordinate.direction === "string" && DIRECTIONS.includes(coordinate.direction)
+        ? coordinate.direction
+        : fallback.direction
+    };
+  }
+
+  function normalizeGoal(goal) {
+    if (!goal || typeof goal !== "object") return null;
+    const parsedX = Number(goal.x);
+    const parsedY = Number(goal.y);
+    if (!Number.isFinite(parsedX) || !Number.isFinite(parsedY)) {
+      return null;
+    }
+    return {
+      x: clamp(parsedX, 0, 7),
+      y: clamp(parsedY, 0, 7)
+    };
+  }
+
+  function normalizePoints(points) {
+    if (!Array.isArray(points)) return [];
+    return points
+      .map(point => {
+        const parsedX = Number(point.x);
+        const parsedY = Number(point.y);
+        if (!Number.isFinite(parsedX) || !Number.isFinite(parsedY)) {
+          return null;
+        }
+        return {
+          x: clamp(parsedX, 0, 7),
+          y: clamp(parsedY, 0, 7)
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function ensureLevelThreeObstacles(board) {
+    const result = Array.isArray(board.obstacles) ? board.obstacles.map(ob => ({ ...ob })) : [];
+    const occupied = new Set(result.map(ob => `${ob.x},${ob.y}`));
+    const startKey = `${board.start.x},${board.start.y}`;
+    const goalKey = board.goal ? `${board.goal.x},${board.goal.y}` : null;
+
+    const candidateRow = clamp(board.start.y, 1, board.size - 2);
+    const baseX = clamp(board.start.x + 2, 1, board.size - 2);
+    const candidates = [
+      { x: baseX, y: candidateRow },
+      { x: Math.min(board.size - 1, baseX + 1), y: candidateRow }
+    ];
+
+    candidates.forEach(point => {
+      const key = `${point.x},${point.y}`;
+      if (key !== startKey && key !== goalKey && !occupied.has(key)) {
+        result.push(point);
+        occupied.add(key);
+      }
+    });
+
+    let fallbackX = 0;
+    while (result.length < 2 && fallbackX < board.size) {
+      const fallbackPoint = { x: fallbackX, y: candidateRow };
+      const key = `${fallbackPoint.x},${fallbackPoint.y}`;
+      if (key !== startKey && key !== goalKey && !occupied.has(key)) {
+        result.push(fallbackPoint);
+        occupied.add(key);
+      }
+      fallbackX++;
+    }
+
+    return result.slice(0, Math.max(result.length, 2));
   }
 
   function getCodeKey(taskId, language = state.selectedLanguage) {
@@ -163,8 +345,20 @@
   }
 
   function renderLevelButtons() {
-    const levels = [...new Set(TASKS.map(t => t.level))].sort((a, b) => a - b);
+    if (!dom.levelSelector) return;
+    const levels = getLevels();
     dom.levelSelector.innerHTML = "";
+
+    if (!levels.length) {
+      const message = document.createElement("div");
+      message.className = "loading";
+      message.textContent = state.tasksError
+        ? `Kunne ikke hente opgaver: ${state.tasksError}`
+        : "Ingen opgaver fundet.";
+      dom.levelSelector.appendChild(message);
+      return;
+    }
+
     levels.forEach(level => {
       const btn = document.createElement("button");
       btn.textContent = `Niveau ${level}`;
@@ -172,6 +366,16 @@
       btn.dataset.level = level;
       dom.levelSelector.appendChild(btn);
     });
+  }
+
+  function getLevels() {
+    const levels = [...new Set(state.tasks.map(task => task.level))];
+    return levels.sort((a, b) => a - b);
+  }
+
+  function getFirstLevel() {
+    const levels = getLevels();
+    return levels.length ? levels[0] : null;
   }
 
   function updateLevelButtonState() {
@@ -185,15 +389,32 @@
     updateLevelButtonState();
     renderTaskButtons();
 
-    const tasksForLevel = TASKS.filter(t => t.level === level);
+    const tasksForLevel = state.tasks.filter(t => t.level === level);
     if (tasksForLevel.length) {
       selectTask(tasksForLevel[0].id);
+    } else {
+      state.selectedTask = null;
+      state.boardState = null;
+      renderTaskDetails(null);
+      dom.editor.value = "";
+      if (dom.board) {
+        dom.board.innerHTML = "";
+      }
     }
   }
 
   function renderTaskButtons() {
-    const tasks = TASKS.filter(t => t.level === state.selectedLevel);
+    const tasks = state.tasks.filter(t => t.level === state.selectedLevel);
     dom.taskList.innerHTML = "";
+
+    if (!tasks.length) {
+      const empty = document.createElement("div");
+      empty.className = "loading";
+      empty.textContent = "Ingen opgaver fundet for dette niveau.";
+      dom.taskList.appendChild(empty);
+      return;
+    }
+
     tasks.forEach(task => {
       const btn = document.createElement("button");
       btn.textContent = `${task.id} • ${task.title}`;
@@ -215,7 +436,7 @@
       storeCurrentCode();
     }
 
-    const task = TASKS.find(t => t.id === taskId);
+    const task = state.tasks.find(t => t.id === taskId);
     if (!task) {
       return;
     }
@@ -237,6 +458,10 @@
   }
 
   function renderTaskDetails(task) {
+    if (!task) {
+      dom.taskDetails.innerHTML = "<p>Vælg en opgave for at se detaljer.</p>";
+      return;
+    }
     const tipsList = (task.tips || []).map(tip => `<li>${tip}</li>`).join("");
     dom.taskDetails.innerHTML = `
       <h2>Niveau ${task.level}: ${task.title}</h2>
@@ -367,66 +592,103 @@
     }
   }
 
-  function handleRun() {
-    if (!state.selectedTask || !state.boardState) return;
-    const task = state.selectedTask;
-    const boardState = state.boardState;
+  async function handleRun() {
+    if (!state.selectedTask || !state.boardState || state.isRunning) return;
 
-    resetBoardState(boardState);
-    state.logEntries = [];
-    updateLog();
-    dom.feedback.textContent = "Programmet kører…";
-    dom.feedback.className = "feedback";
+    state.isRunning = true;
+    setRunButtonBusy(true);
 
-    appendLog("▶️ Ny kørsel startet");
-
-    if (boardState.randomizeObstacles) {
-      boardState.obstacles = randomizeObstacles(boardState);
-      appendLog("Forhindringerne er blevet flyttet tilfældigt");
-    }
-
-    if (boardState.revealOnRun) {
-      boardState.obstaclesVisible = true;
-      appendLog("Skjulte forhindringer er nu synlige");
-    }
-
-    drawBoard();
-
-    const sandbox = createSandbox(boardState);
-
-    const rawCode = dom.editor.value;
-    let userCode;
     try {
-      userCode = transformCode(rawCode, state.selectedLanguage);
-    } catch (translationError) {
-      appendLog(`⚠️ Oversættelsesfejl: ${translationError.message}`);
-      dom.feedback.textContent = "Koden kunne ikke oversættes til simulatoren. Tjek syntaksen for det valgte sprog.";
-      dom.feedback.className = "feedback error";
-      drawBoard();
-      return;
-    }
+      const task = state.selectedTask;
+      const boardState = state.boardState;
+      const rawCode = dom.editor.value;
 
-    let success = false;
-    try {
-      const fn = new Function(...sandbox.argNames, `"use strict";\n${userCode}`);
-      fn(...sandbox.argValues);
-      success = isAtGoal(boardState);
-    } catch (error) {
-      appendLog(`⚠️ Fejl: ${error.message}`);
-      dom.feedback.textContent = "Der opstod en fejl i programmet. Tjek loggen.";
-      dom.feedback.className = "feedback error";
-      drawBoard();
-      return;
-    }
-
-    drawBoard();
-
-    if (success) {
-      dom.feedback.textContent = "Godt gået! Robotten nåede målet.";
-      dom.feedback.className = "feedback success";
-    } else {
-      dom.feedback.textContent = "Programmet er kørt færdigt. Robotten nåede endnu ikke målet.";
+      state.logEntries = [];
+      updateLog();
+      dom.feedback.textContent = "Validerer kode…";
       dom.feedback.className = "feedback";
+
+      appendLog("▶️ Validerer kode");
+      const validation = await validateCode(rawCode, state.selectedLanguage);
+
+      if (validation.warning) {
+        appendLog(`⚠️ ${validation.warning}`);
+      }
+
+      if (!validation.ok) {
+        appendLog("❌ Kompileringsfejl fundet");
+        (validation.errors || []).forEach(error => {
+          const lineInfo = Number.isFinite(error.line) ? `Linje ${error.line}: ` : "";
+          appendLog(`   ${lineInfo}${error.message}`);
+        });
+        dom.feedback.textContent = validation.shortMessage || "Koden indeholder fejl. Tjek loggen.";
+        dom.feedback.className = "feedback error";
+        drawBoard();
+        return;
+      }
+
+      appendLog("✅ Ingen kompileringsfejl fundet");
+
+      resetBoardState(boardState);
+      dom.feedback.textContent = "Programmet kører…";
+      dom.feedback.className = "feedback";
+
+      appendLog("▶️ Ny kørsel startet");
+
+      if (boardState.randomizeObstacles) {
+        boardState.obstacles = randomizeObstacles(boardState);
+        appendLog("Forhindringerne er blevet flyttet tilfældigt");
+      }
+
+      if (boardState.revealOnRun) {
+        boardState.obstaclesVisible = true;
+        appendLog("Skjulte forhindringer er nu synlige");
+      }
+
+      drawBoard();
+
+      const sandbox = createSandbox(boardState);
+
+      let userCode;
+      try {
+        userCode = transformCode(rawCode, state.selectedLanguage);
+      } catch (translationError) {
+        appendLog(`⚠️ Oversættelsesfejl: ${translationError.message}`);
+        dom.feedback.textContent = "Koden kunne ikke oversættes til simulatoren. Tjek syntaksen for det valgte sprog.";
+        dom.feedback.className = "feedback error";
+        drawBoard();
+        return;
+      }
+
+      let success = false;
+      try {
+        const fn = new Function(...sandbox.argNames, `"use strict";\n${userCode}`);
+        fn(...sandbox.argValues);
+        success = isAtGoal(boardState);
+      } catch (error) {
+        appendLog(`⚠️ Fejl: ${error.message}`);
+        dom.feedback.textContent = "Der opstod en fejl i programmet. Tjek loggen.";
+        dom.feedback.className = "feedback error";
+        drawBoard();
+        return;
+      }
+
+      drawBoard();
+
+      if (success) {
+        dom.feedback.textContent = "Godt gået! Robotten nåede målet.";
+        dom.feedback.className = "feedback success";
+      } else {
+        dom.feedback.textContent = "Programmet er kørt færdigt. Robotten nåede endnu ikke målet.";
+        dom.feedback.className = "feedback";
+      }
+    } catch (error) {
+      appendLog(`⚠️ Uventet fejl: ${error instanceof Error ? error.message : error}`);
+      dom.feedback.textContent = "Der opstod en uventet fejl. Tjek loggen.";
+      dom.feedback.className = "feedback error";
+    } finally {
+      setRunButtonBusy(false);
+      state.isRunning = false;
     }
   }
 
@@ -607,6 +869,47 @@
   function updateLog() {
     dom.log.textContent = state.logEntries.join("\n");
     dom.log.scrollTop = dom.log.scrollHeight;
+  }
+
+  async function validateCode(source, language) {
+    try {
+      const response = await fetch("api/validate.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify({ code: source, language })
+      });
+
+      const text = await response.text();
+      const payload = text ? JSON.parse(text) : {};
+
+      if (!response.ok) {
+        throw new Error(payload.error || `Server-fejl ${response.status}`);
+      }
+
+      if (typeof payload.ok !== "boolean") {
+        throw new Error("Valideringssvaret mangler ok-flag.");
+      }
+
+      payload.errors = Array.isArray(payload.errors) ? payload.errors : [];
+      return payload;
+    } catch (error) {
+      return {
+        ok: true,
+        warning: error instanceof Error
+          ? `Valideringen mislykkedes (${error.message}).`
+          : "Valideringen mislykkedes." 
+      };
+    }
+  }
+
+  function setRunButtonBusy(isBusy) {
+    if (!dom.runBtn) return;
+    dom.runBtn.disabled = isBusy;
+    dom.runBtn.dataset.label = dom.runBtn.dataset.label || dom.runBtn.textContent;
+    dom.runBtn.textContent = isBusy ? "Arbejder…" : dom.runBtn.dataset.label;
   }
 
   function clamp(value, min, max) {

@@ -1,6 +1,6 @@
 # Skakbræt Simulator
 
-En selvstændig webapplikation til at træne grundlæggende programmering på et skakbræt-lignende bræt. Projektet består af fem niveauer med tre opgaver i hver, hvor eleverne kan kode direkte i en indbygget editor og køre deres løsning i browseren.
+En selvstændig webapplikation til at træne grundlæggende programmering på et skakbræt-lignende bræt. Simulatoren genererer seks niveauer med tre opgaver i hver via OpenAI og giver eleverne en indbygget editor til at køre deres løsninger direkte i browseren.
 
 ## Teknologi
 - PHP-fil som entry point (`index.php`) – kan uploades til simple webhoteller.
@@ -8,16 +8,18 @@ En selvstændig webapplikation til at træne grundlæggende programmering på et
 
 ## Funktioner
 - Visuel simulator med robot, startfelt, mål, checkpoints og forhindringer.
+- Seks niveauer med tre opgaver i hver (18 i alt). Niveau 3 har synlige forhindringer, mens de højere niveauer kan afsløre skjulte blokeringer under kørslen.
+- Opgaver hentes dynamisk fra OpenAI via `api/tasks.php`; et komplet sæt fallback-opgaver med samme struktur er indbygget til offline-brug.
 - Eleverne kan vælge at kode i C eller PowerShell; koden oversættes automatisk til simulatoren.
-- Kommandoerne `frem()`, `venstre()`, `højre()` og `blokering(...)` er tilgængelige for eleverne.
-- Kode skabeloner og tips til alle 15 opgaver.
-- Skjulte forhindringer, der først vises når programmet køres (fra niveau 3 og opefter).
+- Før programmet kører, sendes koden til `api/validate.php`, der bruger OpenAI til at simulere en compiler og stopper kørslen ved syntaksfejl.
+- Kommandoerne `frem()`, `venstre()`, `højre()` og `blokering(...)` er tilgængelige for eleverne og dokumenteres dynamisk ud fra det valgte sprog.
 - Log over alle udførte kommandoer samt resultater fra `blokering()`.
 - Shift + klik på **Nulstil** gendanner startkoden for den aktuelle opgave.
 
-## Kom i gang
-1. Upload hele mappen til din server.
-2. Åbn `index.php` i browseren.
-3. Vælg først sprog og derefter et niveau og en opgave, skriv kode og klik på **Kør program**.
+## Opsætning
+1. Kopiér `config/config.example.php` til `config/config.php` og indsæt din OpenAI API-nøgle samt eventuelt eget endpoint.
+2. Upload hele mappen til din server.
+3. Sørg for at certificeringsfilen i `config/` matcher stien i konfigurationen (standard: `cacert-2025-08-12.pem`).
+4. Åbn `index.php` i browseren.
 
-Ingen server-side konfiguration er nødvendig.
+> **Bemærk:** Hvis API-kaldene mislykkes (f.eks. offline), anvendes fallback-opgaverne, og koden kører uden server-side validering, men brugeren informeres i loggen.
