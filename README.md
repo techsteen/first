@@ -13,7 +13,7 @@ Dette repo indeholder et PHP-baseret layout til en kurateret AI-nyhedsavis. Fors
 - `assets/styles.css` – avisinspireret styling.
 - `assets/app.js` – simpel tag-filtrering på klientsiden.
 - `ai_digest.php` – værktøjsside hvor du kan generere et midlertidigt AI-feed ud fra en vilkårlig URL.
-- `config/` – konfigurationsmappe til API-nøgler og certifikater. `config.php` returnerer et array med OpenAI-indstillingerne og blokeres fra webadgang via `.htaccess`/`web.config`.
+- `config/` – konfigurationsmappe til API-nøgler og certifikater. Repoet indeholder `config/config.sample.php` som skabelon, mens selve `config.php` kan ligge her eller i en overordnet `config`/`Config`-mappe (fx `../Config/config.php` som på skærmbilledet). Filen skal returnere et array med OpenAI-indstillingerne og bør placeres uden direkte webadgang.
 
 ## Hvor ligger dine data?
 
@@ -39,7 +39,7 @@ Upload filerne til din PHP-server for at se prototypen i aktion, og udbyg efter 
 
 ## AI-genereret nyhedsudtræk
 
-- Udfyld `config/config.php` med din OpenAI API-nøgle, ønsket model, base-URL og tidsgrænse. Filen returnerer et array og er beskyttet mod direkte adgang via de medfølgende `.htaccess`/`web.config`-regler.
+- Kopiér `config/config.sample.php`, indsæt din OpenAI API-nøgle og upload filen som `config.php`. Applikationen leder automatisk efter filen i `config/config.php`, `../config/config.php`, `../Config/config.php`, `../../config/config.php` og `../../Config/config.php`, så du kan genbruge en eksisterende opsætning uden at ændre mappestrukturen.
 - Hvis dit webhotel kræver eget certifikat, upload et `cacert-YYYY-MM-DD.pem` i `config/` og opdater `CA_BUNDLE`-stien. Filen er på forhånd ignoreret i Git, så den bliver ikke committet.
 - Besøg `ai_digest.php`, indsæt en URL til en nyhedsside og tryk **Generér** for at lade ChatGPT skabe et overblik.
 - Hvis kilden angiver publiceringsdatoer, filtreres resultatet automatisk til de seneste to døgn. Ellers vises de vigtigste fem historier.

@@ -7,6 +7,7 @@ $timezone = new DateTimeZone('Europe/Copenhagen');
 $errors = [];
 $resultItems = [];
 $requestedUrl = '';
+$configHint = getOpenAIConfigHint();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $requestedUrl = trim((string) ($_POST['source_url'] ?? ''));
@@ -58,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="submit">Generér</button>
             </div>
         </form>
-        <p class="help-text">API-nøglen hentes fra <code>/config/config.php</code>, som er blokeret for direkte webadgang.</p>
+        <p class="help-text">API-nøglen hentes fra <code><?php echo htmlspecialchars($configHint); ?></code>. Sørg for, at filen ikke kan tilgås direkte fra nettet.</p>
     </section>
 
     <?php if (!empty($errors)): ?>

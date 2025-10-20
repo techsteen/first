@@ -3,26 +3,140 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/feed_config.php';
 
+function openAIConfigDisplayPath(?string $set = null): string
+{
+    static $display = 'config/config.php';
+
+    if ($set !== null && $set !== '') {
+        $display = $set;
+    }
+
+    return $display;
+}
+
+/**
+ * @return array<int,array{path:string,label:string}>
+ */
+function openAIConfigCandidates(): array
+{
+    $projectDir = dirname(__DIR__);
+    $candidates = [];
+    $seen = [];
+
+    $addCandidate = static function (string $path, string $label) use (&$candidates, &$seen): void {
+        $normalised = str_replace('\\', '/', $path);
+        if (isset($seen[$normalised])) {
+            return;
+        }
+
+        $seen[$normalised] = true;
+        $candidates[] = ['path' => $path, 'label' => $label];
+    };
+
+    $current = $projectDir;
+    for ($level = 0; $level <= 4; $level++) {
+        $prefix = str_repeat('../', $level);
+        $dir = rtrim($current, "\\/");
+
+        foreach (['config', 'Config'] as $folder) {
+            $path = $dir . '/' . $folder . '/config.php';
+            $label = ($prefix === '' ? '' : $prefix) . $folder . '/config.php';
+            $addCandidate($path, $label);
+        }
+
+        $next = dirname($current);
+        if ($next === '' || $next === $current) {
+            break;
+        }
+
+        $current = $next;
+    }
+
+    return $candidates;
+}
+
+/**
+ * @return array<int,string>
+ */
+function getOpenAIConfigPathHints(): array
+{
+    $candidates = openAIConfigCandidates();
+    $labels = [];
+
+    foreach ($candidates as $candidate) {
+        $labels[] = $candidate['label'];
+    }
+
+    return array_values(array_unique($labels));
+}
+
+/**
+ * @return array{path:string,label:string}|null
+ */
+function findOpenAIConfigPath(): ?array
+{
+    foreach (openAIConfigCandidates() as $candidate) {
+        if (is_file($candidate['path'])) {
+            return $candidate;
+        }
+    }
+
+    return null;
+}
+
+function getOpenAIConfigHint(): string
+{
+    $existing = findOpenAIConfigPath();
+    if ($existing !== null) {
+        return $existing['label'];
+    }
+
+    $hints = getOpenAIConfigPathHints();
+    if (!empty($hints)) {
+        return $hints[0];
+    }
+
+    return 'config/config.php';
+}
+
 /**
  * @return array<string,mixed>|null
  */
 function loadOpenAIConfig(array &$errors): ?array
 {
     static $config = null;
+    static $attempted = false;
 
     if ($config !== null) {
         return $config;
     }
 
-    $basePath = dirname(__DIR__) . '/config/config.php';
-    if (!is_file($basePath)) {
-        $errors[] = 'Konfigurationsfilen /config/config.php blev ikke fundet. Upload den, og indsæt din OpenAI API-nøgle.';
+    if ($attempted) {
         return null;
     }
 
-    $loaded = include $basePath;
+    $attempted = true;
+
+    $candidate = findOpenAIConfigPath();
+    if ($candidate === null) {
+        $hints = getOpenAIConfigPathHints();
+        if (!empty($hints)) {
+            openAIConfigDisplayPath($hints[0]);
+            $errors[] = 'Konfigurationsfilen til OpenAI blev ikke fundet. Placér den f.eks. i: ' . implode(', ', $hints) . '.';
+        } else {
+            $errors[] = 'Konfigurationsfilen til OpenAI blev ikke fundet.';
+        }
+
+        return null;
+    }
+
+    $configPath = $candidate['path'];
+    $display = $candidate['label'];
+    openAIConfigDisplayPath($display);
+
+    $loaded = include $configPath;
     if (!is_array($loaded)) {
-        $errors[] = 'Konfigurationsfilen /config/config.php skal returnere et array med indstillinger.';
+        $errors[] = sprintf('Konfigurationsfilen (%s) skal returnere et array med indstillinger.', $display);
         return null;
     }
 
@@ -39,7 +153,7 @@ function loadOpenAIConfig(array &$errors): ?array
     $required = ['OPENAI_API_KEY', 'OPENAI_MODEL', 'OPENAI_BASE'];
     foreach ($required as $key) {
         if (!array_key_exists($key, $loaded) || trim((string) $loaded[$key]) === '') {
-            $errors[] = sprintf('Indstillingen %s mangler i /config/config.php.', $key);
+            $errors[] = sprintf('Indstillingen %s mangler i %s.', $key, $display);
             return null;
         }
     }
@@ -194,21 +308,23 @@ function resolveOpenAIConnection(array &$errors): ?array
         return null;
     }
 
+    $displayPath = openAIConfigDisplayPath();
+
     $apiKey = trim((string) ($config['OPENAI_API_KEY'] ?? ''));
     if ($apiKey === '') {
-        $errors[] = 'OpenAI API-nøglen er ikke udfyldt i /config/config.php.';
+        $errors[] = sprintf('OpenAI API-nøglen er ikke udfyldt i %s.', $displayPath);
         return null;
     }
 
     $apiBase = rtrim((string) ($config['OPENAI_BASE'] ?? ''), '/');
     if ($apiBase === '') {
-        $errors[] = 'OPENAI_BASE i /config/config.php må ikke være tom.';
+        $errors[] = sprintf('OPENAI_BASE i %s må ikke være tom.', $displayPath);
         return null;
     }
 
     $model = trim((string) ($config['OPENAI_MODEL'] ?? ''));
     if ($model === '') {
-        $errors[] = 'OPENAI_MODEL i /config/config.php må ikke være tom.';
+        $errors[] = sprintf('OPENAI_MODEL i %s må ikke være tom.', $displayPath);
         return null;
     }
 
