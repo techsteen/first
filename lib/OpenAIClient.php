@@ -25,6 +25,52 @@ class OpenAIClient
         return new self($config);
     }
 
+    public static function fromDefaultLocations(): self
+    {
+        $paths = self::defaultConfigPaths();
+
+        foreach ($paths as $path) {
+            if (!$path) {
+                continue;
+            }
+
+            $resolved = realpath($path) ?: $path;
+            if (file_exists($resolved)) {
+                return self::fromConfigFile($resolved);
+            }
+        }
+
+        throw new RuntimeException('Kunne ikke finde config.php. Angiv SIMULATOR_CONFIG_PATH eller placer filen i config/ eller Config/.');
+    }
+
+    private static function defaultConfigPaths(): array
+    {
+        $paths = [];
+
+        $envPath = getenv('SIMULATOR_CONFIG_PATH');
+        if (is_string($envPath) && $envPath !== '') {
+            $paths[] = $envPath;
+        }
+
+        $root = dirname(__DIR__);
+        $parent = dirname($root);
+
+        $candidates = [
+            $root . '/config/config.php',
+            $root . '/Config/config.php',
+            $parent . '/config/config.php',
+            $parent . '/Config/config.php',
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (!in_array($candidate, $paths, true)) {
+                $paths[] = $candidate;
+            }
+        }
+
+        return $paths;
+    }
+
     public function chat(array $messages, array $options = []): array
     {
         $model = $options['model'] ?? ($this->config['OPENAI_MODEL'] ?? null);

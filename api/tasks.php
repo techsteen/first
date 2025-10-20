@@ -6,18 +6,8 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../lib/OpenAIClient.php';
 
-$configPath = __DIR__ . '/../config/config.php';
-if (!file_exists($configPath)) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Konfigurationsfilen mangler. Kopiér config/config.example.php til config/config.php og udfyld API-nøglen.'
-    ]);
-    exit;
-}
-
 try {
-    $client = OpenAIClient::fromConfigFile($configPath);
+    $client = OpenAIClient::fromDefaultLocations();
     $response = $client->chat([
         [
             'role' => 'system',

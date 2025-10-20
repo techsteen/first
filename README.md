@@ -17,9 +17,11 @@ En selvstændig webapplikation til at træne grundlæggende programmering på et
 - Shift + klik på **Nulstil** gendanner startkoden for den aktuelle opgave.
 
 ## Opsætning
-1. Kopiér `config/config.example.php` til `config/config.php` og indsæt din OpenAI API-nøgle samt eventuelt eget endpoint.
+1. Angiv din OpenAI API-nøgle i en konfigurationsfil:
+   - Standard: kopiér `config/config.example.php` til `config/config.php`.
+   - Hvis din server allerede har en delt konfiguration (fx `../Config/config.php`), kan den bruges direkte eller stien angives via miljøvariablen `SIMULATOR_CONFIG_PATH`.
 2. Upload hele mappen til din server.
-3. Sørg for at certificeringsfilen i `config/` matcher stien i konfigurationen (standard: `cacert-2025-08-12.pem`).
+3. Sørg for at certificeringsfilen matcher stien i konfigurationen (standard: `cacert-2025-08-12.pem`).
 4. Åbn `index.php` i browseren.
 
 > **Bemærk:** Hvis API-kaldene mislykkes (f.eks. offline), anvendes fallback-opgaverne, og koden kører uden server-side validering, men brugeren informeres i loggen.
