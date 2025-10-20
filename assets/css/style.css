@@ -446,6 +446,7 @@ body {
 .feedback {
     min-height: 1.5rem;
     font-weight: 600;
+    white-space: pre-line;
 }
 
 .feedback.success {

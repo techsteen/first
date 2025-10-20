@@ -61,7 +61,8 @@
     selectedLanguage: "c",
     tasks: normalizeTasks(Array.isArray(window.FALLBACK_TASKS) ? window.FALLBACK_TASKS : []),
     isRunning: false,
-    hintIndex: 0
+    hintIndex: 0,
+    pendingFeedback: ""
   };
 
   const dom = {};
@@ -418,6 +419,7 @@
     state.boardState = createBoardState(task);
     buildBoardGrid(state.boardState.size);
     drawBoard();
+    state.pendingFeedback = "";
     dom.feedback.textContent = task.objective ? `Mål: ${task.objective}` : "";
     dom.feedback.className = "feedback";
     state.hintIndex = 0;
@@ -606,6 +608,7 @@
     if (!state.selectedTask || !state.boardState || state.isRunning) return;
 
     state.isRunning = true;
+    state.pendingFeedback = "";
     setRunButtonBusy(true);
 
     try {
@@ -620,6 +623,7 @@
 
       appendLog("▶️ Validerer kode");
       const validation = await validateCode(rawCode, state.selectedLanguage, task.objective);
+      state.pendingFeedback = typeof validation.feedback === "string" ? validation.feedback.trim() : "";
 
       if (validation.warning) {
         appendLog(`⚠️ ${validation.warning}`);
@@ -634,13 +638,16 @@
         const fallbackMessage = task.objective
           ? `Koden indeholder fejl. Husk: ${task.objective}`
           : "Koden indeholder fejl. Tjek loggen.";
-        dom.feedback.textContent = validation.shortMessage || fallbackMessage;
+        const compileMessage = validation.shortMessage || fallbackMessage;
+        appendPendingFeedback();
+        dom.feedback.textContent = withPendingFeedback(compileMessage);
         dom.feedback.className = "feedback error";
         drawBoard();
         return;
       }
 
       appendLog("✅ Ingen kompileringsfejl fundet");
+      appendPendingFeedback();
 
       resetBoardState(boardState);
       dom.feedback.textContent = task.objective
@@ -669,9 +676,10 @@
         userCode = transformCode(rawCode, state.selectedLanguage);
       } catch (translationError) {
         appendLog(`⚠️ Oversættelsesfejl: ${translationError.message}`);
-        dom.feedback.textContent = task.objective
+        const translationMessage = task.objective
           ? `Koden kunne ikke oversættes til simulatoren. Prøv igen med fokus på: ${task.objective}`
           : "Koden kunne ikke oversættes til simulatoren. Tjek syntaksen for det valgte sprog.";
+        dom.feedback.textContent = withPendingFeedback(translationMessage);
         dom.feedback.className = "feedback error";
         drawBoard();
         return;
@@ -684,9 +692,10 @@
         success = isAtGoal(boardState);
       } catch (error) {
         appendLog(`⚠️ Fejl: ${error.message}`);
-        dom.feedback.textContent = task.objective
+        const runtimeMessage = task.objective
           ? `Der opstod en fejl i programmet. Sammenhold med målet: ${task.objective}`
           : "Der opstod en fejl i programmet. Tjek loggen.";
+        dom.feedback.textContent = withPendingFeedback(runtimeMessage);
         dom.feedback.className = "feedback error";
         drawBoard();
         return;
@@ -695,21 +704,24 @@
       drawBoard();
 
       if (success) {
-        dom.feedback.textContent = task.objective
+        const successMessage = task.objective
           ? `✅ Opgaven løst: ${task.objective}`
           : "Godt gået! Robotten nåede målet.";
+        dom.feedback.textContent = withPendingFeedback(successMessage);
         dom.feedback.className = "feedback success";
       } else {
-        dom.feedback.textContent = task.objective
+        const resultMessage = task.objective
           ? `Programmet er kørt færdigt, men målet blev ikke nået. Husk: ${task.objective}`
           : "Programmet er kørt færdigt. Robotten nåede endnu ikke målet.";
+        dom.feedback.textContent = withPendingFeedback(resultMessage);
         dom.feedback.className = "feedback";
       }
     } catch (error) {
       appendLog(`⚠️ Uventet fejl: ${error instanceof Error ? error.message : error}`);
-      dom.feedback.textContent = task.objective
+      const unexpectedMessage = task.objective
         ? `Der opstod en uventet fejl. Genbesøg målet: ${task.objective}`
         : "Der opstod en uventet fejl. Tjek loggen.";
+      dom.feedback.textContent = withPendingFeedback(unexpectedMessage);
       dom.feedback.className = "feedback error";
     } finally {
       setRunButtonBusy(false);
@@ -725,6 +737,7 @@
     updateLog();
     dom.feedback.textContent = "";
     dom.feedback.className = "feedback";
+    state.pendingFeedback = "";
 
     if (event && event.shiftKey) {
       const template = getTemplateForTask(state.selectedTask);
@@ -889,6 +902,25 @@
   function appendLog(message) {
     state.logEntries.push(`${state.logEntries.length + 1}. ${message}`);
     updateLog();
+  }
+
+  function appendPendingFeedback() {
+    if (!state.pendingFeedback) {
+      return;
+    }
+    appendLog(`ℹ️ AI-feedback: ${state.pendingFeedback}`);
+  }
+
+  function withPendingFeedback(message) {
+    const base = typeof message === "string" ? message : String(message ?? "");
+    if (!state.pendingFeedback) {
+      return base;
+    }
+    const trimmedBase = base.trim();
+    if (!trimmedBase) {
+      return `AI-feedback: ${state.pendingFeedback}`;
+    }
+    return `${trimmedBase}\nAI-feedback: ${state.pendingFeedback}`;
   }
 
   function updateLog() {

@@ -60,7 +60,7 @@ try {
                         'Det er korrekt at funktioner som frem() ikke returnerer værdier.'
                     ]
                 ],
-                'instructions' => 'Tjek syntaks og grundlæggende struktur. Returnér ok=true hvis alt er fint. Ved fejl returnér ok=false, en shortMessage og en liste af fejl med line og message. Inddrag målet i shortMessage når objective ikke er tom, f.eks. "Fejl i opgaven: [objective]".'
+                'instructions' => 'Fokuser udelukkende på syntaks, parenteser, blokstruktur og andre forhold der ville få kildekoden til ikke at kompilere eller blive afvist af en formatter. Returnér ok=false kun ved egentlige compiler-/parserfejl og angiv shortMessage samt en detaljeret liste af fejl (med line og message). Hvis koden er syntaktisk korrekt, skal du returnere ok=true også selv om løsningen muligvis ikke opfylder opgaven. Giv i stedet vejledende logisk feedback i feltet feedback (maks. 2 sætninger) og relater det til objective når det findes. Lad shortMessage stå tom når ok=true. Inddrag målet i shortMessage når objective ikke er tom, f.eks. "Fejl i opgaven: [objective]".'
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
         ]
     ], [
@@ -75,6 +75,7 @@ try {
                     'properties' => [
                         'ok' => ['type' => 'boolean'],
                         'shortMessage' => ['type' => 'string'],
+                        'feedback' => ['type' => 'string'],
                         'errors' => [
                             'type' => 'array',
                             'items' => [
