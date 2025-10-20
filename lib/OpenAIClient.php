@@ -61,7 +61,7 @@ class OpenAIClient
             return new self($envConfig);
         }
 
-        throw new RuntimeException('Kunne ikke finde config.php. Angiv SIMULATOR_CONFIG_PATH eller placer filen i config/ eller Config/.');
+        throw new RuntimeException('Kunne ikke finde config.php. Angiv SIMULATOR_CONFIG_PATH eller placer filen i et delt Config/-bibliotek.');
     }
 
     private static function defaultConfigCandidates(): array
@@ -74,19 +74,25 @@ class OpenAIClient
         }
 
         $root = dirname(__DIR__);
-        $parent = dirname($root);
+        $cursor = $root;
+        $seen = [];
 
-        $candidates = [
-            $root . '/config',
-            $root . '/Config',
-            $parent . '/config',
-            $parent . '/Config',
-        ];
+        while (true) {
+            $ancestor = dirname($cursor);
 
-        foreach ($candidates as $candidate) {
-            if (!in_array($candidate, $paths, true)) {
-                $paths[] = $candidate;
+            if ($ancestor === $cursor) {
+                break;
             }
+
+            foreach (['Config', 'config'] as $dirName) {
+                $candidate = rtrim($ancestor, '/\\') . DIRECTORY_SEPARATOR . $dirName;
+                if (!isset($seen[$candidate])) {
+                    $paths[] = $candidate;
+                    $seen[$candidate] = true;
+                }
+            }
+
+            $cursor = $ancestor;
         }
 
         return $paths;
