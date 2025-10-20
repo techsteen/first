@@ -13,13 +13,21 @@ class OpenAIClient
 
     public static function fromConfigFile(string $path): self
     {
-        if (!file_exists($path)) {
+        if (!is_readable($path)) {
             throw new RuntimeException("Konfigurationsfilen blev ikke fundet: {$path}");
         }
 
-        $config = require $path;
-        if (!is_array($config)) {
-            throw new RuntimeException('Konfigurationsfilen skal returnere et array.');
+        $loaded = require $path;
+        $config = self::normalizeConfig($loaded, dirname($path));
+
+        return new self($config);
+    }
+
+    public static function fromConfigDirectory(string $directory): self
+    {
+        $config = self::loadFromDirectory($directory);
+        if ($config === null) {
+            throw new RuntimeException("Kunne ikke finde en konfigurationsfil i {$directory}");
         }
 
         return new self($config);
@@ -27,23 +35,36 @@ class OpenAIClient
 
     public static function fromDefaultLocations(): self
     {
-        $paths = self::defaultConfigPaths();
+        $candidates = self::defaultConfigCandidates();
 
-        foreach ($paths as $path) {
-            if (!$path) {
+        foreach ($candidates as $candidate) {
+            if (!$candidate) {
                 continue;
             }
 
-            $resolved = realpath($path) ?: $path;
-            if (file_exists($resolved)) {
+            $resolved = realpath($candidate) ?: $candidate;
+
+            if (is_file($resolved) && is_readable($resolved)) {
                 return self::fromConfigFile($resolved);
             }
+
+            if (is_dir($resolved)) {
+                $config = self::loadFromDirectory($resolved);
+                if ($config !== null) {
+                    return new self($config);
+                }
+            }
+        }
+
+        $envConfig = self::configFromEnvironment();
+        if ($envConfig !== null) {
+            return new self($envConfig);
         }
 
         throw new RuntimeException('Kunne ikke finde config.php. Angiv SIMULATOR_CONFIG_PATH eller placer filen i config/ eller Config/.');
     }
 
-    private static function defaultConfigPaths(): array
+    private static function defaultConfigCandidates(): array
     {
         $paths = [];
 
@@ -56,10 +77,10 @@ class OpenAIClient
         $parent = dirname($root);
 
         $candidates = [
-            $root . '/config/config.php',
-            $root . '/Config/config.php',
-            $parent . '/config/config.php',
-            $parent . '/Config/config.php',
+            $root . '/config',
+            $root . '/Config',
+            $parent . '/config',
+            $parent . '/Config',
         ];
 
         foreach ($candidates as $candidate) {
@@ -69,6 +90,132 @@ class OpenAIClient
         }
 
         return $paths;
+    }
+
+    private static function loadFromDirectory(string $directory): ?array
+    {
+        if (!is_dir($directory)) {
+            return null;
+        }
+
+        $configFiles = ['config.php', 'config.phg'];
+        foreach ($configFiles as $file) {
+            $path = rtrim($directory, '/\\') . DIRECTORY_SEPARATOR . $file;
+            if (is_readable($path)) {
+                $loaded = require $path;
+                return self::normalizeConfig($loaded, $directory);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param mixed $loaded
+     */
+    private static function normalizeConfig($loaded, string $configDir): array
+    {
+        if (is_array($loaded)) {
+            $config = $loaded;
+        } elseif (is_string($loaded)) {
+            $config = ['OPENAI_API_KEY' => trim($loaded)];
+        } else {
+            throw new RuntimeException('Konfigurationsfilen skal returnere et array eller en streng.');
+        }
+
+        if (isset($config['OPENAI_API_KEY'])) {
+            $config['OPENAI_API_KEY'] = trim((string) $config['OPENAI_API_KEY']);
+        }
+
+        if (empty($config['OPENAI_API_KEY'])) {
+            $envKey = getenv('OPENAI_API_KEY');
+            if (is_string($envKey) && trim($envKey) !== '') {
+                $config['OPENAI_API_KEY'] = trim($envKey);
+            }
+        }
+
+        if (isset($config['CA_BUNDLE'])) {
+            $caCandidate = trim((string) $config['CA_BUNDLE']);
+            if ($caCandidate !== '') {
+                if (!is_readable($caCandidate)) {
+                    $relativeCandidate = rtrim($configDir, '/\\') . DIRECTORY_SEPARATOR . ltrim($caCandidate, '/\\');
+                    if (is_readable($relativeCandidate)) {
+                        $caCandidate = $relativeCandidate;
+                    }
+                }
+
+                if (is_readable($caCandidate)) {
+                    $config['CA_BUNDLE'] = $caCandidate;
+                } else {
+                    unset($config['CA_BUNDLE']);
+                }
+            } else {
+                unset($config['CA_BUNDLE']);
+            }
+        }
+
+        if (!isset($config['CA_BUNDLE'])) {
+            $defaultCa = rtrim($configDir, '/\\') . DIRECTORY_SEPARATOR . 'cacert.pem';
+            if (is_readable($defaultCa)) {
+                $config['CA_BUNDLE'] = $defaultCa;
+            }
+        }
+
+        foreach (['OPENAI_MODEL', 'OPENAI_BASE'] as $key) {
+            if (empty($config[$key])) {
+                $envValue = getenv($key);
+                if (is_string($envValue) && trim($envValue) !== '') {
+                    $config[$key] = trim($envValue);
+                }
+            }
+        }
+
+        if (empty($config['TIMEOUT'])) {
+            $timeoutEnv = getenv('OPENAI_TIMEOUT');
+            if (!is_string($timeoutEnv) || trim($timeoutEnv) === '') {
+                $timeoutEnv = getenv('TIMEOUT');
+            }
+
+            if (is_string($timeoutEnv) && trim($timeoutEnv) !== '') {
+                $config['TIMEOUT'] = (int) trim($timeoutEnv);
+            }
+        }
+
+        if (empty($config['OPENAI_API_KEY'])) {
+            throw new RuntimeException('OPENAI_API_KEY er ikke sat i config eller miljøvariabler.');
+        }
+
+        return $config;
+    }
+
+    private static function configFromEnvironment(): ?array
+    {
+        $apiKey = getenv('OPENAI_API_KEY');
+        if (!is_string($apiKey) || trim($apiKey) === '') {
+            return null;
+        }
+
+        $config = [
+            'OPENAI_API_KEY' => trim($apiKey),
+        ];
+
+        foreach (['OPENAI_MODEL', 'OPENAI_BASE'] as $key) {
+            $envValue = getenv($key);
+            if (is_string($envValue) && trim($envValue) !== '') {
+                $config[$key] = trim($envValue);
+            }
+        }
+
+        $timeoutEnv = getenv('OPENAI_TIMEOUT');
+        if (!is_string($timeoutEnv) || trim($timeoutEnv) === '') {
+            $timeoutEnv = getenv('TIMEOUT');
+        }
+
+        if (is_string($timeoutEnv) && trim($timeoutEnv) !== '') {
+            $config['TIMEOUT'] = (int) trim($timeoutEnv);
+        }
+
+        return $config;
     }
 
     public function chat(array $messages, array $options = []): array
