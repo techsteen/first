@@ -19,12 +19,15 @@ if (!is_array($payload)) {
 
 $language = $payload['language'] ?? '';
 $code = $payload['code'] ?? '';
+$objective = $payload['objective'] ?? '';
 
-if (!is_string($language) || !is_string($code)) {
+if (!is_string($language) || !is_string($code) || ($objective !== '' && !is_string($objective))) {
     http_response_code(400);
-    echo json_encode(['ok' => false, 'error' => 'Både language og code skal være strenge.']);
+    echo json_encode(['ok' => false, 'error' => 'language, code og objective skal være strenge.']);
     exit;
 }
+
+$objective = is_string($objective) ? trim($objective) : '';
 
 require_once __DIR__ . '/../lib/OpenAIClient.php';
 
@@ -34,14 +37,30 @@ try {
     $response = $client->chat([
         [
             'role' => 'system',
-            'content' => 'Du er en compiler-assistent. Du modtager kode og svarer med JSON. Hvis der er fejl, angiv dem med linjenumre.'
+            'content' => 'Du er en compiler-assistent for en undervisningsplatform. Du vurderer elevkode til en robotsimulator og svarer kun med JSON.'
         ],
         [
             'role' => 'user',
             'content' => json_encode([
                 'language' => $language,
                 'code' => $code,
-                'instructions' => 'Tjek syntaks og grundlæggende struktur. Returnér ok=true hvis alt er fint. Ved fejl returnér ok=false, shortMessage og en liste af fejl med line og message.'
+                'objective' => $objective,
+                'environment' => [
+                    'cEntryPoint' => 'void program(void)',
+                    'powershellEntryPoint' => 'Invoke-Program',
+                    'commands' => [
+                        'frem()',
+                        'venstre()',
+                        'højre()',
+                        'blokering("retning")'
+                    ],
+                    'notes' => [
+                        'Funktionerne ovenfor er defineret af simulatoren og må ikke markeres som udefinerede.',
+                        'Eleverne skal ikke deklarere eller kalde int main(). Programmet startes via program() i C og Invoke-Program i PowerShell.',
+                        'Det er korrekt at funktioner som frem() ikke returnerer værdier.'
+                    ]
+                ],
+                'instructions' => 'Tjek syntaks og grundlæggende struktur. Returnér ok=true hvis alt er fint. Ved fejl returnér ok=false, en shortMessage og en liste af fejl med line og message. Inddrag målet i shortMessage når objective ikke er tom, f.eks. "Fejl i opgaven: [objective]".'
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
         ]
     ], [

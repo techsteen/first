@@ -447,7 +447,7 @@
     state.boardState = createBoardState(task);
     buildBoardGrid(state.boardState.size);
     drawBoard();
-    dom.feedback.textContent = "";
+    dom.feedback.textContent = task.objective ? `Mål: ${task.objective}` : "";
     dom.feedback.className = "feedback";
     state.logEntries = [];
     updateLog();
@@ -609,7 +609,7 @@
       dom.feedback.className = "feedback";
 
       appendLog("▶️ Validerer kode");
-      const validation = await validateCode(rawCode, state.selectedLanguage);
+      const validation = await validateCode(rawCode, state.selectedLanguage, task.objective);
 
       if (validation.warning) {
         appendLog(`⚠️ ${validation.warning}`);
@@ -621,7 +621,10 @@
           const lineInfo = Number.isFinite(error.line) ? `Linje ${error.line}: ` : "";
           appendLog(`   ${lineInfo}${error.message}`);
         });
-        dom.feedback.textContent = validation.shortMessage || "Koden indeholder fejl. Tjek loggen.";
+        const fallbackMessage = task.objective
+          ? `Koden indeholder fejl. Husk: ${task.objective}`
+          : "Koden indeholder fejl. Tjek loggen.";
+        dom.feedback.textContent = validation.shortMessage || fallbackMessage;
         dom.feedback.className = "feedback error";
         drawBoard();
         return;
@@ -630,7 +633,9 @@
       appendLog("✅ Ingen kompileringsfejl fundet");
 
       resetBoardState(boardState);
-      dom.feedback.textContent = "Programmet kører…";
+      dom.feedback.textContent = task.objective
+        ? `Programmet kører… Fokus: ${task.objective}`
+        : "Programmet kører…";
       dom.feedback.className = "feedback";
 
       appendLog("▶️ Ny kørsel startet");
@@ -654,7 +659,9 @@
         userCode = transformCode(rawCode, state.selectedLanguage);
       } catch (translationError) {
         appendLog(`⚠️ Oversættelsesfejl: ${translationError.message}`);
-        dom.feedback.textContent = "Koden kunne ikke oversættes til simulatoren. Tjek syntaksen for det valgte sprog.";
+        dom.feedback.textContent = task.objective
+          ? `Koden kunne ikke oversættes til simulatoren. Prøv igen med fokus på: ${task.objective}`
+          : "Koden kunne ikke oversættes til simulatoren. Tjek syntaksen for det valgte sprog.";
         dom.feedback.className = "feedback error";
         drawBoard();
         return;
@@ -667,7 +674,9 @@
         success = isAtGoal(boardState);
       } catch (error) {
         appendLog(`⚠️ Fejl: ${error.message}`);
-        dom.feedback.textContent = "Der opstod en fejl i programmet. Tjek loggen.";
+        dom.feedback.textContent = task.objective
+          ? `Der opstod en fejl i programmet. Sammenhold med målet: ${task.objective}`
+          : "Der opstod en fejl i programmet. Tjek loggen.";
         dom.feedback.className = "feedback error";
         drawBoard();
         return;
@@ -676,15 +685,21 @@
       drawBoard();
 
       if (success) {
-        dom.feedback.textContent = "Godt gået! Robotten nåede målet.";
+        dom.feedback.textContent = task.objective
+          ? `✅ Opgaven løst: ${task.objective}`
+          : "Godt gået! Robotten nåede målet.";
         dom.feedback.className = "feedback success";
       } else {
-        dom.feedback.textContent = "Programmet er kørt færdigt. Robotten nåede endnu ikke målet.";
+        dom.feedback.textContent = task.objective
+          ? `Programmet er kørt færdigt, men målet blev ikke nået. Husk: ${task.objective}`
+          : "Programmet er kørt færdigt. Robotten nåede endnu ikke målet.";
         dom.feedback.className = "feedback";
       }
     } catch (error) {
       appendLog(`⚠️ Uventet fejl: ${error instanceof Error ? error.message : error}`);
-      dom.feedback.textContent = "Der opstod en uventet fejl. Tjek loggen.";
+      dom.feedback.textContent = task.objective
+        ? `Der opstod en uventet fejl. Genbesøg målet: ${task.objective}`
+        : "Der opstod en uventet fejl. Tjek loggen.";
       dom.feedback.className = "feedback error";
     } finally {
       setRunButtonBusy(false);
@@ -871,7 +886,7 @@
     dom.log.scrollTop = dom.log.scrollHeight;
   }
 
-  async function validateCode(source, language) {
+  async function validateCode(source, language, objective) {
     try {
       const response = await fetch("api/validate.php", {
         method: "POST",
@@ -879,7 +894,7 @@
           "Content-Type": "application/json",
           Accept: "application/json"
         },
-        body: JSON.stringify({ code: source, language })
+        body: JSON.stringify({ code: source, language, objective })
       });
 
       const text = await response.text();
