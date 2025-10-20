@@ -406,6 +406,12 @@ body {
     color: var(--primary);
 }
 
+#step-btn {
+    background: #f0f4ff;
+    color: var(--primary);
+    border: 1px solid var(--border);
+}
+
 #hint-btn {
     background: #f5f7fb;
     color: var(--primary);

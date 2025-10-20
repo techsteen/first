@@ -47,6 +47,7 @@
                     <label for="code-editor">Din kode</label>
                     <textarea id="code-editor" spellcheck="false"></textarea>
                     <div class="editor-actions">
+                        <button id="step-btn" class="secondary">Kør ét skridt</button>
                         <button id="run-btn">Kør program</button>
                         <button id="reset-btn" class="secondary">Nulstil</button>
                         <button id="hint-btn" class="secondary">Vis hint</button>

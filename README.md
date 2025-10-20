@@ -13,9 +13,11 @@ En selvstændig webapplikation til at træne grundlæggende programmering på et
 - Eleverne kan vælge at kode i C eller PowerShell; koden oversættes automatisk til simulatoren.
 - Før programmet kører, sendes koden til `api/validate.php`, der bruger OpenAI til at simulere en compiler og stopper kørslen ved syntaksfejl samt leverer feedback.
 - Kommandoerne `frem()`, `venstre()`, `højre()` og `blokering(...)` er tilgængelige for eleverne og dokumenteres dynamisk ud fra det valgte sprog.
+- En **Kør ét skridt**-knap lader eleverne afvikle programmet trin for trin og se brættet opdateres mellem hver kommando.
 - En **Vis hint**-knap viser gradvise hints til den valgte opgave.
 - Log over alle udførte kommandoer samt resultater fra `blokering()`.
 - Shift + klik på **Nulstil** gendanner startkoden for den aktuelle opgave.
+- C-skabelonerne bruger `static void main(void)` som entrypoint, så eleverne slipper for at håndtere `int main()`.
 
 ## Opsætning
 1. Sørg for at din server har en delt konfiguration (fx `../Config/config.php`) med felterne `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE`, `TIMEOUT` og evt. `CA_BUNDLE`.

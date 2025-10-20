@@ -46,7 +46,7 @@ try {
                 'code' => $code,
                 'objective' => $objective,
                 'environment' => [
-                    'cEntryPoint' => 'void program(void)',
+                    'cEntryPoint' => 'static void main(void)',
                     'powershellEntryPoint' => 'Invoke-Program',
                     'commands' => [
                         'frem()',
@@ -56,7 +56,7 @@ try {
                     ],
                     'notes' => [
                         'Funktionerne ovenfor er defineret af simulatoren og må ikke markeres som udefinerede.',
-                        'Eleverne skal ikke deklarere eller kalde int main(). Programmet startes via program() i C og Invoke-Program i PowerShell.',
+                        'Eleverne skal ikke deklarere eller kalde int main(). Programmet startes via static void main() i C og Invoke-Program i PowerShell.',
                         'Det er korrekt at funktioner som frem() ikke returnerer værdier.'
                     ]
                 ],

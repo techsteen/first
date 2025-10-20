@@ -62,7 +62,8 @@
     tasks: normalizeTasks(Array.isArray(window.FALLBACK_TASKS) ? window.FALLBACK_TASKS : []),
     isRunning: false,
     hintIndex: 0,
-    pendingFeedback: ""
+    pendingFeedback: "",
+    stepSession: null
   };
 
   const dom = {};
@@ -76,6 +77,7 @@
     dom.board = document.getElementById("board");
     dom.editor = document.getElementById("code-editor");
     dom.runBtn = document.getElementById("run-btn");
+    dom.stepBtn = document.getElementById("step-btn");
     dom.resetBtn = document.getElementById("reset-btn");
     dom.hintBtn = document.getElementById("hint-btn");
     dom.feedback = document.getElementById("feedback");
@@ -107,11 +109,16 @@
 
   function bindEvents() {
     dom.runBtn.addEventListener("click", handleRun);
+    if (dom.stepBtn) {
+      dom.stepBtn.dataset.defaultLabel = dom.stepBtn.textContent;
+      dom.stepBtn.addEventListener("click", handleStepRun);
+    }
     dom.resetBtn.addEventListener("click", handleReset);
     if (dom.hintBtn) {
       dom.hintBtn.addEventListener("click", showNextHint);
     }
     dom.editor.addEventListener("input", () => {
+      clearStepSession();
       if (state.selectedTask) {
         storeCurrentCode();
       }
@@ -170,7 +177,7 @@
 
   function normalizeTemplates(templates) {
     const fallback = {
-      c: "void program(void) {\n    // Skriv din kode her\n}\n\nprogram();\n",
+      c: "static void main(void) {\n    // Skriv din kode her\n}\n",
       powershell: "function Invoke-Program {\n    # Skriv din kode her\n}\n\nInvoke-Program\n"
     };
 
@@ -313,6 +320,7 @@
     renderCommandReference();
 
     if (state.selectedTask) {
+      clearStepSession();
       const stored = getStoredCode(state.selectedTask.id);
       dom.editor.value = stored !== undefined ? stored : getTemplateForTask(state.selectedTask);
     }
@@ -413,6 +421,7 @@
       return;
     }
 
+    clearStepSession();
     state.selectedTask = task;
     updateTaskButtonState();
     renderTaskDetails(task);
@@ -607,6 +616,7 @@
   async function handleRun() {
     if (!state.selectedTask || !state.boardState || state.isRunning) return;
 
+    clearStepSession();
     state.isRunning = true;
     state.pendingFeedback = "";
     setRunButtonBusy(true);
@@ -729,8 +739,218 @@
     }
   }
 
+  async function handleStepRun() {
+    if (!state.selectedTask || !state.boardState || state.isRunning) return;
+
+    if (state.stepSession && state.stepSession.events && state.stepSession.index < state.stepSession.events.length) {
+      advanceStepSession();
+      return;
+    }
+
+    if (state.stepSession && (!state.stepSession.events || state.stepSession.index >= state.stepSession.events.length)) {
+      clearStepSession();
+    }
+
+    state.isRunning = true;
+    state.pendingFeedback = "";
+    setStepButtonBusy(true);
+
+    let prepared = false;
+
+    try {
+      const task = state.selectedTask;
+      const rawCode = dom.editor.value;
+
+      state.logEntries = [];
+      updateLog();
+      dom.feedback.textContent = "Validerer kode…";
+      dom.feedback.className = "feedback";
+
+      appendLog("▶️ Validerer kode");
+      const validation = await validateCode(rawCode, state.selectedLanguage, task.objective);
+      state.pendingFeedback = typeof validation.feedback === "string" ? validation.feedback.trim() : "";
+
+      if (validation.warning) {
+        appendLog(`⚠️ ${validation.warning}`);
+      }
+
+      if (!validation.ok) {
+        appendLog("❌ Kompileringsfejl fundet");
+        (validation.errors || []).forEach(error => {
+          const lineInfo = Number.isFinite(error.line) ? `Linje ${error.line}: ` : "";
+          appendLog(`   ${lineInfo}${error.message}`);
+        });
+        const fallbackMessage = task.objective
+          ? `Koden indeholder fejl. Husk: ${task.objective}`
+          : "Koden indeholder fejl. Tjek loggen.";
+        const compileMessage = validation.shortMessage || fallbackMessage;
+        appendPendingFeedback();
+        dom.feedback.textContent = withPendingFeedback(compileMessage);
+        dom.feedback.className = "feedback error";
+        drawBoard();
+        clearStepSession();
+        return;
+      }
+
+      appendLog("✅ Ingen kompileringsfejl fundet");
+      appendPendingFeedback();
+
+      resetBoardState(state.boardState);
+      if (state.boardState.randomizeObstacles) {
+        state.boardState.obstacles = randomizeObstacles(state.boardState);
+        appendLog("Forhindringerne er blevet flyttet tilfældigt");
+      }
+
+      if (state.boardState.revealOnRun) {
+        state.boardState.obstaclesVisible = true;
+        appendLog("Skjulte forhindringer er nu synlige");
+      }
+
+      drawBoard();
+
+      let userCode;
+      try {
+        userCode = transformCode(rawCode, state.selectedLanguage);
+      } catch (translationError) {
+        appendLog(`⚠️ Oversættelsesfejl: ${translationError.message}`);
+        const translationMessage = task.objective
+          ? `Koden kunne ikke oversættes til simulatoren. Prøv igen med fokus på: ${task.objective}`
+          : "Koden kunne ikke oversættes til simulatoren. Tjek syntaksen for det valgte sprog.";
+        dom.feedback.textContent = withPendingFeedback(translationMessage);
+        dom.feedback.className = "feedback error";
+        drawBoard();
+        clearStepSession();
+        return;
+      }
+
+      const playbackState = cloneBoardState(state.boardState);
+      const events = [];
+
+      const sandbox = createSandbox(playbackState, {
+        draw: false,
+        log: (message, currentState, kind) => {
+          events.push({
+            type: kind === "action" ? "action" : "log",
+            message,
+            snapshot: snapshotBoard(currentState),
+            log: true
+          });
+        }
+      });
+
+      let runtimeErrorMessage = null;
+      let success = false;
+
+      try {
+        const fn = new Function(...sandbox.argNames, `"use strict";\n${userCode}`);
+        fn(...sandbox.argValues);
+        success = isAtGoal(playbackState);
+      } catch (error) {
+        runtimeErrorMessage = error instanceof Error ? error.message : String(error);
+        const runtimeLog = `⚠️ Fejl: ${runtimeErrorMessage}`;
+        events.push({
+          type: "log",
+          message: runtimeLog,
+          snapshot: snapshotBoard(playbackState),
+          log: true
+        });
+      }
+
+      const finalSnapshot = snapshotBoard(playbackState);
+      const completionMessage = runtimeErrorMessage
+        ? (task.objective
+          ? `Der opstod en fejl i programmet. Sammenhold med målet: ${task.objective}`
+          : "Der opstod en fejl i programmet. Tjek loggen.")
+        : success
+          ? (task.objective
+            ? `✅ Opgaven løst: ${task.objective}`
+            : "Godt gået! Robotten nåede målet.")
+          : (task.objective
+            ? `Programmet er kørt færdigt, men målet blev ikke nået. Husk: ${task.objective}`
+            : "Programmet er kørt færdigt. Robotten nåede endnu ikke målet.");
+
+      events.push({
+        type: runtimeErrorMessage ? "status-error" : success ? "status-success" : "status",
+        message: withPendingFeedback(completionMessage),
+        snapshot: finalSnapshot,
+        final: true,
+        log: false,
+        level: runtimeErrorMessage ? "error" : success ? "success" : "info"
+      });
+
+      state.stepSession = {
+        taskId: task.id,
+        language: state.selectedLanguage,
+        events,
+        index: 0
+      };
+
+      prepared = true;
+      if (dom.stepBtn) {
+        updateStepButtonLabel(events.length > 1 ? "Næste skridt" : (dom.stepBtn.dataset.defaultLabel || "Kør ét skridt"));
+      }
+    } finally {
+      setStepButtonBusy(false);
+      state.isRunning = false;
+    }
+
+    if (prepared) {
+      advanceStepSession();
+    }
+  }
+
+  function advanceStepSession() {
+    const session = state.stepSession;
+    if (!session || !Array.isArray(session.events) || !session.events.length) {
+      dom.feedback.textContent = "Programmet udførte ingen handlinger.";
+      dom.feedback.className = "feedback";
+      clearStepSession();
+      return;
+    }
+
+    if (session.index >= session.events.length) {
+      clearStepSession();
+      return;
+    }
+
+    const event = session.events[session.index];
+    session.index += 1;
+
+    if (event.snapshot) {
+      applyBoardSnapshot(state.boardState, event.snapshot);
+      drawBoard();
+    }
+
+    if (event.log !== false) {
+      appendLog(event.message);
+    }
+
+    if (event.final) {
+      dom.feedback.textContent = event.message;
+      if (event.level === "success") {
+        dom.feedback.className = "feedback success";
+      } else if (event.level === "error") {
+        dom.feedback.className = "feedback error";
+      } else {
+        dom.feedback.className = "feedback";
+      }
+      if (dom.stepBtn) {
+        updateStepButtonLabel(dom.stepBtn.dataset.defaultLabel || "Kør ét skridt");
+      }
+    } else {
+      dom.feedback.textContent = `Trin ${session.index} af ${session.events.length}`;
+      dom.feedback.className = "feedback";
+      if (dom.stepBtn) {
+        updateStepButtonLabel(session.index < session.events.length
+          ? "Næste skridt"
+          : (dom.stepBtn.dataset.defaultLabel || "Kør ét skridt"));
+      }
+    }
+  }
+
   function handleReset(event) {
     if (!state.boardState || !state.selectedTask) return;
+    clearStepSession();
     resetBoardState(state.boardState);
     drawBoard();
     state.logEntries = [];
@@ -750,6 +970,44 @@
     boardState.agent = { ...boardState.start };
     boardState.obstacles = boardState.baseObstacles.map(ob => ({ ...ob }));
     boardState.obstaclesVisible = !boardState.revealOnRun;
+  }
+
+  function cloneBoardState(boardState) {
+    if (!boardState) return null;
+    return {
+      size: boardState.size,
+      start: { ...boardState.start },
+      goal: boardState.goal ? { ...boardState.goal } : null,
+      agent: { ...boardState.agent },
+      baseObstacles: boardState.baseObstacles.map(ob => ({ ...ob })),
+      obstacles: boardState.obstacles.map(ob => ({ ...ob })),
+      checkpoints: boardState.checkpoints.map(cp => ({ ...cp })),
+      revealOnRun: boardState.revealOnRun,
+      randomizeObstacles: boardState.randomizeObstacles,
+      obstaclesVisible: boardState.obstaclesVisible
+    };
+  }
+
+  function snapshotBoard(boardState) {
+    if (!boardState) return null;
+    return {
+      agent: { ...boardState.agent },
+      obstacles: boardState.obstacles.map(ob => ({ ...ob })),
+      obstaclesVisible: boardState.obstaclesVisible
+    };
+  }
+
+  function applyBoardSnapshot(target, snapshot) {
+    if (!target || !snapshot) return;
+    if (snapshot.agent) {
+      target.agent = { ...snapshot.agent };
+    }
+    if (Array.isArray(snapshot.obstacles)) {
+      target.obstacles = snapshot.obstacles.map(ob => ({ ...ob }));
+    }
+    if (typeof snapshot.obstaclesVisible === "boolean") {
+      target.obstaclesVisible = snapshot.obstaclesVisible;
+    }
   }
 
   function randomizeObstacles(boardState) {
@@ -781,7 +1039,8 @@
     return result;
   }
 
-  function createSandbox(boardState) {
+  function createSandbox(boardState, options = {}) {
+    const { log = appendLog, draw = true } = options;
     const api = {
       frem,
       venstre,
@@ -794,6 +1053,21 @@
 
     return { argNames, argValues };
 
+    function recordAction(message) {
+      if (typeof log === "function") {
+        log(message, boardState, "action");
+      }
+      if (draw) {
+        drawBoard();
+      }
+    }
+
+    function recordLog(message) {
+      if (typeof log === "function") {
+        log(message, boardState, "log");
+      }
+    }
+
     function frem() {
       const { agent } = boardState;
       const target = nextCoordinate(agent.x, agent.y, agent.direction);
@@ -802,24 +1076,21 @@
       }
       agent.x = target.x;
       agent.y = target.y;
-      appendLog("frem()");
-      drawBoard();
+      recordAction("frem()");
     }
 
     function venstre() {
       const { agent } = boardState;
       const index = DIRECTIONS.indexOf(agent.direction);
       agent.direction = DIRECTIONS[(index + 3) % 4];
-      appendLog("venstre()");
-      drawBoard();
+      recordAction("venstre()");
     }
 
     function højre() {
       const { agent } = boardState;
       const index = DIRECTIONS.indexOf(agent.direction);
       agent.direction = DIRECTIONS[(index + 1) % 4];
-      appendLog("højre()");
-      drawBoard();
+      recordAction("højre()");
     }
 
     function blokering(direction) {
@@ -827,7 +1098,7 @@
       const dir = (direction || "frem").toLowerCase();
       if (dir === "mål") {
         const reached = goal ? agent.x === goal.x && agent.y === goal.y : false;
-        appendLog(`blokering("mål") → ${reached}`);
+        recordLog(`blokering("mål") → ${reached}`);
         return reached;
       }
 
@@ -837,11 +1108,11 @@
       }
       const target = nextCoordinate(agent.x, agent.y, relativeDirection);
       if (isOutOfBounds(boardState, target.x, target.y)) {
-        appendLog(`blokering("${dir}") → true (uden for brættet)`);
+        recordLog(`blokering("${dir}") → true (uden for brættet)`);
         return true;
       }
       const blocked = isBlocked(boardState, target.x, target.y);
-      appendLog(`blokering("${dir}") → ${blocked}`);
+      recordLog(`blokering("${dir}") → ${blocked}`);
       return blocked;
     }
   }
@@ -969,6 +1240,30 @@
     dom.runBtn.textContent = isBusy ? "Arbejder…" : dom.runBtn.dataset.label;
   }
 
+  function setStepButtonBusy(isBusy) {
+    if (!dom.stepBtn) return;
+    dom.stepBtn.disabled = isBusy;
+    dom.stepBtn.dataset.label = dom.stepBtn.dataset.label || dom.stepBtn.textContent;
+    dom.stepBtn.textContent = isBusy ? "Arbejder…" : dom.stepBtn.dataset.label;
+  }
+
+  function updateStepButtonLabel(label) {
+    if (!dom.stepBtn) return;
+    const resolved = label || dom.stepBtn.dataset.defaultLabel || "Kør ét skridt";
+    dom.stepBtn.dataset.label = resolved;
+    if (!dom.stepBtn.disabled) {
+      dom.stepBtn.textContent = resolved;
+    }
+  }
+
+  function clearStepSession() {
+    state.stepSession = null;
+    updateStepButtonLabel(dom.stepBtn ? dom.stepBtn.dataset.defaultLabel : "Kør ét skridt");
+    if (dom.stepBtn) {
+      dom.stepBtn.disabled = false;
+    }
+  }
+
   function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
   }
@@ -990,17 +1285,18 @@
     js = js.replace(/^\s*#include[^\n]*\n/gm, "");
     js = js.replace(/^\s*using\s+[^\n]*\n/gm, "");
 
-    js = js.replace(/\bvoid\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{/g, (match, name, params) => {
+    js = js.replace(/\b(?:static\s+)?void\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{/g, (match, name, params) => {
       return `function ${name}(${cleanCFunctionParams(params)}) {`;
     });
 
-    js = js.replace(/\bint\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{/g, (match, name, params) => {
+    js = js.replace(/\b(?:static\s+)?int\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{/g, (match, name, params) => {
       return `function ${name}(${cleanCFunctionParams(params)}) {`;
     });
 
     js = js.replace(/\bconst\b/g, "");
 
     const typeWords = [
+      "static",
       "unsigned",
       "long",
       "short",
@@ -1023,6 +1319,10 @@
 
     js = js.replace(/return\s+0\s*;/g, "return;");
     js = js.replace(/->/g, ".");
+
+    if (shouldAutoInvokeMain(js)) {
+      js += '\nif (typeof main === "function") { main(); }\n';
+    }
 
     return js;
   }
@@ -1060,6 +1360,41 @@
       })
       .filter(Boolean)
       .join(", ");
+  }
+
+  function shouldAutoInvokeMain(js) {
+    if (!/\bfunction\s+main\s*\(/.test(js)) {
+      return false;
+    }
+    const withoutMain = stripFunctionDefinition(js, "main");
+    return !/\bmain\s*\(/.test(withoutMain);
+  }
+
+  function stripFunctionDefinition(source, functionName) {
+    const pattern = new RegExp(`function\\s+${functionName}\\s*\\(`);
+    const match = pattern.exec(source);
+    if (!match) {
+      return source;
+    }
+    let braceIndex = source.indexOf("{", match.index);
+    if (braceIndex === -1) {
+      return source;
+    }
+    let depth = 1;
+    let i = braceIndex + 1;
+    while (i < source.length && depth > 0) {
+      const char = source[i];
+      if (char === "{") {
+        depth += 1;
+      } else if (char === "}") {
+        depth -= 1;
+      }
+      i += 1;
+    }
+    if (depth !== 0) {
+      return source;
+    }
+    return source.slice(0, match.index) + source.slice(i);
   }
 
   function transformPowerShellCode(source) {

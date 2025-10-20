@@ -13,7 +13,7 @@
     const psBody = formatBlock(psLines, "    ");
 
     return {
-      c: `#include <stdio.h>\n\nvoid program(void) {\n${cBody}\n}\n\nprogram();\n`,
+      c: `#include <stdio.h>\n\nstatic void main(void) {\n${cBody}\n}\n`,
       powershell: `function Invoke-Program {\n${psBody}\n}\n\nInvoke-Program\n`
     };
   }
