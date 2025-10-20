@@ -11,6 +11,7 @@ En selvstændig webapplikation til at træne grundlæggende programmering på et
 - Seks niveauer med ti faste opgaver i hver (60 i alt). Niveau 3 har synlige forhindringer, mens højere niveauer kombinerer synlige blokke, checkpoints og avanceret styring.
 - Alle opgaver leveres statisk fra `assets/js/tasks.js`, så simulatoren kan køre uden netværksadgang.
 - Eleverne kan vælge at kode i C eller PowerShell; koden oversættes automatisk til simulatoren.
+  - Når eleverne vælger C, forventes klassisk C-syntaks (`static void main(void)`), ikke C#-struktur med klasser og `Main(string[] args)`.
 - Før programmet kører, sendes koden til `api/validate.php`, der bruger OpenAI til at simulere en compiler og stopper kørslen ved syntaksfejl samt leverer feedback.
 - Kommandoerne `frem()`, `venstre()`, `højre()` og `blokering(...)` er tilgængelige for eleverne og dokumenteres dynamisk ud fra det valgte sprog.
 - En **Kør ét skridt**-knap lader eleverne afvikle programmet trin for trin og se brættet opdateres mellem hver kommando.

@@ -12,6 +12,10 @@
       label: "C",
       commandReference: [
         {
+          code: "static void main(void) { … }",
+          description: "Simulatoren starter i denne funktion. Brug C-syntaks (ikke C#) og placer dine kommandoer her."
+        },
+        {
           code: "frem();",
           description: "Flytter robotten et felt frem i den retning, den vender."
         },
@@ -628,6 +632,19 @@
 
       state.logEntries = [];
       updateLog();
+
+      const mismatch = detectLanguageMismatch(rawCode, state.selectedLanguage);
+      if (mismatch) {
+        appendLog("❌ Kodesproget matcher ikke valget");
+        (mismatch.logLines || []).forEach(line => appendLog(`   ${line}`));
+        dom.feedback.textContent = mismatch.message;
+        dom.feedback.className = "feedback error";
+        state.isRunning = false;
+        setRunButtonBusy(false);
+        drawBoard();
+        return;
+      }
+
       dom.feedback.textContent = "Validerer kode…";
       dom.feedback.className = "feedback";
 
@@ -763,6 +780,19 @@
 
       state.logEntries = [];
       updateLog();
+      const mismatch = detectLanguageMismatch(rawCode, state.selectedLanguage);
+      if (mismatch) {
+        appendLog("❌ Kodesproget matcher ikke valget");
+        (mismatch.logLines || []).forEach(line => appendLog(`   ${line}`));
+        dom.feedback.textContent = mismatch.message;
+        dom.feedback.className = "feedback error";
+        state.isRunning = false;
+        setStepButtonBusy(false);
+        drawBoard();
+        clearStepSession();
+        return;
+      }
+
       dom.feedback.textContent = "Validerer kode…";
       dom.feedback.className = "feedback";
 
@@ -1197,6 +1227,38 @@
   function updateLog() {
     dom.log.textContent = state.logEntries.join("\n");
     dom.log.scrollTop = dom.log.scrollHeight;
+  }
+
+  function detectLanguageMismatch(source, language) {
+    if (!language) return null;
+    const code = typeof source === "string" ? source.trim() : "";
+    if (!code) {
+      return null;
+    }
+
+    if (language === "c") {
+      const csharpIndicators = [
+        /namespace\s+[A-Za-z_]\w*/i,
+        /\bclass\s+[A-Za-z_]\w*/i,
+        /\bConsole\s*\./,
+        /\busing\s+System/i,
+        /\bpublic\s+(?:static\s+)?(?:class|void|int|bool|string)\b/i,
+        /\bstatic\s+void\s+Main\s*\(/,
+        /\bstring\s*\[\s*\]\s*[A-Za-z_]\w*/i
+      ];
+
+      if (csharpIndicators.some(pattern => pattern.test(code))) {
+        return {
+          message: "Koden ligner C#-syntaks. Simulatoren understøtter C (ikke C#). Brug static void main(void) og klassisk C-notation eller vælg PowerShell.",
+          logLines: [
+            "Koden matcher ikke sproget C.",
+            "Brug C-syntaks med static void main(void) eller vælg PowerShell for script-baseret kode."
+          ]
+        };
+      }
+    }
+
+    return null;
   }
 
   async function validateCode(source, language, objective) {

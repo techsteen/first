@@ -57,7 +57,8 @@ try {
                     'notes' => [
                         'Funktionerne ovenfor er defineret af simulatoren og må ikke markeres som udefinerede.',
                         'Eleverne skal ikke deklarere eller kalde int main(). Programmet startes via static void main() i C og Invoke-Program i PowerShell.',
-                        'Det er korrekt at funktioner som frem() ikke returnerer værdier.'
+                        'Det er korrekt at funktioner som frem() ikke returnerer værdier.',
+                        'Hvis sproget er "c" og koden bruger mønstre som "using System", "namespace", "class Program" eller "static void Main(string[] args)", så forklar at simulatoren forventer C-syntaks (ikke C#) og returnér ok=false med denne forklaring uden at opfinde filnavne.'
                     ]
                 ],
                 'instructions' => 'Fokuser udelukkende på syntaks, parenteser, blokstruktur og andre forhold der ville få kildekoden til ikke at kompilere eller blive afvist af en formatter. Returnér ok=false kun ved egentlige compiler-/parserfejl og angiv shortMessage samt en detaljeret liste af fejl (med line og message). Hvis koden er syntaktisk korrekt, skal du returnere ok=true også selv om løsningen muligvis ikke opfylder opgaven. Giv i stedet vejledende logisk feedback i feltet feedback (maks. 2 sætninger) og relater det til objective når det findes. Lad shortMessage stå tom når ok=true. Inddrag målet i shortMessage når objective ikke er tom, f.eks. "Fejl i opgaven: [objective]".'

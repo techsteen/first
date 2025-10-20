@@ -19,7 +19,7 @@
                     <label><input type="radio" name="language" value="c" checked> C</label>
                     <label><input type="radio" name="language" value="powershell"> PowerShell</label>
                 </div>
-                <p class="language-help">Vælg hvilket sprog eleverne skal kode i. Koden bliver oversat, så den kan afvikles i simulatoren.</p>
+                <p class="language-help">Vælg hvilket sprog eleverne skal kode i. Vælges C, skal eleverne bruge klassisk C-syntaks (ikke C#), og koden bliver oversat, så den kan afvikles i simulatoren.</p>
             </section>
             <section>
                 <h2>Niveauer og opgaver</h2>
