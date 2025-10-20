@@ -60,9 +60,8 @@
     logEntries: [],
     selectedLanguage: "c",
     tasks: normalizeTasks(Array.isArray(window.FALLBACK_TASKS) ? window.FALLBACK_TASKS : []),
-    tasksLoaded: false,
-    tasksError: null,
-    isRunning: false
+    isRunning: false,
+    hintIndex: 0
   };
 
   const dom = {};
@@ -77,7 +76,9 @@
     dom.editor = document.getElementById("code-editor");
     dom.runBtn = document.getElementById("run-btn");
     dom.resetBtn = document.getElementById("reset-btn");
+    dom.hintBtn = document.getElementById("hint-btn");
     dom.feedback = document.getElementById("feedback");
+    dom.hint = document.getElementById("hint-output");
     dom.log = document.getElementById("log");
     dom.commandReference = document.getElementById("command-reference");
     dom.languageInputs = document.querySelectorAll('input[name="language"]');
@@ -89,30 +90,11 @@
 
     renderCommandReference();
     bindEvents();
-    renderLoadingState();
-    loadTasks();
+    initializeTasks();
   }
 
-  async function loadTasks() {
-    try {
-      const response = await fetch("api/tasks.php", { headers: { Accept: "application/json" } });
-      if (!response.ok) {
-        throw new Error(`Server-fejl ${response.status}`);
-      }
-      const payload = await response.json();
-      if (payload.success && Array.isArray(payload.tasks)) {
-        state.tasks = normalizeTasks(payload.tasks);
-        state.tasksLoaded = true;
-        state.tasksError = null;
-      } else {
-        throw new Error(payload.error || "Ukendt fejl ved hentning af opgaver");
-      }
-    } catch (error) {
-      state.tasksLoaded = true;
-      state.tasksError = error instanceof Error ? error.message : String(error);
-      state.tasks = normalizeTasks(Array.isArray(window.FALLBACK_TASKS) ? window.FALLBACK_TASKS : []);
-    }
-
+  function initializeTasks() {
+    state.tasks = normalizeTasks(Array.isArray(window.FALLBACK_TASKS) ? window.FALLBACK_TASKS : []);
     renderLevelButtons();
     const defaultLevel = getFirstLevel();
     if (defaultLevel !== null) {
@@ -125,6 +107,9 @@
   function bindEvents() {
     dom.runBtn.addEventListener("click", handleRun);
     dom.resetBtn.addEventListener("click", handleReset);
+    if (dom.hintBtn) {
+      dom.hintBtn.addEventListener("click", showNextHint);
+    }
     dom.editor.addEventListener("input", () => {
       if (state.selectedTask) {
         storeCurrentCode();
@@ -137,18 +122,6 @@
         }
       });
     });
-  }
-
-  function renderLoadingState() {
-    if (dom.levelSelector) {
-      dom.levelSelector.innerHTML = '<div class="loading">Henter opgaver…</div>';
-    }
-    if (dom.taskList) {
-      dom.taskList.innerHTML = "";
-    }
-    if (dom.taskDetails) {
-      dom.taskDetails.innerHTML = "<p>Vælg et niveau for at se opgaverne.</p>";
-    }
   }
 
   function normalizeTasks(tasks) {
@@ -352,9 +325,7 @@
     if (!levels.length) {
       const message = document.createElement("div");
       message.className = "loading";
-      message.textContent = state.tasksError
-        ? `Kunne ikke hente opgaver: ${state.tasksError}`
-        : "Ingen opgaver fundet.";
+      message.textContent = "Ingen opgaver fundet.";
       dom.levelSelector.appendChild(message);
       return;
     }
@@ -449,6 +420,11 @@
     drawBoard();
     dom.feedback.textContent = task.objective ? `Mål: ${task.objective}` : "";
     dom.feedback.className = "feedback";
+    state.hintIndex = 0;
+    if (dom.hint) {
+      dom.hint.innerHTML = "";
+      dom.hint.className = "hint-output";
+    }
     state.logEntries = [];
     updateLog();
 
@@ -462,14 +438,48 @@
       dom.taskDetails.innerHTML = "<p>Vælg en opgave for at se detaljer.</p>";
       return;
     }
-    const tipsList = (task.tips || []).map(tip => `<li>${tip}</li>`).join("");
     dom.taskDetails.innerHTML = `
       <h2>Niveau ${task.level}: ${task.title}</h2>
       <p><strong>Mål:</strong> ${task.objective}</p>
       <p><strong>Læringsfokus:</strong> ${task.learningFocus}</p>
-      ${tipsList ? `<h3>Tips</h3><ul>${tipsList}</ul>` : ""}
+      <p class="task-meta">Brug "Vis hint"-knappen for gradvise hints til denne opgave.</p>
       <p class="task-meta">Hold <kbd>Shift</kbd> nede når du klikker på "Nulstil" for at gendanne startkoden.</p>
     `;
+  }
+
+  function showNextHint() {
+    if (!state.selectedTask || !dom.hint) {
+      return;
+    }
+
+    const tips = Array.isArray(state.selectedTask.tips) ? state.selectedTask.tips : [];
+    if (!tips.length) {
+      dom.hint.textContent = "Der er ingen hints til denne opgave.";
+      dom.hint.className = "hint-output visible";
+      return;
+    }
+
+    if (state.hintIndex >= tips.length) {
+      dom.hint.textContent = "Du har set alle hints for denne opgave.";
+      dom.hint.className = "hint-output visible";
+      return;
+    }
+
+    state.hintIndex += 1;
+
+    const list = document.createElement("ol");
+    list.className = "hint-list";
+
+    tips.slice(0, state.hintIndex).forEach((tipText, index) => {
+      const item = document.createElement("li");
+      item.textContent = tipText;
+      item.dataset.index = index;
+      list.appendChild(item);
+    });
+
+    dom.hint.innerHTML = "";
+    dom.hint.appendChild(list);
+    dom.hint.className = "hint-output visible";
   }
 
   function createBoardState(task) {

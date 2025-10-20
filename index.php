@@ -9,7 +9,7 @@
 <body>
     <header class="app-header">
         <h1>Skakbræt Simulator</h1>
-        <p>Udforsk robot-programmering gennem seks niveauer og atten AI-genererede udfordringer.</p>
+        <p>Udforsk robot-programmering gennem seks niveauer og faste opgaver med AI-baseret feedback.</p>
     </header>
     <main class="app-layout">
         <aside class="sidebar">
@@ -49,7 +49,9 @@
                     <div class="editor-actions">
                         <button id="run-btn">Kør program</button>
                         <button id="reset-btn" class="secondary">Nulstil</button>
+                        <button id="hint-btn" class="secondary">Vis hint</button>
                     </div>
+                    <div id="hint-output" class="hint-output"></div>
                     <div class="feedback" id="feedback"></div>
                     <div class="log" id="log"></div>
                 </div>

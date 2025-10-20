@@ -378,6 +378,7 @@ body {
 .editor-actions {
     display: flex;
     gap: 0.8rem;
+    flex-wrap: wrap;
 }
 
 .editor-actions button {
@@ -405,8 +406,41 @@ body {
     color: var(--primary);
 }
 
+#hint-btn {
+    background: #f5f7fb;
+    color: var(--primary);
+    border: 1px solid var(--border);
+}
+
 #reset-btn.secondary {
     border: 1px solid var(--border);
+}
+
+.hint-output {
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--primary);
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.hint-output.visible {
+    border-color: rgba(33, 60, 90, 0.2);
+    background: rgba(236, 240, 244, 0.6);
+}
+
+.hint-list {
+    margin: 0;
+    padding-left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.hint-list li {
+    line-height: 1.5;
 }
 
 .feedback {
