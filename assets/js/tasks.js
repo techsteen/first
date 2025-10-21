@@ -798,17 +798,17 @@
         templates: createTemplates(
           [
             "while (!blokering(\"frem\")) {",
-            "    frem();",
+            "    // Bevæg dig et skridt frem",
             "}",
-            "højre();",
-            "// Fortsæt mod målet"
+            "// Drej til højre for at finde omvejen",
+            "// Fortsæt mod målet med passende kommandoer"
           ],
           [
             "while (-not (blokering \"frem\")) {",
-            "    frem",
+            "    # Bevæg dig et skridt frem",
             "}",
-            "højre",
-            "# Fortsæt mod målet"
+            "# Drej til højre for at finde omvejen",
+            "# Fortsæt mod målet med passende kommandoer"
           ]
         ),
         tips: [
@@ -828,12 +828,12 @@
         templates: createTemplates(
           [
             "while (!blokering(\"mål\")) {",
-            "    frem();",
+            "    // Fortsæt bevægelsen skridt for skridt",
             "}"
           ],
           [
             "while (-not (blokering \"mål\")) {",
-            "    frem",
+            "    # Fortsæt bevægelsen skridt for skridt",
             "}"
           ]
         ),
@@ -859,7 +859,7 @@
             "        // Lav en omvej",
             "        break;",
             "    }",
-            "    frem();",
+            "    // Bevæg dig et skridt frem",
             "}"
           ],
           [
@@ -868,7 +868,7 @@
             "        # Lav en omvej",
             "        break",
             "    }",
-            "    frem",
+            "    # Bevæg dig et skridt frem",
             "}"
           ]
         ),
@@ -894,22 +894,22 @@
           [
             "for (int i = 0; i < 4; i++) {",
             "    if (blokering(\"frem\")) {",
-            "        venstre();",
+            "        // Beskriv en omvej til venstre",
             "    } else if (blokering(\"højre\")) {",
-            "        venstre();",
+            "        // Planlæg en alternativ drej",
             "    } else {",
-            "        frem();",
+            "        // Bevæg dig videre frem",
             "    }",
             "}"
           ],
           [
             "for ($i = 0; $i -lt 4; $i++) {",
             "    if (blokering \"frem\") {",
-            "        venstre",
+            "        # Beskriv en omvej til venstre",
             "    } elseif (blokering \"højre\") {",
-            "        venstre",
+            "        # Planlæg en alternativ drej",
             "    } else {",
-            "        frem",
+            "        # Bevæg dig videre frem",
             "    }",
             "}"
           ]
@@ -964,22 +964,18 @@
           [
             "while (!blokering(\"mål\")) {",
             "    if (blokering(\"frem\")) {",
-            "        venstre();",
-            "        frem();",
-            "        højre();",
+            "        // Indsæt en omvej udenom blokken",
             "    } else {",
-            "        frem();",
+            "        // Fortsæt direkte frem",
             "    }",
             "}"
           ],
           [
             "while (-not (blokering \"mål\")) {",
             "    if (blokering \"frem\") {",
-            "        venstre",
-            "        frem",
-            "        højre",
+            "        # Indsæt en omvej udenom blokken",
             "    } else {",
-            "        frem",
+            "        # Fortsæt direkte frem",
             "    }",
             "}"
           ]
@@ -1003,16 +999,14 @@
         templates: createTemplates(
           [
             "if (blokering(\"frem\")) {",
-            "    højre();",
-            "    // Gå til alternativ rute via checkpoint",
+            "    // Drej og gå til alternativ rute via checkpoint",
             "} else {",
             "    // Gå direkte mod målet",
             "}"
           ],
           [
             "if (blokering \"frem\") {",
-            "    højre",
-            "    # Gå til alternativ rute via checkpoint",
+            "    # Drej og gå til alternativ rute via checkpoint",
             "} else {",
             "    # Gå direkte mod målet",
             "}"
@@ -1041,17 +1035,17 @@
           [
             "while (!blokering(\"mål\")) {",
             "    if (blokering(\"frem\")) {",
-            "        venstre();",
+            "        // Tilføj en omvej her",
             "    }",
-            "    frem();",
+            "    // Flyt videre mod målet",
             "}"
           ],
           [
             "while (-not (blokering \"mål\")) {",
             "    if (blokering \"frem\") {",
-            "        venstre",
+            "        # Tilføj en omvej her",
             "    }",
-            "    frem",
+            "    # Flyt videre mod målet",
             "}"
           ]
         ),
@@ -1195,17 +1189,17 @@
           [
             "while (!blokering(\"mål\")) {",
             "    if (blokering(\"frem\")) {",
-            "        højre();",
+            "        // Planlæg en omvej",
             "    }",
-            "    frem();",
+            "    // Bevæg dig videre mod målet",
             "}"
           ],
           [
             "while (-not (blokering \"mål\")) {",
             "    if (blokering \"frem\") {",
-            "        højre",
+            "        # Planlæg en omvej",
             "    }",
-            "    frem",
+            "    # Bevæg dig videre mod målet",
             "}"
           ]
         ),
@@ -1248,28 +1242,28 @@
         templates: createTemplates(
           [
             "for (int i = 0; i < 7; i++) {",
-            "    frem();",
+            "    // Bevæg dig ét felt ad gangen",
             "}",
-            "venstre();",
+            "// Drej til næste side af ruten",
             "for (int i = 0; i < 7; i++) {",
-            "    frem();",
+            "    // Gentag bevægelsen på den nye strækning",
             "}",
-            "venstre();",
+            "// Drej igen før sidste strækning",
             "for (int i = 0; i < 7; i++) {",
-            "    frem();",
+            "    // Afslut den sidste side",
             "}"
           ],
           [
             "for ($i = 0; $i -lt 7; $i++) {",
-            "    frem",
+            "    # Bevæg dig ét felt ad gangen",
             "}",
-            "venstre",
+            "# Drej til næste side af ruten",
             "for ($i = 0; $i -lt 7; $i++) {",
-            "    frem",
+            "    # Gentag bevægelsen på den nye strækning",
             "}",
-            "venstre",
+            "# Drej igen før sidste strækning",
             "for ($i = 0; $i -lt 7; $i++) {",
-            "    frem",
+            "    # Afslut den sidste side",
             "}"
           ]
         ),
@@ -1318,20 +1312,20 @@
         templates: createTemplates(
           [
             "for (int i = 0; i < 3; i++) {",
-            "    frem();",
+            "    // Gå gennem tunnelen trin for trin",
             "}",
             "// Vend om og gå tilbage",
             "for (int i = 0; i < 3; i++) {",
-            "    frem();",
+            "    // Gå tilbage til startpositionen",
             "}"
           ],
           [
             "for ($i = 0; $i -lt 3; $i++) {",
-            "    frem",
+            "    # Gå gennem tunnelen trin for trin",
             "}",
             "# Vend om og gå tilbage",
             "for ($i = 0; $i -lt 3; $i++) {",
-            "    frem",
+            "    # Gå tilbage til startpositionen",
             "}"
           ]
         ),
@@ -1383,22 +1377,18 @@
           [
             "while (!blokering(\"mål\")) {",
             "    if (blokering(\"frem\")) {",
-            "        venstre();",
-            "        frem();",
-            "        højre();",
+            "        // Beskriv hvordan du laver en omvej",
             "    } else {",
-            "        frem();",
+            "        // Fortsæt ligeud",
             "    }",
             "}"
           ],
           [
             "while (-not (blokering \"mål\")) {",
             "    if (blokering \"frem\") {",
-            "        venstre",
-            "        frem",
-            "        højre",
+            "        # Beskriv hvordan du laver en omvej",
             "    } else {",
-            "        frem",
+            "        # Fortsæt ligeud",
             "    }",
             "}"
           ]
@@ -1452,25 +1442,23 @@
           [
             "if (!blokering(\"frem\")) {",
             "    while (!blokering(\"mål\")) {",
-            "        frem();",
+            "        // Bevæg dig et skridt ad gangen",
             "    }",
             "} else {",
-            "    højre();",
-            "    frem();",
-            "    venstre();",
-            "    // Fortsæt i den anden korridor",
+            "    // Drej ind i den anden korridor",
+            "    // Flyt dig frem til du kan dreje tilbage",
+            "    // Fortsæt i den alternative korridor",
             "}"
           ],
           [
             "if (-not (blokering \"frem\")) {",
             "    while (-not (blokering \"mål\")) {",
-            "        frem",
+            "        # Bevæg dig et skridt ad gangen",
             "    }",
             "} else {",
-            "    højre",
-            "    frem",
-            "    venstre",
-            "    # Fortsæt i den anden korridor",
+            "    # Drej ind i den anden korridor",
+            "    # Flyt dig frem til du kan dreje tilbage",
+            "    # Fortsæt i den alternative korridor",
             "}"
           ]
         ),
@@ -1499,19 +1487,19 @@
           [
             "for (int i = 0; i < 5; i++) {",
             "    if (blokering(\"frem\")) {",
-            "        venstre();",
+            "        // Vælg en alternativ retning",
             "    }",
-            "    frem();",
-            "    højre();",
+            "    // Flyt dig gennem gangen",
+            "    // Ret dig ind til næste gentagelse",
             "}"
           ],
           [
             "for ($i = 0; $i -lt 5; $i++) {",
             "    if (blokering \"frem\") {",
-            "        venstre",
+            "        # Vælg en alternativ retning",
             "    }",
-            "    frem",
-            "    højre",
+            "    # Flyt dig gennem gangen",
+            "    # Ret dig ind til næste gentagelse",
             "}"
           ]
         ),
@@ -1566,24 +1554,24 @@
             "while (!blokering(\"mål\")) {",
             "    if (blokering(\"frem\")) {",
             "        if (!blokering(\"venstre\")) {",
-            "            venstre();",
+            "            // Beskriv hvordan du bruger venstre()-omvejen",
             "        } else {",
-            "            højre();",
+            "            // Ellers forklar højre()-omvejen",
             "        }",
             "    }",
-            "    frem();",
+            "    // Bevæg dig videre mod målet",
             "}"
           ],
           [
             "while (-not (blokering \"mål\")) {",
             "    if (blokering \"frem\") {",
             "        if (-not (blokering \"venstre\")) {",
-            "            venstre",
+            "            # Beskriv hvordan du bruger venstre()-omvejen",
             "        } else {",
-            "            højre",
+            "            # Ellers forklar højre()-omvejen",
             "        }",
             "    }",
-            "    frem",
+            "    # Bevæg dig videre mod målet",
             "}"
           ]
         ),
@@ -1612,15 +1600,14 @@
             "while (!blokering(\"mål\")) {",
             "    if (blokering(\"frem\")) {",
             "        if (!blokering(\"venstre\")) {",
-            "            venstre();",
+            "            // Beskriv venstre()-strategien",
             "        } else if (!blokering(\"højre\")) {",
-            "            højre();",
+            "            // Beskriv højre()-strategien",
             "        } else {",
-            "            venstre();",
-            "            venstre();",
+            "            // Forklar hvordan du vender om",
             "        }",
             "    } else {",
-            "        frem();",
+            "        // Fortsæt fremad",
             "    }",
             "}"
           ],
@@ -1628,15 +1615,14 @@
             "while (-not (blokering \"mål\")) {",
             "    if (blokering \"frem\") {",
             "        if (-not (blokering \"venstre\")) {",
-            "            venstre",
+            "            # Beskriv venstre()-strategien",
             "        } elseif (-not (blokering \"højre\")) {",
-            "            højre",
+            "            # Beskriv højre()-strategien",
             "        } else {",
-            "            venstre",
-            "            venstre",
+            "            # Forklar hvordan du vender om",
             "        }",
             "    } else {",
-            "        frem",
+            "        # Fortsæt fremad",
             "    }",
             "}"
           ]
@@ -1667,9 +1653,9 @@
             "    if (!besogt) {",
             "        // Naviger mod checkpointet og sæt besogt = 1 når du rammer det",
             "    } else if (!blokering(\"frem\")) {",
-            "        frem();",
+            "        // Fortsæt frem mod målet",
             "    } else {",
-            "        højre();",
+            "        // Vælg en ny retning, fx højre()",
             "    }",
             "}"
           ],
@@ -1679,9 +1665,9 @@
             "    if (-not $besogt) {",
             "        # Naviger mod checkpointet og sæt $besogt = $true når du rammer det",
             "    } elseif (-not (blokering \"frem\")) {",
-            "        frem",
+            "        # Fortsæt frem mod målet",
             "    } else {",
-            "        højre",
+            "        # Vælg en ny retning, fx højre",
             "    }",
             "}"
           ]
@@ -1709,28 +1695,26 @@
           [
             "while (!blokering(\"mål\")) {",
             "    if (!blokering(\"frem\")) {",
-            "        frem();",
+            "        // Gå frem når der er fri bane",
             "    } else if (!blokering(\"venstre\")) {",
-            "        venstre();",
+            "        // Drej til venstre og fortsæt",
             "    } else if (!blokering(\"højre\")) {",
-            "        højre();",
+            "        // Drej til højre og fortsæt",
             "    } else {",
-            "        venstre();",
-            "        venstre();",
+            "        // Beskriv hvordan du vender om",
             "    }",
             "}"
           ],
           [
             "while (-not (blokering \"mål\")) {",
             "    if (-not (blokering \"frem\")) {",
-            "        frem",
+            "        # Gå frem når der er fri bane",
             "    } elseif (-not (blokering \"venstre\")) {",
-            "        venstre",
+            "        # Drej til venstre og fortsæt",
             "    } elseif (-not (blokering \"højre\")) {",
-            "        højre",
+            "        # Drej til højre og fortsæt",
             "    } else {",
-            "        venstre",
-            "        venstre",
+            "        # Beskriv hvordan du vender om",
             "    }",
             "}"
           ]
