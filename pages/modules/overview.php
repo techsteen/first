@@ -2,12 +2,13 @@
 $modules = require __DIR__ . '/modules_data.php';
 ?>
 <article class="section-content">
-    <h2>Modulpakker &amp; læringsaktiviteter</h2>
+    <h2>Trin-for-trin AD-DS forløb</h2>
     <p>
-        Nedenfor finder du de fire centrale moduler i forløbet. Hver pakke kombinerer teori, simuleringer
-        og praksisopgaver, så eleverne skiftevis lærer, prøver og anvender deres AD-DS kompetencer i
-        realistiske scenarier. Brug checklisterne til at holde styr på progressionen, og klik på
-        <em>Detaljeret plan</em> for at se alle aktiviteterne.
+        Forløbet er opdelt i tre overskuelige trin, der hver kombinerer korte oplæg, guidede simuleringer
+        og praksisnære opgaver. Eleverne arbejder sammen med underviseren i klasselabbet og kan hele tiden
+        markere elementer for at få hjælp fra ChatGPT-integrationens kontekstforklaringer. Brug
+        checklisterne til at holde styr på progressionen, og fold <em>Detaljeret plan</em> ud for at se
+        alle aktiviteterne.
     </p>
     <div class="module-grid">
         <?php foreach ($modules as $module): ?>

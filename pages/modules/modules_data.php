@@ -1,409 +1,292 @@
 <?php
 return [
     [
-        'id' => 'intro-ad-ds',
-        'title' => 'Modul 1 · Active Directory fundament',
-        'duration' => '3 lektioner',
-        'summary' => 'Eleverne får styr på AD-DS begreber, roller og værktøjer gennem korte oplæg, guidede simuleringer og simple reallife-øvelser.',
+        'id' => 'grundlag',
+        'title' => 'Trin 1 · Grundlæggende AD-DS',
+        'duration' => '2 lektioner',
+        'summary' => 'Eleverne følger en fælles introduktion og opbygger deres første domænecontroller i et kontrolleret klasselab.',
         'competencies' => [
             'Forklare hvad et domæne, en domain controller og et forest er.',
-            'Navigere i AD Users and Computers og finde centrale administrationspunkter.',
-            'Importere brugere via CSV og anvende standardiserede navngivningspolitikker.',
+            'Installere AD-DS rollen og promovere en server til domain controller.',
+            'Bruge Active Directory Users and Computers til at oprette og finde brugere.',
         ],
         'activities' => [
             'learn' => [
                 [
-                    'text' => 'Se intro-screencast: "Hvorfor AD-DS?" og udfyld begrebsnoter.',
-                    'assist' => 'Giv en forklaring på hvorfor organisationer bruger Active Directory Domain Services.'
+                    'text' => 'Fælles gennemgang af AD-DS begreber på tavlen med eksempelorganisationen "SkoleLab".',
+                    'assist' => 'Genfortæl forskellen på lokale brugere og domænebrugere med udgangspunkt i SkoleLab.'
                 ],
                 [
-                    'text' => 'Mini-quiz i klassen (Mentimeter/Kahoot) med 10 kernespørgsmål til AD-DS.',
-                    'assist' => 'Forklar de vigtigste forskelle på lokale brugere og domænebrugere.'
+                    'text' => 'Demonstration: underviseren viser installation af AD-DS rollen i Server Manager.',
+                    'assist' => 'Beskriv de vigtigste trin underviseren følger i Server Manager.'
                 ],
                 [
-                    'text' => 'Parøvelse: tegn AD-komponenter på whiteboard ud fra et kundescenarie.',
-                    'assist' => 'Hjælp med at beskrive rollerne: domain controller, global catalog og DNS-integration.'
+                    'text' => 'Eleverne udfylder et kort begrebskort med nøgleord og forklaringer.',
+                    'assist' => 'Giv eksempler på tre nøglebegreber og hvordan de hænger sammen.'
                 ],
             ],
             'simulate' => [
                 [
-                    'title' => 'SimLab: AD Users and Computers orienteringsløb',
-                    'description' => 'Eleverne bruger en sandbox (browser-baseret Remote Lab) til at løse konkrete mikroopgaver i ADUC.',
+                    'title' => 'Guidet simulation: Installer AD-DS',
+                    'description' => 'Alle arbejder i den forberedte Windows Server VM og følger den viste opskrift på projektoren trin for trin.',
                     'steps' => [
-                        'Log på sandbox med elevkontoen og åbn "Active Directory Users and Computers".',
-                        'Find OU "GF2 Students" og identificer brugeren fra intro-scenariet.',
-                        'Højreklik og undersøg fanerne for at finde hvor man nulstiller adgangskoder.',
-                        'Importer en CSV med 5 demo-brugere og verificer at de lander i korrekt OU.',
+                        'Åbn Server Manager og vælg "Add roles and features".',
+                        'Vælg "Role-based or feature-based installation" og markér serveren "GF2-DC".',
+                        'Tilføj rollen "Active Directory Domain Services" og accepter alle forudsætninger.',
+                        'Efter genstart: vælg flagikonet og promover serveren til domain controller for "skolelab.local".',
+                        'Gennemfør guiden og log på igen som domæneadministrator.',
                     ],
                     'checkpoints' => [
-                        'Screenshot af OU-strukturen efter import.',
-                        'Noter hvilket værktøj der bruges til masseimport.',
+                        'Skærmbillede der viser succesfuld promotion til domain controller.',
+                        'Notat i logbogen om hvilke legitimationsoplysninger der blev brugt.',
                     ],
-                    'assist' => 'Forklar hvordan man importerer brugere fra CSV i AD Users and Computers.'
+                    'assist' => 'Forklar hvorfor serveren skal genstartes efter installationen.'
                 ],
                 [
-                    'title' => 'Quick sim: Delegér rettigheder',
-                    'description' => 'Vis hvordan man delegerer password reset til helpdesk OU.',
+                    'title' => 'Mini-simulation: Opret brugere',
+                    'description' => 'Eleverne opretter to brugerkonti og en sikkerhedsgruppe i ADUC.',
                     'steps' => [
-                        'Åbn Delegation of Control Wizard på OU "Support".',
-                        'Vælg gruppen "Helpdesk Trainees" og tildel dem muligheden "Reset user passwords".',
-                        'Test delegationen på en testbruger.',
+                        'Åbn "Active Directory Users and Computers" og find OU "GF2".',
+                        'Opret en ny bruger til din sidemakker og sæt en midlertidig adgangskode.',
+                        'Opret en gruppe "GF2-Workshop" og tilføj begge brugere.',
+                        'Kontroller at brugerne ligger i den rigtige OU.',
                     ],
                     'checkpoints' => [
-                        'Liste over tildelte rettigheder til Helpdesk Trainees.',
+                        'Lille logbogsnote med navne på brugerne og gruppen.',
                     ],
-                    'assist' => 'Hvad sker der bag kulisserne når man bruger Delegation of Control Wizard?'
+                    'assist' => 'Beskriv hvordan man ændrer adgangskodepolitikken for en bruger.'
                 ],
             ],
             'real_life' => [
                 [
-                    'title' => 'Opsætning i fysisk/virtuel lab',
+                    'title' => 'Hands-on: Dokumentér din første AD-DS opsætning',
                     'tasks' => [
-                        'Installer AD-DS rollen på en Windows Server VM (brug fælles skabelon).',
-                        'Promover serveren til domain controller for domænet skolens-lab.local.',
-                        'Opret sikkerhedsgruppen "GF2-Elever" og tilføj klassens konti.',
+                        'Udfyld skabelonen "AD-DS begrebsark" med dine egne forklaringer.',
+                        'Optag et 1 minuts skærmklip hvor du viser ADUC og forklarer OU-strukturen.',
                     ],
-                    'assist' => 'Beskriv de trin der skal til for at promovere en server til domain controller med Server Manager.'
-                ],
-                [
-                    'title' => 'Refleksionspitch',
-                    'tasks' => [
-                        'Forbered en 2-minutters stand-up hvor holdet forklarer hvornår AD-DS giver værdi.',
-                        'Brug tavle eller Miro-board til at illustrere datalogistikken.',
-                    ],
-                    'assist' => 'Hjælp med at forklare hvordan central brugeradministration øger sikkerheden.'
+                    'assist' => 'Giv forslag til hvordan man kan forklare OU-strukturen til en klassekammerat.'
                 ],
             ],
             'reflection' => [
-                'Hvilke nye begreber kan du forklare for en klassekammerat i dag?',
-                'Hvilke værktøjer i ADUC fandt du mest intuitive, og hvorfor?',
+                'Hvilke trin i installationen var mest udfordrende, og hvordan løste du dem?',
+                'Hvordan kan du se forskel på en lokal og en domænebruger i praksis?',
             ],
         ],
         'checkpoints' => [
-            [
-                'id' => 'intro-video',
-                'label' => 'Har set introvideoen og udfyldt noter.'
-            ],
-            [
-                'id' => 'sim-import',
-                'label' => 'Har gennemført CSV-import i sandbox.'
-            ],
-            [
-                'id' => 'dc-setup',
-                'label' => 'Har promoveret domain controller i lab-miljøet.'
-            ],
+            ['id' => 'role-install', 'label' => 'AD-DS rollen er installeret.'],
+            ['id' => 'dc-promote', 'label' => 'Serveren er promoveret til domain controller.'],
+            ['id' => 'users-created', 'label' => 'Brugere og grupper er oprettet i OU GF2.'],
         ],
         'resources' => [
-            [
-                'label' => 'Lærerens modulplan',
-                'path' => 'resources/teacher-guides/modulplan-intro-ad-ds.md'
-            ],
-            [
-                'label' => 'Elev: AD-DS begrebsark',
-                'path' => 'resources/student-materials/ad-ds-begrebsark.md'
-            ],
+            ['label' => 'Begrebsark', 'path' => 'resources/student-materials/ad-ds-begrebsark.md'],
+            ['label' => 'Lærernotat · Grundlæggende AD-DS', 'path' => 'resources/teacher-guides/modulplan-intro-ad-ds.md'],
         ],
         'rubric' => [
             'criteria' => [
                 [
-                    'name' => 'Begrebsforståelse',
-                    'beginner' => 'Kan gengive enkelte definitioner med støtte.',
-                    'developing' => 'Forklarer sammenhængen mellem domæne, OU og bruger.',
-                    'proficient' => 'Kan selvstændigt koble begreberne til konkrete scenarier.'
+                    'name' => 'Forståelse af begreber',
+                    'beginner' => 'Kan nævne enkelte begreber når der spørges direkte.',
+                    'developing' => 'Kan forklare sammenhængen mellem domæne, OU og bruger.',
+                    'proficient' => 'Kan selvstændigt bruge begreberne til at forklare en opsætning.'
                 ],
                 [
-                    'name' => 'Teknisk udførsel',
-                    'beginner' => 'Kan følge en guide trin for trin.',
-                    'developing' => 'Kan løse standardopgaver og rette simple fejl.',
-                    'proficient' => 'Kan selvstændigt konfigurere og dokumentere AD-DS opsætning.'
+                    'name' => 'Teknisk gennemførsel',
+                    'beginner' => 'Installerer rollen med vejledning.',
+                    'developing' => 'Fuldender installationen og promoveringen med minimale hints.',
+                    'proficient' => 'Fejlretter selv små problemer og dokumenterer løsningen.'
                 ],
             ],
         ],
     ],
     [
-        'id' => 'ou-design',
-        'title' => 'Modul 2 · Design af OU-strukturer',
-        'duration' => '4 lektioner',
-        'summary' => 'Eleverne lærer at analysere organisationsbehov, strukturere OUs og forberede rettigheder til forskellige teams.',
+        'id' => 'ou-struktur',
+        'title' => 'Trin 2 · Organisér med OU',
+        'duration' => '3 lektioner',
+        'summary' => 'Eleverne designer en simpel OU-struktur og tester delegation i et kontrolleret scenarie.',
         'competencies' => [
-            'Analysere et virksomhedsscenarie og omsætte det til en OU-struktur.',
-            'Anvende navngivningsstandarder og administrative delegeringer.',
-            'Dokumentere designvalg i en standardiseret skabelon.',
+            'Analysere et scenarie og foreslå en logisk OU-struktur.',
+            'Implementere og navngive OUs efter aftalte standarder.',
+            'Delegera rettigheder til en helpdesk-gruppe.',
         ],
         'activities' => [
             'learn' => [
                 [
-                    'text' => 'Casegennemgang: "NordTech" (fiktiv virksomhed) og deres it-behov.',
-                    'assist' => 'Opsummer hovedkravene fra NordTech-casen.'
+                    'text' => 'Fælles case: "Makerspace" – kort analyse af teams, lokationer og fælles ressourcer.',
+                    'assist' => 'Opsummer hvilke afdelinger Makerspace har og hvilke krav de stiller.'
                 ],
                 [
-                    'text' => 'Mini-lecture: OU design patterns (geografisk, funktionel, hybrid).',
-                    'assist' => 'Forklar forskellen på geografisk og funktionel OU-struktur.'
+                    'text' => 'Underviseren tegner et forslag til OU-struktur på tavlen og forklarer navngivningskonventionerne.',
+                    'assist' => 'Forklar hvorfor navne som "MS-Staff" og "MS-Students" er nemme at arbejde med.'
                 ],
                 [
-                    'text' => 'Peer review: analyser hinandens udkast i par og giv feed-forward.',
-                    'assist' => 'Hvordan kan man give konstruktiv feedback på en OU-struktur?'
+                    'text' => 'Mini-workshop: eleverne skitserer deres egen OU-struktur på papir og får feedback.',
+                    'assist' => 'Giv to spørgsmål der kan hjælpe med at forbedre en OU-skitse.'
                 ],
             ],
             'simulate' => [
                 [
-                    'title' => 'SimLab: Træk-og-slip OU designer',
-                    'description' => 'Drag-and-drop interface (Simflow) hvor eleverne placerer afdelinger og roller i et OU-træ.',
+                    'title' => 'Simulation: Byg OU-træet',
+                    'description' => 'Eleverne følger den fælles gennemgang på projektoren og genskaber strukturen på deres server.',
                     'steps' => [
-                        'Læs kravspecifikationen fra NordTech og marker tværgående teams.',
-                        'Træk afdelinger ind i passende parent OUs og navngiv dem korrekt.',
-                        'Angiv hvilke OUs der skal have GPO-link for sikkerhedspolitik.',
-                        'Eksporter designet som JSON/XML og upload i LMS.',
+                        'Opret roden "MS" under domænet og tilføj underenheder for "Administration", "Workshops" og "Support".',
+                        'Tilføj underenheder for "3D-Print" og "Robotteknik" under "Workshops".',
+                        'Flyt eksisterende brugere ind i passende OUs.',
+                        'Opret grupper til "Instruktører" og "Elever" i de relevante OUs.',
                     ],
                     'checkpoints' => [
-                        'Screenshot af endelig OU-struktur.',
-                        'Kort video (60 sek.) hvor eleven forklarer sit design.',
+                        'Skærmbillede af OU-strukturen efter flytning af brugere.',
                     ],
-                    'assist' => 'Forklar hvordan man sikrer at et OU-design understøtter fremtidig vækst.'
+                    'assist' => 'Hjælp med at forklare forskellen på at flytte og kopiere en bruger i ADUC.'
+                ],
+                [
+                    'title' => 'Simulation: Delegér rettigheder',
+                    'description' => 'Øvelsen viser hvordan helpdesk får lov til at nulstille adgangskoder i en specifik OU.',
+                    'steps' => [
+                        'Opret gruppen "MS-Helpdesk" i OU "Support".',
+                        'Start Delegation of Control Wizard på OU "MS-Students".',
+                        'Tildel rettigheden "Reset user passwords" til gruppen.',
+                        'Test med en demobruker om delegationen virker.',
+                    ],
+                    'checkpoints' => [
+                        'Notér i logbogen hvem der nu må nulstille adgangskoder.',
+                    ],
+                    'assist' => 'Forklar hvad der sker i baggrunden når man fuldfører delegationen.'
                 ],
             ],
             'real_life' => [
                 [
-                    'title' => 'Workshop: OU implementering',
+                    'title' => 'Hands-on: Dokumentér designet',
                     'tasks' => [
-                        'Implementer dit design på skolens lab-domain controller.',
-                        'Delegér relevante rettigheder til team leads.',
-                        'Udfyld designlog med begrundelser for valg.',
+                        'Udfyld "OU designlog" med begrundelser for dine valg.',
+                        'Optag et kort lydklip hvor du guider en ny elev igennem strukturen.',
                     ],
-                    'assist' => 'Hvilke overvejelser skal man gøre sig, før man delegerer rettigheder til en OU?'
-                ],
-                [
-                    'title' => 'Kundemøde-rollespil',
-                    'tasks' => [
-                        'Elevgruppe præsenterer designet for "kunden" (underviser).',
-                        'Besvar spørgsmål om compliance, backup og fremtidig skalering.',
-                    ],
-                    'assist' => 'Hvordan argumenterer man for et OU-design overfor en ikke-teknisk kunde?'
+                    'assist' => 'Foreslå hvordan man begrunder placeringen af en afdeling i en OU.'
                 ],
             ],
             'reflection' => [
-                'Hvordan understøtter din struktur både drift og sikkerhed?',
-                'Hvilke dele af casen var sværest at omsætte til OU-design, og hvorfor?',
+                'Hvordan sikrer din struktur at nye brugere hurtigt kan placeres korrekt?',
+                'Hvilke opgaver vil du overlade til helpdesk, og hvorfor?',
             ],
         ],
         'checkpoints' => [
-            ['id' => 'case-analyse', 'label' => 'Caseanalyse udfyldt.'],
-            ['id' => 'sim-designer', 'label' => 'OU-design sim gennemført.'],
-            ['id' => 'implementering', 'label' => 'Design implementeret i lab.'],
+            ['id' => 'ou-created', 'label' => 'OU-strukturen er oprettet.'],
+            ['id' => 'users-moved', 'label' => 'Brugere er flyttet til de rigtige OUs.'],
+            ['id' => 'delegation', 'label' => 'Helpdesk-gruppen kan nulstille adgangskoder.'],
         ],
         'resources' => [
-            ['label' => 'Skabelon: OU designlog', 'path' => 'resources/student-materials/ou-designlog.md'],
-            ['label' => 'Casebeskrivelse: NordTech', 'path' => 'resources/teacher-guides/case-nordtech.md'],
+            ['label' => 'OU designlog', 'path' => 'resources/student-materials/ou-designlog.md'],
+            ['label' => 'Casebeskrivelse', 'path' => 'resources/teacher-guides/case-nordtech.md'],
         ],
         'rubric' => [
             'criteria' => [
                 [
-                    'name' => 'Analyse',
-                    'beginner' => 'Identificerer enkelte organisatoriske krav.',
-                    'developing' => 'Kortlægger roller og behov systematisk.',
-                    'proficient' => 'Omsætter komplekse krav til et skalerbart OU-design.'
+                    'name' => 'Struktur og navngivning',
+                    'beginner' => 'Strukturen er ujævn og følger ikke aftalte navne.',
+                    'developing' => 'De fleste elementer følger navngivningsreglerne.',
+                    'proficient' => 'Hele strukturen er konsekvent og let at forstå for andre.',
                 ],
                 [
-                    'name' => 'Dokumentation',
-                    'beginner' => 'Leverer kortfattet liste over OUs.',
-                    'developing' => 'Udfylder designlog med begrundelser.',
-                    'proficient' => 'Producerer komplet dokumentation inkl. diagram og rettighedsplan.'
+                    'name' => 'Delegation',
+                    'beginner' => 'Har brug for støtte til at køre guiden.',
+                    'developing' => 'Gennemfører guiden og kan forklare hvad der er sket.',
+                    'proficient' => 'Tilpasser delegationen til nye behov og dokumenterer ændringer.',
                 ],
             ],
         ],
     ],
     [
-        'id' => 'gpo-basics',
-        'title' => 'Modul 3 · GPO grundlæggende politikker',
-        'duration' => '4 lektioner',
-        'summary' => 'Eleverne designer, tester og dokumenterer politikker til login, sikkerhed og brugeroplevelse.',
+        'id' => 'gpo',
+        'title' => 'Trin 3 · Group Policy i praksis',
+        'duration' => '3 lektioner',
+        'summary' => 'Eleverne skaber og tester politikker, der sikrer ens konfiguration på tværs af organisationen.',
         'competencies' => [
-            'Oprette og linke Group Policy Objects til relevante OUs.',
-            'Teste politikker i et kontrolleret miljø før udrulning.',
-            'Dokumentere ændringer og kommunikere konsekvenser til brugere.',
+            'Oprette og linke GPO\'er til relevante OUs.',
+            'Teste effekten af politikker på en klientmaskine.',
+            'Dokumentere ændringer og planlægge opfølgning.',
         ],
         'activities' => [
             'learn' => [
                 [
-                    'text' => 'Teorioplæg: GPO processing order og inheritance.',
-                    'assist' => 'Forklar i hvilken rækkefølge GPO\'er anvendes, og hvad loopback processing er.'
+                    'text' => 'Introduktion til Group Policy: underviseren viser hvordan en GPO bygges op.',
+                    'assist' => 'Forklar forskellen på Computer Configuration og User Configuration i en GPO.'
                 ],
                 [
-                    'text' => 'Live-demo: Opret standard logon-banner og password policy.',
-                    'assist' => 'Hjælp med at beskrive hvordan man laver et logon-banner i en GPO.'
+                    'text' => 'Eleverne undersøger eksisterende politikker i "Default Domain Policy" og noterer standardindstillinger.',
+                    'assist' => 'Hvilke indstillinger bør man være forsigtig med at ændre i Default Domain Policy?'
                 ],
                 [
-                    'text' => 'Fejlsøgningsgalleri: gennemgå skærmbilleder fra almindelige fejl.',
-                    'assist' => 'Hvordan bruger man gpresult til at fejlfinde?'
+                    'text' => 'Sammenligning: hvad er fordelene ved at bruge GPO fremfor manuelle ændringer?',
+                    'assist' => 'List tre fordele ved at bruge GPO i en skoleorganisation.'
                 ],
             ],
             'simulate' => [
                 [
-                    'title' => 'SimLab: Politikker i sikker sandkasse',
-                    'description' => 'Virtuelt miljø hvor eleverne kan teste politikker uden risiko.',
+                    'title' => 'Simulation: Skab en sikkerheds-GPO',
+                    'description' => 'Eleverne laver en politik der låser skærmen efter 10 minutters inaktivitet.',
                     'steps' => [
-                        'Opret en GPO "GF2-Login" og tilføj logon-banneret fra elevmaterialet.',
-                        'Konfigurer passwordkrav: minimum 10 tegn, kompleksitet aktiveret.',
-                        'Brug Group Policy Modeling til at teste en bruger fra OU "Support".',
-                        'Dokumenter resultatet i GPO ændringsloggen.',
+                        'Åbn Group Policy Management og opret en ny GPO ved navn "MS-Sikkerhed".',
+                        'Redigér politikken og gå til "Computer Configuration → Policies → Administrative Templates → Control Panel".',
+                        'Aktiver politikken "Password protect the screen saver" og sæt ventetid til 10 minutter.',
+                        'Link politikken til OU "MS-Students".',
+                        'Kør "gpupdate /force" på en testklient og observer resultatet.',
                     ],
                     'checkpoints' => [
-                        'Eksporter GPO-rapport som HTML og vedhæft i LMS.',
-                        'Tilføj refleksion i loggen: Hvilke brugere påvirkes?'
+                        'Notér tidspunktet hvor skærmen låser på testklienten.',
+                        'Gem et screenshot af GPO indstillingerne.',
                     ],
-                    'assist' => 'Beskriv hvordan Group Policy Modeling kan bruges før udrulning.'
+                    'assist' => 'Hjælp med at forstå hvad gpupdate /force gør.'
                 ],
                 [
-                    'title' => 'Quick sim: Tidsstyret GPO',
-                    'description' => 'Sæt en politik til kun at gælde i eksamensugen.',
+                    'title' => 'Simulation: Brugerspecifik GPO',
+                    'description' => 'Opsæt en politik der tildeler et fælles skrivebordstapet til elever.',
                     'steps' => [
-                        'Aktivér WMI filter for tidsperiode.',
-                        'Link filter til en midlertidig OU.',
+                        'Redigér samme GPO og gå til "User Configuration → Policies → Administrative Templates → Desktop → Desktop".',
+                        'Aktiver "Desktop Wallpaper" og angiv stien \\\\GF2-DC\\DelteFiler\\MS\\tapet.jpg.',
+                        'Log på som testbruger og kontroller tapetet.',
                     ],
                     'checkpoints' => [
-                        'Log tid og dato for aktivering.',
+                        'Foto af skrivebordet på testbrugeren.',
                     ],
-                    'assist' => 'Hvordan bruges WMI filters til at styre hvornår en GPO aktiveres?'
+                    'assist' => 'Forklar hvorfor det er en god idé at gemme tapetet på en delt mappe.'
                 ],
             ],
             'real_life' => [
                 [
-                    'title' => 'GPO change management',
+                    'title' => 'Hands-on: Overvågning og feedback',
                     'tasks' => [
-                        'Udfyld change request skabelon og få godkendelse.',
-                        'Implementer politikken i skolens lab og dokumenter tests.',
-                        'Præsentér konsekvensanalyse for læreren.',
+                        'Udfyld "GPO ændringslog" med dato, politik og forventet effekt.',
+                        'Planlæg et kort stand-up møde hvor holdet tjekker om politikkerne virker som planlagt.',
                     ],
-                    'assist' => 'Hvilke elementer skal en change request til en GPO indeholde?'
-                ],
-                [
-                    'title' => 'Elevsupport scenarie',
-                    'tasks' => [
-                        'Rollespil hvor elev A er helpdesk og elev B er bruger der rammes af politikken.',
-                        'Udarbejd FAQ-artikel med screenshot og instruktioner.',
-                    ],
-                    'assist' => 'Hjælp med at formulere et elevvenligt svar til en bruger der spørger om logon-banneret.'
+                    'assist' => 'Giv ideer til spørgsmål man kan stille i stand-up mødet.'
                 ],
             ],
             'reflection' => [
-                'Hvad gør du for at undgå at en GPO skaber nedetid?',
-                'Hvordan kan man kommunikere ændringer så brugerne føler sig trygge?',
+                'Hvordan kan du se at en politik er blevet anvendt på en klient?',
+                'Hvilke fordele giver central styring af indstillinger for skolens it-team?',
             ],
         ],
         'checkpoints' => [
-            ['id' => 'gpo-modeling', 'label' => 'Har kørt Group Policy Modeling.'],
-            ['id' => 'change-log', 'label' => 'Har dokumenteret change request.'],
-            ['id' => 'faq', 'label' => 'Har skrevet FAQ-artikel.'],
+            ['id' => 'gpo-created', 'label' => 'Sikkerheds-GPO er oprettet og linket.'],
+            ['id' => 'gpo-tested', 'label' => 'Politikken er testet på en klient.'],
+            ['id' => 'log-updated', 'label' => 'GPO ændringslog er udfyldt.'],
         ],
         'resources' => [
-            ['label' => 'Skabelon: GPO ændringslog', 'path' => 'resources/student-materials/gpo-aendringslog.md'],
-            ['label' => 'Lærer: GPO demo manus', 'path' => 'resources/teacher-guides/gpo-demo-manus.md'],
+            ['label' => 'GPO ændringslog', 'path' => 'resources/student-materials/gpo-aendringslog.md'],
+            ['label' => 'Lærernotat · GPO demonstration', 'path' => 'resources/teacher-guides/gpo-demo-manus.md'],
         ],
         'rubric' => [
             'criteria' => [
                 [
                     'name' => 'Politikdesign',
-                    'beginner' => 'Genbruger eksisterende skabeloner med hjælp.',
-                    'developing' => 'Tilpasser politikker til casens behov.',
-                    'proficient' => 'Designer og begrunder politikker, der balancerer sikkerhed og brugervenlighed.'
+                    'beginner' => 'Opretter politikker med tæt støtte.',
+                    'developing' => 'Kan forklare hvad politikken gør og teste den.',
+                    'proficient' => 'Tilpasser politikkerne og vurderer effekten på elevernes arbejdsgange.',
                 ],
                 [
-                    'name' => 'Kommunikation',
-                    'beginner' => 'Skriver kort teknisk note.',
-                    'developing' => 'Forklarer ændringer på let forståeligt dansk.',
-                    'proficient' => 'Producerer målgruppe-tilpasset kommunikation og FAQ.'
-                ],
-            ],
-        ],
-    ],
-    [
-        'id' => 'advanced-scenarios',
-        'title' => 'Modul 4 · Avancerede scenarier og evaluering',
-        'duration' => '5 lektioner',
-        'summary' => 'Holdbaseret projekt hvor eleverne kombinerer OU-design, GPO og change management i et samlet forløb.',
-        'competencies' => [
-            'Planlægge og gennemføre en samlet AD-DS løsning for en casevirksomhed.',
-            'Automatisere gentagne opgaver via scripts og skabeloner.',
-            'Evaluere løsningen i forhold til sikkerhed, drift og brugeroplevelse.',
-        ],
-        'activities' => [
-            'learn' => [
-                [
-                    'text' => 'Kick-off: projektplan og roller i teams (Scrum light).',
-                    'assist' => 'Hvordan kan man bruge stand-ups og kanban i et it-projekt?'
-                ],
-                [
-                    'text' => 'Miniworkshop: PowerShell til AD-administration.',
-                    'assist' => 'Vis et eksempel på et PowerShell-script der opretter OUs og brugere.'
-                ],
-                [
-                    'text' => 'Sikkerhedssession: Group Policy Security baselines.',
-                    'assist' => 'Forklar hvorfor sikkerhedsbaselines er vigtige i AD-DS.'
-                ],
-            ],
-            'simulate' => [
-                [
-                    'title' => 'Scenario-sim: Incident response',
-                    'description' => 'Simuleret sikkerhedsbrud hvor eleverne skal isolere en OU og rulle nødpolitikker ud.',
-                    'steps' => [
-                        'Identificer påvirkede brugere via rapporten i sim-miljøet.',
-                        'Opret midlertidig "Quarantine" OU og flyt kompromitterede konti.',
-                        'Anvend nød-GPO der låser konti og logger forsøg.',
-                        'Rapportér hændelsen i incident-skabelonen.',
-                    ],
-                    'checkpoints' => [
-                        'Incidentrapport udfyldt og uploadet.',
-                    ],
-                    'assist' => 'Hvilke tiltag bør man iværksætte ved et muligt AD-kompromis?'
-                ],
-            ],
-            'real_life' => [
-                [
-                    'title' => 'Projektleverance',
-                    'tasks' => [
-                        'Udarbejd komplet løsningsdokumentation (diagram, designlog, GPO-oversigt).',
-                        'Opsæt demo-miljø hvor underviser kan teste funktionalitet.',
-                        'Forbered kundemødet med fokus på værdi og sikkerhed.',
-                    ],
-                    'assist' => 'Hvad skal et afleveringsklart løsningsdokument indeholde?'
-                ],
-                [
-                    'title' => '360° evaluering',
-                    'tasks' => [
-                        'Teams giver hinanden peer feedback via evalueringsark.',
-                        'Sæt personlige læringsmål for næste praktikforløb.',
-                    ],
-                    'assist' => 'Hvordan kan man formulere brugbar peer feedback i it-projekter?'
-                ],
-            ],
-            'reflection' => [
-                'Hvad ville du gøre anderledes næste gang du planlægger en AD-DS løsning?',
-                'Hvordan sikrer du at brugere og ledelse er med ombord på ændringerne?',
-            ],
-        ],
-        'checkpoints' => [
-            ['id' => 'incident-plan', 'label' => 'Incident respons sim gennemført.'],
-            ['id' => 'projekt-dokumentation', 'label' => 'Projekt dokumenteret og uploadet.'],
-            ['id' => 'peer-feedback', 'label' => 'Peer feedback afleveret.'],
-        ],
-        'resources' => [
-            ['label' => 'Incidentrapport skabelon', 'path' => 'resources/student-materials/incidentrapport.md'],
-            ['label' => 'Projekt rubrik til underviser', 'path' => 'resources/teacher-guides/projekt-rubrik.md'],
-            ['label' => 'Powershell snippets', 'path' => 'resources/tools/powershell-snippets.ps1'],
-        ],
-        'rubric' => [
-            'criteria' => [
-                [
-                    'name' => 'Projektledelse',
-                    'beginner' => 'Behøver konstant støtte til at planlægge opgaver.',
-                    'developing' => 'Bruger enkle planlægningsværktøjer og følger op.',
-                    'proficient' => 'Driver teamet med tydelige mål, backlog og statusrapporter.'
-                ],
-                [
-                    'name' => 'Sikkerhedsbevidsthed',
-                    'beginner' => 'Reagerer først når fejl opstår.',
-                    'developing' => 'Forudser risici og foreslår modtræk.',
-                    'proficient' => 'Indarbejder sikkerhed i alle leverancer og dokumenterer det.'
+                    'name' => 'Dokumentation',
+                    'beginner' => 'Noterer få detaljer i loggen.',
+                    'developing' => 'Registrerer ændringer med klare beskrivelser.',
+                    'proficient' => 'Planlægger opfølgning og foreslår forbedringer baseret på observationer.',
                 ],
             ],
         ],
