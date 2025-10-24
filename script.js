@@ -611,14 +611,16 @@ function setTaskExpansion(article, key, isActive) {
   if (!article) {
     return;
   }
-  const currentState = taskExpansionStates.get(article) || {
+  const currentState = {
     editor: false,
     pseudocode: false,
+    feedback: false,
+    ...(taskExpansionStates.get(article) || {}),
   };
-  const wasExpanded = currentState.editor || currentState.pseudocode;
+  const wasExpanded = currentState.editor || currentState.pseudocode || currentState.feedback;
   currentState[key] = Boolean(isActive);
   taskExpansionStates.set(article, currentState);
-  const shouldExpand = currentState.editor || currentState.pseudocode;
+  const shouldExpand = currentState.editor || currentState.pseudocode || currentState.feedback;
   article.classList.toggle("is-expanded", shouldExpand);
   const closeButton = article.querySelector(".task-close");
   if (closeButton) {
@@ -771,6 +773,7 @@ function renderTasks(useFallback = false) {
     const closeButton = article.querySelector(".task-close");
     setTaskExpansion(article, "editor", false);
     setTaskExpansion(article, "pseudocode", false);
+    setTaskExpansion(article, "feedback", false);
 
     if (details) {
       details.addEventListener("toggle", () => {
@@ -789,10 +792,27 @@ function renderTasks(useFallback = false) {
         }
         setTaskExpansion(article, "editor", false);
         setTaskExpansion(article, "pseudocode", false);
+        setTaskExpansion(article, "feedback", false);
       });
     }
     const feedback = article.querySelector(".feedback");
     const button = article.querySelector(".evaluate");
+
+    if (feedback) {
+      if (!feedback.hasAttribute("tabindex")) {
+        feedback.setAttribute("tabindex", "0");
+      }
+      const activateFeedbackExpansion = () => setTaskExpansion(article, "feedback", true);
+      const deactivateFeedbackExpansion = () => {
+        window.setTimeout(() => {
+          const stillFocused = feedback === document.activeElement;
+          setTaskExpansion(article, "feedback", stillFocused);
+        }, 0);
+      };
+      feedback.addEventListener("focus", activateFeedbackExpansion);
+      feedback.addEventListener("click", activateFeedbackExpansion);
+      feedback.addEventListener("blur", deactivateFeedbackExpansion);
+    }
 
     button.addEventListener("click", () => evaluateSolution(task, article, feedback));
 
