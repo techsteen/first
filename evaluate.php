@@ -34,8 +34,18 @@ function loadCredentials(string $configDir): array
     $apiKey = null;
     $caBundle = null;
 
-    $configPath = $configDir . '/config.php';
-    if (is_readable($configPath)) {
+    $configFiles = ['config.php', 'config.phg'];
+    $configPath = null;
+
+    foreach ($configFiles as $candidate) {
+        $candidatePath = $configDir . '/' . $candidate;
+        if (is_readable($candidatePath)) {
+            $configPath = $candidatePath;
+            break;
+        }
+    }
+
+    if ($configPath) {
         $loaded = require $configPath;
         if (is_string($loaded)) {
             $apiKey = trim($loaded);
