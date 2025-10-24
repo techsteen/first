@@ -3,23 +3,23 @@ require_once __DIR__ . '/partials/header.php';
 require_once __DIR__ . '/partials/navigation.php';
 ?>
 <main class="site-main">
-    <section id="framework" class="content-section">
-        <?php require_once __DIR__ . '/pages/framework.php'; ?>
+    <section id="intro" class="content-section">
+        <?php require_once __DIR__ . '/pages/training/intro.php'; ?>
     </section>
-    <section id="wireframe" class="content-section alt">
-        <?php require_once __DIR__ . '/pages/wireframe.php'; ?>
+    <section id="step1" class="content-section alt">
+        <?php require_once __DIR__ . '/pages/training/step1.php'; ?>
     </section>
-    <section id="modules" class="content-section">
-        <?php require_once __DIR__ . '/pages/modules/overview.php'; ?>
+    <section id="step2" class="content-section">
+        <?php require_once __DIR__ . '/pages/training/step2.php'; ?>
     </section>
-    <section id="learning-journey" class="content-section">
-        <?php require_once __DIR__ . '/pages/learning_journey.php'; ?>
+    <section id="step3" class="content-section alt">
+        <?php require_once __DIR__ . '/pages/training/step3.php'; ?>
     </section>
-    <section id="resources" class="content-section alt">
-        <?php require_once __DIR__ . '/pages/resources.php'; ?>
+    <section id="practice" class="content-section">
+        <?php require_once __DIR__ . '/pages/training/practice.php'; ?>
     </section>
-    <section id="support" class="content-section">
-        <?php require_once __DIR__ . '/pages/support.php'; ?>
+    <section id="evaluation" class="content-section alt">
+        <?php require_once __DIR__ . '/pages/training/evaluation.php'; ?>
     </section>
 </main>
 <?php

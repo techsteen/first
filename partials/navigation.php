@@ -1,10 +1,10 @@
 <nav class="site-nav">
     <ul>
-        <li><a href="#framework">Framework</a></li>
-        <li><a href="#wireframe">Wireframe</a></li>
-        <li><a href="#modules">Moduler</a></li>
-        <li><a href="#learning-journey">Læringsrejse</a></li>
-        <li><a href="#resources">Ressourcer</a></li>
-        <li><a href="#support">Support</a></li>
+        <li><a href="#intro">Intro</a></li>
+        <li><a href="#step1">Domæne</a></li>
+        <li><a href="#step2">OU-design</a></li>
+        <li><a href="#step3">GPO-lab</a></li>
+        <li><a href="#practice">Praksislab</a></li>
+        <li><a href="#evaluation">Evaluering</a></li>
     </ul>
 </nav>
