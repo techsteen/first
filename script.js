@@ -777,7 +777,9 @@ function renderTasks(useFallback = false) {
 
     if (details) {
       details.addEventListener("toggle", () => {
-        setTaskExpansion(article, "pseudocode", details.open);
+        if (details.open) {
+          setTaskExpansion(article, "pseudocode", true);
+        }
       });
     }
 
@@ -803,15 +805,8 @@ function renderTasks(useFallback = false) {
         feedback.setAttribute("tabindex", "0");
       }
       const activateFeedbackExpansion = () => setTaskExpansion(article, "feedback", true);
-      const deactivateFeedbackExpansion = () => {
-        window.setTimeout(() => {
-          const stillFocused = feedback === document.activeElement;
-          setTaskExpansion(article, "feedback", stillFocused);
-        }, 0);
-      };
       feedback.addEventListener("focus", activateFeedbackExpansion);
       feedback.addEventListener("click", activateFeedbackExpansion);
-      feedback.addEventListener("blur", deactivateFeedbackExpansion);
     }
 
     button.addEventListener("click", () => evaluateSolution(task, article, feedback));
@@ -837,13 +832,6 @@ function renderTasks(useFallback = false) {
       });
       textarea.addEventListener("focus", () => {
         setTaskExpansion(article, "editor", true);
-      });
-      textarea.addEventListener("blur", () => {
-        window.setTimeout(() => {
-          if (document.activeElement !== textarea) {
-            setTaskExpansion(article, "editor", false);
-          }
-        }, 0);
       });
     } else {
       createMonacoEditor(task.id, editorContainer, languageSelect, article);
@@ -937,17 +925,9 @@ function createMonacoEditor(taskId, containerEl, languageSelect, article) {
   editor.onDidChangeModelContent(() => updateEditorEmptyState(taskId));
 
   const activateExpansion = () => setTaskExpansion(article, "editor", true);
-  const deactivateExpansion = () => {
-    window.setTimeout(() => {
-      const stillFocused = editor.hasTextFocus?.() || containerEl.contains(document.activeElement);
-      setTaskExpansion(article, "editor", Boolean(stillFocused));
-    }, 0);
-  };
 
   editor.onDidFocusEditorWidget(activateExpansion);
-  editor.onDidBlurEditorWidget(deactivateExpansion);
   containerEl.addEventListener("focusin", activateExpansion);
-  containerEl.addEventListener("focusout", deactivateExpansion);
 
   languageSelect.addEventListener("change", () => {
     updateEditorLanguage(taskId, languageSelect.value);
