@@ -3,25 +3,87 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 
-$rawInput = file_get_contents('php://input');
-if ($rawInput === false) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Kunne ikke læse forespørgslen.'], JSON_UNESCAPED_UNICODE);
+/**
+ * Send a JSON response and terminate the script.
+ */
+function respond(array $payload, int $status = 200): void
+{
+    http_response_code($status);
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-$payload = json_decode($rawInput, true);
-if (!is_array($payload)) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Ugyldigt JSON-format.'], JSON_UNESCAPED_UNICODE);
-    exit;
+/**
+ * Decode a JSON string into an associative array.
+ */
+function decodeJsonPayload(string $raw): array
+{
+    $payload = json_decode($raw, true);
+    if (!is_array($payload)) {
+        respond(['error' => 'Ugyldigt JSON-format.'], 400);
+    }
+
+    return $payload;
 }
+
+/**
+ * Locate the API key and optional CA bundle within the config directory.
+ */
+function loadCredentials(string $configDir): array
+{
+    $apiKey = null;
+    $caBundle = null;
+
+    $configPath = $configDir . '/config.php';
+    if (is_readable($configPath)) {
+        $loaded = require $configPath;
+        if (is_string($loaded)) {
+            $apiKey = trim($loaded);
+        } elseif (is_array($loaded)) {
+            if (isset($loaded['OPENAI_API_KEY'])) {
+                $apiKey = trim((string) $loaded['OPENAI_API_KEY']);
+            }
+            if (isset($loaded['CA_BUNDLE'])) {
+                $caCandidate = trim((string) $loaded['CA_BUNDLE']);
+                if ($caCandidate !== '') {
+                    if (!is_readable($caCandidate)) {
+                        $relativeCandidate = $configDir . '/' . ltrim($caCandidate, '/\\');
+                        if (is_readable($relativeCandidate)) {
+                            $caCandidate = $relativeCandidate;
+                        }
+                    }
+                    if (is_readable($caCandidate)) {
+                        $caBundle = $caCandidate;
+                    }
+                }
+            }
+        }
+    }
+
+    if (!$caBundle) {
+        $defaultCa = $configDir . '/cacert.pem';
+        if (is_readable($defaultCa)) {
+            $caBundle = $defaultCa;
+        }
+    }
+
+    if (!$apiKey) {
+        $apiKey = getenv('OPENAI_API_KEY') ?: '';
+    }
+
+    return [$apiKey, $caBundle];
+}
+
+$rawInput = file_get_contents('php://input');
+if ($rawInput === false) {
+    respond(['error' => 'Kunne ikke læse forespørgslen.'], 400);
+}
+
+$payload = decodeJsonPayload($rawInput);
 
 $solution = trim((string)($payload['solution'] ?? ''));
 if ($solution === '') {
-    http_response_code(400);
-    echo json_encode(['error' => 'Der mangler kode at vurdere.'], JSON_UNESCAPED_UNICODE);
-    exit;
+    respond(['error' => 'Der mangler kode at vurdere.'], 400);
 }
 
 $taskTitle = trim((string)($payload['taskTitle'] ?? ''));
@@ -29,50 +91,10 @@ $taskDescription = trim((string)($payload['taskDescription'] ?? ''));
 $pseudocode = trim((string)($payload['pseudocode'] ?? ''));
 $language = trim((string)($payload['language'] ?? ''));
 
-$apiKey = null;
-$caBundle = null;
-$configDir = __DIR__ . '/config';
-$configPath = $configDir . '/config.php';
-if (is_readable($configPath)) {
-    $loaded = require $configPath;
-    if (is_string($loaded)) {
-        $apiKey = trim($loaded);
-    } elseif (is_array($loaded)) {
-        if (isset($loaded['OPENAI_API_KEY'])) {
-            $apiKey = trim((string) $loaded['OPENAI_API_KEY']);
-        }
-        if (isset($loaded['CA_BUNDLE'])) {
-            $caCandidate = trim((string) $loaded['CA_BUNDLE']);
-            if ($caCandidate !== '') {
-                if (!is_readable($caCandidate)) {
-                    $relativeCandidate = $configDir . '/' . ltrim($caCandidate, '/\\');
-                    if (is_readable($relativeCandidate)) {
-                        $caCandidate = $relativeCandidate;
-                    }
-                }
-                if (is_readable($caCandidate)) {
-                    $caBundle = $caCandidate;
-                }
-            }
-        }
-    }
-}
-
-if (!$caBundle) {
-    $defaultCa = $configDir . '/cacert.pem';
-    if (is_readable($defaultCa)) {
-        $caBundle = $defaultCa;
-    }
-}
-
-if (!$apiKey) {
-    $apiKey = getenv('OPENAI_API_KEY') ?: '';
-}
+[$apiKey, $caBundle] = loadCredentials(__DIR__ . '/config');
 
 if ($apiKey === '') {
-    http_response_code(500);
-    echo json_encode(['error' => 'Serveren mangler OpenAI API-nøglen.'], JSON_UNESCAPED_UNICODE);
-    exit;
+    respond(['error' => 'Serveren mangler OpenAI API-nøglen.'], 500);
 }
 
 $requestBody = [
@@ -119,9 +141,7 @@ $response = curl_exec($ch);
 if ($response === false) {
     $errorMessage = curl_error($ch) ?: 'Ukendt fejl ved kald til OpenAI.';
     curl_close($ch);
-    http_response_code(502);
-    echo json_encode(['error' => $errorMessage], JSON_UNESCAPED_UNICODE);
-    exit;
+    respond(['error' => $errorMessage], 502);
 }
 
 $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -130,22 +150,16 @@ curl_close($ch);
 $decoded = json_decode($response, true);
 if ($statusCode >= 400) {
     $message = is_array($decoded) ? ($decoded['error']['message'] ?? 'OpenAI returnerede en fejl.') : 'OpenAI returnerede en fejl.';
-    http_response_code($statusCode);
-    echo json_encode(['error' => $message], JSON_UNESCAPED_UNICODE);
-    exit;
+    respond(['error' => $message], $statusCode);
 }
 
 if (!is_array($decoded)) {
-    http_response_code(502);
-    echo json_encode(['error' => 'Uventet svar fra OpenAI.'], JSON_UNESCAPED_UNICODE);
-    exit;
+    respond(['error' => 'Uventet svar fra OpenAI.'], 502);
 }
 
 $feedback = trim((string)($decoded['choices'][0]['message']['content'] ?? ''));
 if ($feedback === '') {
-    http_response_code(502);
-    echo json_encode(['error' => 'OpenAI gav ikke noget indhold i svaret.'], JSON_UNESCAPED_UNICODE);
-    exit;
+    respond(['error' => 'OpenAI gav ikke noget indhold i svaret.'], 502);
 }
 
-echo json_encode(['feedback' => $feedback], JSON_UNESCAPED_UNICODE);
+respond(['feedback' => $feedback]);
