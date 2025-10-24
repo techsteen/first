@@ -40,6 +40,7 @@
     </div>
     <p>
         Alle elementer designes til klasseundervisning, gruppeforløb og individuelle fordybelser.
-        Undervisere kan aktivere/deaktivere moduler alt efter klassens behov.
+        Undervisere kan aktivere/deaktivere moduler alt efter klassens behov, og moduloversigten nedenfor
+        viser konkrete aktiviteter, checklister og rubrics for hvert tema.
     </p>
 </article>

@@ -218,6 +218,296 @@ body {
     filter: brightness(0.95);
 }
 
+.assist-trigger {
+    margin-left: 0.75rem;
+    border: none;
+    background-color: transparent;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 1.9rem;
+    height: 1.9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.assist-trigger:hover,
+.assist-trigger:focus {
+    background-color: rgba(30, 144, 255, 0.12);
+    outline: none;
+}
+
+.assist-trigger.secondary {
+    margin-top: 0.75rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background-color: rgba(30, 144, 255, 0.08);
+    width: auto;
+    height: auto;
+}
+
+.module-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.module-card {
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.module-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.module-header h3 {
+    margin: 0;
+    color: var(--bg-primary);
+}
+
+.module-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.module-competencies ul,
+.module-details ul,
+.module-details ol {
+    list-style: none;
+    margin: 0;
+    padding-left: 0;
+}
+
+.module-competencies li,
+.module-details li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(13, 27, 42, 0.06);
+}
+
+.module-competencies li:last-child,
+.module-details li:last-child {
+    border-bottom: none;
+}
+
+.module-details {
+    background-color: rgba(19, 42, 68, 0.04);
+    padding: 1rem 1.25rem;
+    border-radius: var(--border-radius);
+}
+
+.module-details summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--bg-primary);
+}
+
+.module-details[open] {
+    background-color: rgba(19, 42, 68, 0.08);
+}
+
+.module-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.module-column h4 {
+    margin-top: 0;
+}
+
+.module-scenario,
+.module-real {
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 1rem 1.25rem;
+    box-shadow: 0 8px 16px rgba(13, 27, 42, 0.06);
+    margin-bottom: 1rem;
+}
+
+.module-scenario header h5,
+.module-real h5 {
+    margin: 0 0 0.5rem 0;
+    color: var(--bg-secondary);
+}
+
+.module-scenario-body h6 {
+    margin-bottom: 0.35rem;
+    margin-top: 0.75rem;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--text-secondary);
+}
+
+.module-checkpoints {
+    padding-left: 1.1rem;
+    list-style: disc;
+}
+
+.module-reflection ul {
+    padding-left: 0;
+}
+
+.module-task {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.35rem 0;
+}
+
+.module-task input[type='checkbox'] {
+    transform: scale(1.1);
+}
+
+.module-progress {
+    margin: 1.5rem 0 1rem;
+    background-color: #e4ecf7;
+    border-radius: 999px;
+    position: relative;
+    overflow: hidden;
+}
+
+.module-progress-bar {
+    height: 10px;
+    background: linear-gradient(135deg, var(--accent), #48c6ef);
+    width: 0%;
+    border-radius: inherit;
+    transition: width 0.3s ease;
+}
+
+.module-progress-text {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.module-rubric table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.module-rubric th,
+.module-rubric td {
+    border: 1px solid rgba(13, 27, 42, 0.08);
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+.module-resources ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.module-resources a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.module-resources a:hover,
+.module-resources a:focus {
+    text-decoration: underline;
+}
+
+.assist-panel {
+    position: fixed;
+    right: 1.5rem;
+    bottom: 5.5rem;
+    width: min(360px, 90vw);
+    max-height: 60vh;
+    background-color: #ffffff;
+    border-radius: var(--border-radius);
+    box-shadow: 0 18px 36px rgba(13, 27, 42, 0.18);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 2000;
+}
+
+.assist-panel header {
+    padding: 0.75rem 1rem;
+    background-color: var(--bg-secondary);
+    color: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.assist-panel header h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.assist-panel button.close-panel {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.assist-panel .assist-content {
+    padding: 1rem;
+    overflow-y: auto;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.assist-panel .assist-meta {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.assist-menu {
+    position: fixed;
+    display: none;
+    flex-direction: column;
+    background-color: #ffffff;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 0.5rem;
+    z-index: 2100;
+}
+
+.assist-menu button {
+    background: none;
+    border: none;
+    padding: 0.35rem 0.6rem;
+    text-align: left;
+    color: var(--text-primary);
+    border-radius: 0.5rem;
+    cursor: pointer;
+}
+
+.assist-menu button:hover,
+.assist-menu button:focus {
+    background-color: rgba(30, 144, 255, 0.12);
+}
+
 @media (max-width: 768px) {
     .header-content h1 {
         font-size: 2rem;
@@ -225,5 +515,9 @@ body {
 
     .section-content h2 {
         font-size: 1.75rem;
+    }
+
+    .module-columns {
+        grid-template-columns: 1fr;
     }
 }

@@ -4,17 +4,21 @@
         <div class="support-card">
             <h3>Sådan får eleverne hjælp</h3>
             <p>
-                Elever kan markere tekst, knapper eller områder i simuleringerne og klikke på
-                <em>"Forklar"</em>. Scriptet i <code>assets/js/chat-assist.js</code> sender konteksten til den fælles ChatGPT API,
-                som returnerer en elevvenlig forklaring. Eleven skal ikke skrive spørgsmålet selv.
+                Elever kan markere tekst eller klikke på <strong>?</strong>-knapperne ud for aktiviteterne og vælge
+                <em>"Forklar"</em>. Scriptet i <code>assets/js/chat-assist.js</code> pakker markeringen ned som kontekst og sender
+                den til den fælles ChatGPT API. Eleven får et målrettet svar uden at formulere spørgsmålet selv.
+            </p>
+            <p>
+                Assist-knappen følger med ned på siden, og når der er valgt tekst dukker der en mini-menu op, så
+                eleverne tydeligt kan se at hjælp er tilgængelig.
             </p>
         </div>
         <div class="support-card">
             <h3>Teknisk integration</h3>
             <ol>
                 <li>Importer den fælles API-klient via <code>require_once</code> fra den centrale placering.</li>
-                <li>Brug funktionen <code>requestAssistance(selectionData)</code> til at kalde API'et.</li>
-                <li>Vis svaret i det dedikerede sidepanel eller modal.</li>
+                <li>Eksponér klienten globalt som <code>window.gf2ChatClient</code> med metoden <code>explainSelection(data)</code>.</li>
+                <li>Frontenden kalder klienten automatisk og viser svaret i sidepanelet.</li>
             </ol>
             <p class="note">Se "anden Codex kode" for den konkrete klientsignatur og autentificering.</p>
         </div>
@@ -27,6 +31,7 @@
         </div>
     </div>
     <p>
-        Supportsektionen udvides med FAQ, kontaktoplysninger og hurtige videoer når indholdet er klar.
+        Supportsektionen kan udvides med en FAQ, kontaktoplysninger og korte screencasts. ChatGPT-loggen kan
+        eksporteres som CSV, så underviserne kan analysere hvilke emner der efterspørges mest.
     </p>
 </article>

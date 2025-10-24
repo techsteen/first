@@ -9,6 +9,9 @@ require_once __DIR__ . '/partials/navigation.php';
     <section id="wireframe" class="content-section alt">
         <?php require_once __DIR__ . '/pages/wireframe.php'; ?>
     </section>
+    <section id="modules" class="content-section">
+        <?php require_once __DIR__ . '/pages/modules/overview.php'; ?>
+    </section>
     <section id="learning-journey" class="content-section">
         <?php require_once __DIR__ . '/pages/learning_journey.php'; ?>
     </section>
