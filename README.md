@@ -1,13 +1,27 @@
 # Opsætning af skjult OpenAI API-nøgle
 
-Projektet benytter PHP-filen `evaluate.php` som proxy til OpenAI. Nøglen skal ligge på serveren, men aldrig sendes til browseren. Du har to muligheder:
+Projektet benytter PHP-filen `evaluate.php` som proxy til OpenAI. Nøglen skal ligge på serveren, men aldrig sendes til browseren. Sådan gør du:
 
-1. **Config-katalog (nemt, hvis du kun kan uploade filer)** – Kopiér `config/config.example.php` til `config/config.php`, redigér filen og indsæt din rigtige nøgle. Filen bliver eksekveret af PHP, så nøglen kan ikke downloades. Den medfølgende `config/web.config` blokerer direkte HTTP-adgang til kataloget på IIS-baserede webhoteller.
-2. **Environment-variabel** – Hvis du kan sætte miljøvariabler på serveren, kan `evaluate.php` fortsat læse `OPENAI_API_KEY` via `getenv()`.
+1. **Placér din nøgle i et server-side config-katalog**  
+   Upload en fil med navnet `config.php` eller `config.phg` til dit skjulte konfigurationskatalog (fx et delt `/Config/` to niveauer over denne mappe). Filen skal returnere enten et array eller en ren streng:
+   ```php
+   <?php
+   return [
+     'OPENAI_API_KEY' => 'din-hemmelige-nøgle',
+     // valgfrit: 'CA_BUNDLE' => __DIR__ . '/cacert.pem',
+   ];
+   ```
+   eller
+   ```php
+   <?php
+   return 'din-hemmelige-nøgle';
+   ```
+   `evaluate.php` finder automatisk kataloget ved at tjekke `CONFIG_DIR`-miljøvariablen og derefter standardstier som `/Config/` to niveauer oppe. Filerne eksekveres af PHP og kan ikke downloades direkte.
 
-I begge tilfælde forbliver nøglen på serveren og sendes aldrig til klienten.
+2. **Brug miljøvariabler hvis din host understøtter det**  
+   Sæt `OPENAI_API_KEY` (og evt. `CONFIG_DIR`) i dit kontrolpanel eller serveropsætning. `evaluate.php` falder tilbage til miljøvariablen, hvis der ikke findes en config-fil.
 
-> Tip: Har du problemer med cURL og TLS-certifikater på ældre Windows-servere, kan du placere en `cacert.pem` i `config/`. `evaluate.php` vælger automatisk filen, eller du kan pege eksplicit på den ved at sætte `'CA_BUNDLE' => 'cacert-2023-08-12.pem'` i `config/config.php`.
+> **Vigtigt:** Læg aldrig nøglen i JavaScript, HTML eller andre filer der kan hentes offentligt. Ved at placere nøglen i et server-side config-katalog eller miljøvariabel forbliver den skjult for eleverne.
 
 ## Hurtig test (PHPs indbyggede server)
 
@@ -39,6 +53,6 @@ Efter en reload får PHP adgang til variablen uden at eksponere den offentligt.
 
 ## Shared hosting / cPanel
 
-De fleste udbydere har et kontrolpanel til miljøvariabler. Tilføj `OPENAI_API_KEY` dér; så bliver den tilgængelig for PHP, men ikke for besøgende. Alternativt kan du uploade en `config.php` med nøglen, hvis udbyderen ikke tilbyder miljøvariabler.
+De fleste udbydere har et kontrolpanel til miljøvariabler. Tilføj `OPENAI_API_KEY` dér; så bliver den tilgængelig for PHP, men ikke for besøgende. Alternativt kan du uploade en `config.php` eller `config.phg` med nøglen til dit skjulte konfigurationskatalog.
 
-> **Vigtigt:** Læg aldrig nøglen i JavaScript, HTML eller filer, der kan downloades fra webroden. Brug i stedet `config.php` (som kun kan eksekveres) eller miljøvariabler, så nøglen forbliver privat på serveren.
+> **Tip:** Har du problemer med cURL og TLS-certifikater på ældre Windows-servere, kan du gemme en `cacert.pem` i samme konfigurationskatalog. Sæt `'CA_BUNDLE' => __DIR__ . '/cacert.pem'` i config-filen, så bruger `evaluate.php` det certifikat.
