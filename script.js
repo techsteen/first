@@ -615,6 +615,7 @@ function setTaskExpansion(article, key, isActive) {
     editor: false,
     pseudocode: false,
   };
+  const wasExpanded = currentState.editor || currentState.pseudocode;
   currentState[key] = Boolean(isActive);
   taskExpansionStates.set(article, currentState);
   const shouldExpand = currentState.editor || currentState.pseudocode;
@@ -622,6 +623,15 @@ function setTaskExpansion(article, key, isActive) {
   const closeButton = article.querySelector(".task-close");
   if (closeButton) {
     closeButton.hidden = !shouldExpand;
+  }
+  if (!wasExpanded && shouldExpand) {
+    window.requestAnimationFrame(() => {
+      try {
+        article.scrollIntoView({ block: "start", behavior: "smooth" });
+      } catch (error) {
+        article.scrollIntoView(true);
+      }
+    });
   }
 }
 
