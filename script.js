@@ -619,6 +619,10 @@ function setTaskExpansion(article, key, isActive) {
   taskExpansionStates.set(article, currentState);
   const shouldExpand = currentState.editor || currentState.pseudocode;
   article.classList.toggle("is-expanded", shouldExpand);
+  const closeButton = article.querySelector(".task-close");
+  if (closeButton) {
+    closeButton.hidden = !shouldExpand;
+  }
 }
 
 loadMonaco()
@@ -754,12 +758,27 @@ function renderTasks(useFallback = false) {
     const languageSelect = article.querySelector(".language");
     const editorContainer = article.querySelector(".solution-editor");
     const details = article.querySelector("details");
+    const closeButton = article.querySelector(".task-close");
     setTaskExpansion(article, "editor", false);
     setTaskExpansion(article, "pseudocode", false);
 
     if (details) {
       details.addEventListener("toggle", () => {
         setTaskExpansion(article, "pseudocode", details.open);
+      });
+    }
+
+    if (closeButton) {
+      closeButton.addEventListener("click", () => {
+        if (details && details.open) {
+          details.open = false;
+        }
+        const activeElement = document.activeElement;
+        if (activeElement && article.contains(activeElement) && typeof activeElement.blur === "function") {
+          activeElement.blur();
+        }
+        setTaskExpansion(article, "editor", false);
+        setTaskExpansion(article, "pseudocode", false);
       });
     }
     const feedback = article.querySelector(".feedback");
