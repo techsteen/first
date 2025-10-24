@@ -91,7 +91,30 @@ $taskDescription = trim((string)($payload['taskDescription'] ?? ''));
 $pseudocode = trim((string)($payload['pseudocode'] ?? ''));
 $language = trim((string)($payload['language'] ?? ''));
 
-[$apiKey, $caBundle] = loadCredentials(__DIR__ . '/config');
+function resolveConfigDir(): string
+{
+    $candidates = [];
+
+    $envDir = getenv('CONFIG_DIR');
+    if (is_string($envDir) && $envDir !== '') {
+        $candidates[] = rtrim($envDir, "\\/");
+    }
+
+    $candidates[] = __DIR__ . '/config';
+    $candidates[] = dirname(__DIR__) . '/config';
+    $candidates[] = dirname(__DIR__, 2) . '/Config';
+    $candidates[] = dirname(__DIR__, 2) . '/config';
+
+    foreach ($candidates as $dir) {
+        if ($dir && is_dir($dir)) {
+            return $dir;
+        }
+    }
+
+    return $candidates[0];
+}
+
+[$apiKey, $caBundle] = loadCredentials(resolveConfigDir());
 
 if ($apiKey === '') {
     respond(['error' => 'Serveren mangler OpenAI API-nøglen.'], 500);
