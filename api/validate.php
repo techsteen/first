@@ -37,7 +37,7 @@ try {
     $response = $client->chat([
         [
             'role' => 'system',
-            'content' => 'Du er en compiler-assistent for en undervisningsplatform. Du vurderer elevkode til en robotsimulator og svarer kun med JSON.'
+            'content' => 'Du er en compiler- og runtime-vagt for en undervisningsplatform. Du vurderer elevkode til en robotsimulator og svarer kun med JSON.'
         ],
         [
             'role' => 'user',
@@ -61,7 +61,7 @@ try {
                         'PowerShell-programmer starter via Invoke-Program, som allerede kaldes i skabelonen.'
                     ]
                 ],
-                'instructions' => 'Fokuser udelukkende på syntaks, parenteser, blokstruktur og andre forhold der ville få kildekoden til ikke at kompilere eller blive afvist af en formatter. language er "csharp" eller "powershell". For C# skal du acceptere namespace-, class Program- og static void Main(string[] args)-strukturer samt funktionerne ovenfor. Returnér ok=false kun ved egentlige compiler-/parserfejl og angiv shortMessage samt en detaljeret liste af fejl (med line og message). Hvis koden er syntaktisk korrekt, skal du returnere ok=true også selv om løsningen muligvis ikke opfylder opgaven. Giv i stedet vejledende logisk feedback i feltet feedback (maks. 2 sætninger) og relater det til objective når det findes. Lad shortMessage stå tom når ok=true. Inddrag målet i shortMessage når objective ikke er tom, f.eks. "Fejl i opgaven: [objective]".'
+                'instructions' => 'Undersøg koden for (1) egentlige compiler-/parserfejl og (2) kritiske runtime-risici som uendelige løkker uden exit-betingelse, uendelig rekursion, division med nul, eller andre fejl der med stor sandsynlighed vil crashe eller fryse programmet. language er "csharp" eller "powershell". Returnér ok=false og stopReason="compile" ved syntaksfejl. Returnér ok=false og stopReason="runtime" når du identificerer sandsynlige runtime-fejl eller -loops som bør blokere kørslen. Angiv detaljer i errors-listen (linje når muligt). Hvis koden er sikker, returneres ok=true. Giv logisk feedback i feltet feedback (maks. 2 sætninger) og relater det til objective når det findes. shortMessage skal være tom når ok=true; ellers skal den forklare hvorfor programmet stoppes, f.eks. "Mulig uendelig løkke". Inkludér målet i shortMessage når objective ikke er tom, f.eks. "Fejl i opgaven: [objective]".'
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
         ]
     ], [
@@ -77,6 +77,10 @@ try {
                         'ok' => ['type' => 'boolean'],
                         'shortMessage' => ['type' => 'string'],
                         'feedback' => ['type' => 'string'],
+                        'stopReason' => [
+                            'type' => 'string',
+                            'enum' => ['compile', 'runtime', '']
+                        ],
                         'errors' => [
                             'type' => 'array',
                             'items' => [
@@ -87,7 +91,8 @@ try {
                                     'message' => ['type' => 'string']
                                 ]
                             ]
-                        ]
+                        ],
+                        'warning' => ['type' => 'string']
                     ]
                 ]
             ]
@@ -100,7 +105,54 @@ try {
         throw new RuntimeException('Modellen returnerede ikke et gyldigt svar.');
     }
 
-    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $ok = (bool) $data['ok'];
+    $shortMessage = isset($data['shortMessage']) && is_string($data['shortMessage']) ? $data['shortMessage'] : '';
+    $feedbackMessage = isset($data['feedback']) && is_string($data['feedback']) ? $data['feedback'] : '';
+    $warningMessage = isset($data['warning']) && is_string($data['warning']) ? $data['warning'] : '';
+
+    $stopReason = '';
+    if (!$ok) {
+        $candidate = isset($data['stopReason']) && is_string($data['stopReason']) ? strtolower($data['stopReason']) : '';
+        if ($candidate === 'runtime' || $candidate === 'compile') {
+            $stopReason = $candidate;
+        } else {
+            $stopReason = 'compile';
+        }
+    }
+
+    $errors = [];
+    if (isset($data['errors']) && is_array($data['errors'])) {
+        foreach ($data['errors'] as $error) {
+            if (!is_array($error)) {
+                continue;
+            }
+            $line = null;
+            if (isset($error['line']) && is_numeric($error['line'])) {
+                $line = (int) $error['line'];
+            }
+            $message = isset($error['message']) && is_string($error['message']) ? $error['message'] : '';
+            if ($line === null && $message === '') {
+                continue;
+            }
+            $errors[] = ['line' => $line, 'message' => $message];
+        }
+    }
+
+    $payload = [
+        'ok' => $ok,
+        'shortMessage' => $shortMessage,
+        'feedback' => $feedbackMessage,
+        'errors' => $errors,
+    ];
+
+    if ($stopReason !== '') {
+        $payload['stopReason'] = $stopReason;
+    }
+    if ($warningMessage !== '') {
+        $payload['warning'] = $warningMessage;
+    }
+
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 } catch (Throwable $e) {
     http_response_code(500);
     echo json_encode([

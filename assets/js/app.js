@@ -661,17 +661,23 @@
       }
 
       if (!validation.ok) {
-        appendLog("❌ Kompileringsfejl fundet");
+        const stopReason = typeof validation.stopReason === "string" ? validation.stopReason : "";
+        const runtimeBlock = stopReason === "runtime";
+        appendLog(runtimeBlock ? "❌ Kritisk runtime-fejl fundet" : "❌ Kompileringsfejl fundet");
         (validation.errors || []).forEach(error => {
           const lineInfo = Number.isFinite(error.line) ? `Linje ${error.line}: ` : "";
           appendLog(`   ${lineInfo}${error.message}`);
         });
-        const fallbackMessage = task.objective
-          ? `Koden indeholder fejl. Husk: ${task.objective}`
-          : "Koden indeholder fejl. Tjek loggen.";
-        const compileMessage = validation.shortMessage || fallbackMessage;
+        const fallbackMessage = runtimeBlock
+          ? (task.objective
+            ? `Programmet blev stoppet, fordi koden ser ud til at kunne låse eller crashe. Fokus: ${task.objective}`
+            : "Programmet blev stoppet, fordi koden ser ud til at kunne låse eller crashe. Ret koden og prøv igen.")
+          : (task.objective
+            ? `Koden indeholder fejl. Husk: ${task.objective}`
+            : "Koden indeholder fejl. Tjek loggen.");
+        const stopMessage = validation.shortMessage || fallbackMessage;
         appendPendingFeedback();
-        dom.feedback.textContent = withPendingFeedback(compileMessage);
+        dom.feedback.textContent = withPendingFeedback(stopMessage);
         dom.feedback.className = "feedback error";
         drawBoard();
         return;
@@ -809,17 +815,23 @@
       }
 
       if (!validation.ok) {
-        appendLog("❌ Kompileringsfejl fundet");
+        const stopReason = typeof validation.stopReason === "string" ? validation.stopReason : "";
+        const runtimeBlock = stopReason === "runtime";
+        appendLog(runtimeBlock ? "❌ Kritisk runtime-fejl fundet" : "❌ Kompileringsfejl fundet");
         (validation.errors || []).forEach(error => {
           const lineInfo = Number.isFinite(error.line) ? `Linje ${error.line}: ` : "";
           appendLog(`   ${lineInfo}${error.message}`);
         });
-        const fallbackMessage = task.objective
-          ? `Koden indeholder fejl. Husk: ${task.objective}`
-          : "Koden indeholder fejl. Tjek loggen.";
-        const compileMessage = validation.shortMessage || fallbackMessage;
+        const fallbackMessage = runtimeBlock
+          ? (task.objective
+            ? `Programmet blev stoppet, fordi koden ser ud til at kunne låse eller crashe. Fokus: ${task.objective}`
+            : "Programmet blev stoppet, fordi koden ser ud til at kunne låse eller crashe. Ret koden og prøv igen.")
+          : (task.objective
+            ? `Koden indeholder fejl. Husk: ${task.objective}`
+            : "Koden indeholder fejl. Tjek loggen.");
+        const stopMessage = validation.shortMessage || fallbackMessage;
         appendPendingFeedback();
-        dom.feedback.textContent = withPendingFeedback(compileMessage);
+        dom.feedback.textContent = withPendingFeedback(stopMessage);
         dom.feedback.className = "feedback error";
         drawBoard();
         clearStepSession();
@@ -1310,11 +1322,15 @@
       payload.errors = Array.isArray(payload.errors) ? payload.errors : [];
       return payload;
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || "ukendt fejl");
       return {
-        ok: true,
-        warning: error instanceof Error
-          ? `Valideringen mislykkedes (${error.message}).`
-          : "Valideringen mislykkedes." 
+        ok: false,
+        stopReason: "runtime",
+        shortMessage: "Valideringen mislykkedes, så programmet blev ikke kørt.",
+        feedback: "",
+        errors: [
+          { line: null, message: `Valideringen mislykkedes (${message}).` }
+        ]
       };
     }
   }
