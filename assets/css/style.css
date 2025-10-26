@@ -512,6 +512,12 @@ body {
     color: var(--primary);
 }
 
+.prompt-debug-section h3 {
+    margin: 1.2rem 0 0.4rem 0;
+    color: var(--primary);
+    font-size: 1rem;
+}
+
 .prompt-debug-help {
     margin: 0 0 0.8rem 0;
     font-size: 0.9rem;
@@ -522,6 +528,21 @@ body {
     margin: 0;
     background: #0f172a;
     color: #dbe4f5;
+    border-radius: 10px;
+    border: 1px solid rgba(27, 75, 122, 0.35);
+    padding: 1rem 1.2rem;
+    max-height: 260px;
+    overflow: auto;
+    white-space: pre-wrap;
+    font-family: "Fira Code", "Courier New", monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+#response-debug {
+    margin: 0;
+    background: #111827;
+    color: #e2e8f0;
     border-radius: 10px;
     border: 1px solid rgba(27, 75, 122, 0.35);
     padding: 1rem 1.2rem;

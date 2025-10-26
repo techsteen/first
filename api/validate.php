@@ -193,6 +193,14 @@ function runPreflightCheck(OpenAIClient $client, string $language, string $code,
         'user' => $promptPayload,
     ];
 
+    $payload['modelResponse'] = [
+        'mode' => 'preflight',
+        'id' => $response['id'] ?? null,
+        'usage' => $response['usage'] ?? null,
+        'content' => $content,
+        'raw' => $response,
+    ];
+
     return $payload;
 }
 
@@ -255,6 +263,14 @@ function runFeedbackAnalysis(OpenAIClient $client, string $language, string $cod
         'mode' => 'feedback',
         'system' => $systemPrompt,
         'user' => $promptPayload,
+    ];
+
+    $payload['modelResponse'] = [
+        'mode' => 'feedback',
+        'id' => $response['id'] ?? null,
+        'usage' => $response['usage'] ?? null,
+        'content' => $content,
+        'raw' => $response,
     ];
 
     return $payload;
