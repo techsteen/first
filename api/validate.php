@@ -63,37 +63,41 @@ try {
 
 function runPreflightCheck(OpenAIClient $client, string $language, string $code, string $objective): array
 {
+    $systemPrompt = 'Du er en compiler- og runtime-vagt for en undervisningsplatform. Du vurderer elevkode til en robotsimulator og svarer kun med JSON.';
+
+    $promptPayload = [
+        'language' => $language,
+        'code' => $code,
+        'objective' => $objective,
+        'environment' => [
+            'csharpEntryPoint' => 'static void Main(string[] args)',
+            'powershellEntryPoint' => 'Invoke-Program',
+            'commands' => [
+                'frem()',
+                'venstre()',
+                'højre()',
+                'blokering("retning")'
+            ],
+            'notes' => [
+                'Funktionerne ovenfor er defineret af simulatoren og må ikke markeres som udefinerede.',
+                'I C# skal du antage at frem, venstre, højre og blokering er tilgængelige som importerede statiske metoder (f.eks. via using static). De kaldes direkte fra Main uden yderligere deklaration.',
+                'C#-opgaverne bruger class Program og static void Main(string[] args) uden returværdi. Int Main() skal ikke efterspørges.',
+                'Et eksempel på gyldig struktur er: using System; class Program { static void Main(string[] args) { frem(); } }.',
+                'Console.WriteLine(...) er understøttet og må ikke rapporteres som fejl.',
+                'PowerShell-programmer starter via Invoke-Program, som allerede kaldes i skabelonen. Cmdlets som Write-Host er gyldige.'
+            ]
+        ],
+        'instructions' => 'Undersøg koden for (1) egentlige compiler-/parserfejl og (2) kritiske runtime-risici som uendelige løkker uden exit-betingelse, uendelig rekursion, division med nul, eller andre fejl der med stor sandsynlighed vil crashe eller fryse programmet. language er "csharp" eller "powershell". Returnér ok=false og stopReason="compile" ved syntaksfejl. Returnér ok=false og stopReason="runtime" når du identificerer sandsynlige runtime-fejl eller -loops som bør blokere kørslen. Angiv detaljer i errors-listen (linje når muligt). Hvis koden er sikker, returneres ok=true. shortMessage skal være tom når ok=true; ellers skal den forklare hvorfor programmet stoppes, f.eks. "Mulig uendelig løkke". Inkludér målet i shortMessage når objective ikke er tom, f.eks. "Fejl i opgaven: [objective]".'
+    ];
+
     $response = $client->chat([
         [
             'role' => 'system',
-            'content' => 'Du er en compiler- og runtime-vagt for en undervisningsplatform. Du vurderer elevkode til en robotsimulator og svarer kun med JSON.'
+            'content' => $systemPrompt
         ],
         [
             'role' => 'user',
-            'content' => json_encode([
-                'language' => $language,
-                'code' => $code,
-                'objective' => $objective,
-                'environment' => [
-                    'csharpEntryPoint' => 'static void Main(string[] args)',
-                    'powershellEntryPoint' => 'Invoke-Program',
-                    'commands' => [
-                        'frem()',
-                        'venstre()',
-                        'højre()',
-                        'blokering("retning")'
-                    ],
-                    'notes' => [
-                        'Funktionerne ovenfor er defineret af simulatoren og må ikke markeres som udefinerede.',
-                        'I C# skal du antage at frem, venstre, højre og blokering er tilgængelige som importerede statiske metoder (f.eks. via using static). De kaldes direkte fra Main uden yderligere deklaration.',
-                        'C#-opgaverne bruger class Program og static void Main(string[] args) uden returværdi. Int Main() skal ikke efterspørges.',
-                        'Et eksempel på gyldig struktur er: using System; class Program { static void Main(string[] args) { frem(); } }.',
-                        'Console.WriteLine(...) er understøttet og må ikke rapporteres som fejl.',
-                        'PowerShell-programmer starter via Invoke-Program, som allerede kaldes i skabelonen. Cmdlets som Write-Host er gyldige.'
-                    ]
-                ],
-                'instructions' => 'Undersøg koden for (1) egentlige compiler-/parserfejl og (2) kritiske runtime-risici som uendelige løkker uden exit-betingelse, uendelig rekursion, division med nul, eller andre fejl der med stor sandsynlighed vil crashe eller fryse programmet. language er "csharp" eller "powershell". Returnér ok=false og stopReason="compile" ved syntaksfejl. Returnér ok=false og stopReason="runtime" når du identificerer sandsynlige runtime-fejl eller -loops som bør blokere kørslen. Angiv detaljer i errors-listen (linje når muligt). Hvis koden er sikker, returneres ok=true. shortMessage skal være tom når ok=true; ellers skal den forklare hvorfor programmet stoppes, f.eks. "Mulig uendelig løkke". Inkludér målet i shortMessage når objective ikke er tom, f.eks. "Fejl i opgaven: [objective]".'
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            'content' => json_encode($promptPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
         ]
     ], [
         'temperature' => 0,
@@ -183,6 +187,12 @@ function runPreflightCheck(OpenAIClient $client, string $language, string $code,
         $payload['warning'] = $warningMessage;
     }
 
+    $payload['prompt'] = [
+        'mode' => 'preflight',
+        'system' => $systemPrompt,
+        'user' => $promptPayload,
+    ];
+
     return $payload;
 }
 
@@ -190,20 +200,24 @@ function runFeedbackAnalysis(OpenAIClient $client, string $language, string $cod
 {
     $normalisedProgress = normaliseProgress($progress);
 
+    $systemPrompt = 'Du er en hjælpsom undervisningsassistent. Giv kort, konkret feedback til en elev, der programmerer en robotsimulator.';
+
+    $promptPayload = [
+        'language' => $language,
+        'objective' => $objective,
+        'code' => $code,
+        'progress' => $normalisedProgress,
+        'instructions' => 'Giv 2-3 sætninger med konstruktiv feedback baseret på koden og den nuværende status. Kommentér kort på hvad der allerede virker, og foreslå næste skridt mod målet. Brug venligt tonefald og henvis til objective hvis det findes.'
+    ];
+
     $response = $client->chat([
         [
             'role' => 'system',
-            'content' => 'Du er en hjælpsom undervisningsassistent. Giv kort, konkret feedback til en elev, der programmerer en robotsimulator.'
+            'content' => $systemPrompt
         ],
         [
             'role' => 'user',
-            'content' => json_encode([
-                'language' => $language,
-                'objective' => $objective,
-                'code' => $code,
-                'progress' => $normalisedProgress,
-                'instructions' => 'Giv 2-3 sætninger med konstruktiv feedback baseret på koden og den nuværende status. Kommentér kort på hvad der allerede virker, og foreslå næste skridt mod målet. Brug venligt tonefald og henvis til objective hvis det findes.'
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            'content' => json_encode($promptPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
         ]
     ], [
         'temperature' => 0.4,
@@ -236,6 +250,12 @@ function runFeedbackAnalysis(OpenAIClient $client, string $language, string $cod
     if ($message !== '') {
         $payload['message'] = $message;
     }
+
+    $payload['prompt'] = [
+        'mode' => 'feedback',
+        'system' => $systemPrompt,
+        'user' => $promptPayload,
+    ];
 
     return $payload;
 }
