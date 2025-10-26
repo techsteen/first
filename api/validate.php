@@ -85,9 +85,11 @@ function runPreflightCheck(OpenAIClient $client, string $language, string $code,
                     ],
                     'notes' => [
                         'Funktionerne ovenfor er defineret af simulatoren og må ikke markeres som udefinerede.',
+                        'I C# skal du antage at frem, venstre, højre og blokering er tilgængelige som importerede statiske metoder (f.eks. via using static). De kaldes direkte fra Main uden yderligere deklaration.',
                         'C#-opgaverne bruger class Program og static void Main(string[] args) uden returværdi. Int Main() skal ikke efterspørges.',
+                        'Et eksempel på gyldig struktur er: using System; class Program { static void Main(string[] args) { frem(); } }.',
                         'Console.WriteLine(...) er understøttet og må ikke rapporteres som fejl.',
-                        'PowerShell-programmer starter via Invoke-Program, som allerede kaldes i skabelonen.'
+                        'PowerShell-programmer starter via Invoke-Program, som allerede kaldes i skabelonen. Cmdlets som Write-Host er gyldige.'
                     ]
                 ],
                 'instructions' => 'Undersøg koden for (1) egentlige compiler-/parserfejl og (2) kritiske runtime-risici som uendelige løkker uden exit-betingelse, uendelig rekursion, division med nul, eller andre fejl der med stor sandsynlighed vil crashe eller fryse programmet. language er "csharp" eller "powershell". Returnér ok=false og stopReason="compile" ved syntaksfejl. Returnér ok=false og stopReason="runtime" når du identificerer sandsynlige runtime-fejl eller -loops som bør blokere kørslen. Angiv detaljer i errors-listen (linje når muligt). Hvis koden er sikker, returneres ok=true. shortMessage skal være tom når ok=true; ellers skal den forklare hvorfor programmet stoppes, f.eks. "Mulig uendelig løkke". Inkludér målet i shortMessage når objective ikke er tom, f.eks. "Fejl i opgaven: [objective]".'
