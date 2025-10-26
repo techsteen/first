@@ -463,6 +463,22 @@ body {
     color: var(--danger);
 }
 
+.ai-feedback-output {
+    margin-top: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid rgba(33, 60, 90, 0.15);
+    background: rgba(236, 240, 244, 0.4);
+    color: var(--primary);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    white-space: pre-line;
+}
+
+.ai-feedback-output.hidden {
+    display: none;
+}
+
 .log {
     background: #f6f8fb;
     border-radius: 10px;

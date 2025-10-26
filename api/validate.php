@@ -17,9 +17,21 @@ if (!is_array($payload)) {
     exit;
 }
 
+$mode = isset($payload['mode']) ? strtolower(trim((string) $payload['mode'])) : 'preflight';
 $language = $payload['language'] ?? '';
 $code = $payload['code'] ?? '';
 $objective = $payload['objective'] ?? '';
+
+if (!in_array($mode, ['preflight', 'feedback'], true)) {
+    http_response_code(400);
+    echo json_encode(['ok' => false, 'error' => 'mode skal være preflight eller feedback.']);
+    exit;
+}
+
+$progress = [];
+if ($mode === 'feedback') {
+    $progress = isset($payload['progress']) && is_array($payload['progress']) ? $payload['progress'] : [];
+}
 
 if (!is_string($language) || !is_string($code) || ($objective !== '' && !is_string($objective))) {
     http_response_code(400);
@@ -34,6 +46,23 @@ require_once __DIR__ . '/../lib/OpenAIClient.php';
 try {
     $client = OpenAIClient::fromDefaultLocations();
 
+    if ($mode === 'feedback') {
+        $result = runFeedbackAnalysis($client, $language, $code, $objective, $progress);
+    } else {
+        $result = runPreflightCheck($client, $language, $code, $objective);
+    }
+
+    echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+} catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode([
+        'ok' => false,
+        'error' => $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}
+
+function runPreflightCheck(OpenAIClient $client, string $language, string $code, string $objective): array
+{
     $response = $client->chat([
         [
             'role' => 'system',
@@ -61,7 +90,7 @@ try {
                         'PowerShell-programmer starter via Invoke-Program, som allerede kaldes i skabelonen.'
                     ]
                 ],
-                'instructions' => 'Undersøg koden for (1) egentlige compiler-/parserfejl og (2) kritiske runtime-risici som uendelige løkker uden exit-betingelse, uendelig rekursion, division med nul, eller andre fejl der med stor sandsynlighed vil crashe eller fryse programmet. language er "csharp" eller "powershell". Returnér ok=false og stopReason="compile" ved syntaksfejl. Returnér ok=false og stopReason="runtime" når du identificerer sandsynlige runtime-fejl eller -loops som bør blokere kørslen. Angiv detaljer i errors-listen (linje når muligt). Hvis koden er sikker, returneres ok=true. Giv logisk feedback i feltet feedback (maks. 2 sætninger) og relater det til objective når det findes. shortMessage skal være tom når ok=true; ellers skal den forklare hvorfor programmet stoppes, f.eks. "Mulig uendelig løkke". Inkludér målet i shortMessage når objective ikke er tom, f.eks. "Fejl i opgaven: [objective]".'
+                'instructions' => 'Undersøg koden for (1) egentlige compiler-/parserfejl og (2) kritiske runtime-risici som uendelige løkker uden exit-betingelse, uendelig rekursion, division med nul, eller andre fejl der med stor sandsynlighed vil crashe eller fryse programmet. language er "csharp" eller "powershell". Returnér ok=false og stopReason="compile" ved syntaksfejl. Returnér ok=false og stopReason="runtime" når du identificerer sandsynlige runtime-fejl eller -loops som bør blokere kørslen. Angiv detaljer i errors-listen (linje når muligt). Hvis koden er sikker, returneres ok=true. shortMessage skal være tom når ok=true; ellers skal den forklare hvorfor programmet stoppes, f.eks. "Mulig uendelig løkke". Inkludér målet i shortMessage når objective ikke er tom, f.eks. "Fejl i opgaven: [objective]".'
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
         ]
     ], [
@@ -152,11 +181,142 @@ try {
         $payload['warning'] = $warningMessage;
     }
 
-    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-} catch (Throwable $e) {
-    http_response_code(500);
-    echo json_encode([
-        'ok' => false,
-        'error' => $e->getMessage()
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    return $payload;
+}
+
+function runFeedbackAnalysis(OpenAIClient $client, string $language, string $code, string $objective, array $progress): array
+{
+    $normalisedProgress = normaliseProgress($progress);
+
+    $response = $client->chat([
+        [
+            'role' => 'system',
+            'content' => 'Du er en hjælpsom undervisningsassistent. Giv kort, konkret feedback til en elev, der programmerer en robotsimulator.'
+        ],
+        [
+            'role' => 'user',
+            'content' => json_encode([
+                'language' => $language,
+                'objective' => $objective,
+                'code' => $code,
+                'progress' => $normalisedProgress,
+                'instructions' => 'Giv 2-3 sætninger med konstruktiv feedback baseret på koden og den nuværende status. Kommentér kort på hvad der allerede virker, og foreslå næste skridt mod målet. Brug venligt tonefald og henvis til objective hvis det findes.'
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        ]
+    ], [
+        'temperature' => 0.4,
+        'response_format' => [
+            'type' => 'json_schema',
+            'json_schema' => [
+                'name' => 'ai_feedback',
+                'schema' => [
+                    'type' => 'object',
+                    'required' => ['feedback'],
+                    'properties' => [
+                        'feedback' => ['type' => 'string'],
+                        'message' => ['type' => 'string']
+                    ]
+                ]
+            ]
+        ]
+    ]);
+
+    $content = $response['choices'][0]['message']['content'] ?? null;
+    $data = is_string($content) ? json_decode($content, true) : null;
+    if (!$data || !isset($data['feedback'])) {
+        throw new RuntimeException('Modellen returnerede ikke AI-feedback.');
+    }
+
+    $feedback = is_string($data['feedback']) ? trim($data['feedback']) : '';
+    $message = isset($data['message']) && is_string($data['message']) ? trim($data['message']) : '';
+
+    $payload = ['feedback' => $feedback];
+    if ($message !== '') {
+        $payload['message'] = $message;
+    }
+
+    return $payload;
+}
+
+function normaliseProgress(array $progress): array
+{
+    $log = [];
+    if (isset($progress['log']) && is_array($progress['log'])) {
+        foreach ($progress['log'] as $entry) {
+            if (!is_string($entry)) {
+                continue;
+            }
+            $trimmed = trim($entry);
+            if ($trimmed === '') {
+                continue;
+            }
+            $log[] = $trimmed;
+            if (count($log) >= 40) {
+                break;
+            }
+        }
+    }
+
+    $stepIndex = isset($progress['stepIndex']) && is_numeric($progress['stepIndex'])
+        ? max(0, (int) $progress['stepIndex'])
+        : null;
+    $totalSteps = isset($progress['totalSteps']) && is_numeric($progress['totalSteps'])
+        ? max(0, (int) $progress['totalSteps'])
+        : null;
+    $success = isset($progress['success']) ? (bool) $progress['success'] : null;
+
+    $board = isset($progress['board']) && is_array($progress['board'])
+        ? normaliseBoardSnapshot($progress['board'])
+        : null;
+
+    return [
+        'log' => $log,
+        'stepIndex' => $stepIndex,
+        'totalSteps' => $totalSteps,
+        'success' => $success,
+        'board' => $board
+    ];
+}
+
+function normaliseBoardSnapshot(array $snapshot): array
+{
+    $result = [];
+
+    if (isset($snapshot['agent']) && is_array($snapshot['agent'])) {
+        $result['agent'] = [
+            'x' => isset($snapshot['agent']['x']) && is_numeric($snapshot['agent']['x']) ? (int) $snapshot['agent']['x'] : 0,
+            'y' => isset($snapshot['agent']['y']) && is_numeric($snapshot['agent']['y']) ? (int) $snapshot['agent']['y'] : 0,
+            'direction' => isset($snapshot['agent']['direction']) && is_string($snapshot['agent']['direction'])
+                ? $snapshot['agent']['direction']
+                : ''
+        ];
+    }
+
+    $result['obstacles'] = [];
+    if (isset($snapshot['obstacles']) && is_array($snapshot['obstacles'])) {
+        foreach ($snapshot['obstacles'] as $obstacle) {
+            if (!is_array($obstacle)) {
+                continue;
+            }
+            if (!isset($obstacle['x'], $obstacle['y'])) {
+                continue;
+            }
+            if (!is_numeric($obstacle['x']) || !is_numeric($obstacle['y'])) {
+                continue;
+            }
+            $result['obstacles'][] = [
+                'x' => (int) $obstacle['x'],
+                'y' => (int) $obstacle['y']
+            ];
+            if (count($result['obstacles']) >= 20) {
+                break;
+            }
+        }
+    }
+
+    if (isset($snapshot['obstaclesVisible'])) {
+        $result['obstaclesVisible'] = (bool) $snapshot['obstaclesVisible'];
+    }
+
+    return $result;
 }

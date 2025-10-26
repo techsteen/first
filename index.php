@@ -50,10 +50,12 @@
                         <button id="step-btn" class="secondary">Kør ét skridt</button>
                         <button id="run-btn">Kør program</button>
                         <button id="reset-btn" class="secondary">Nulstil</button>
+                        <button id="ai-feedback-btn" class="secondary">AI feedback</button>
                         <button id="hint-btn" class="secondary">Vis hint</button>
                     </div>
                     <div id="hint-output" class="hint-output"></div>
                     <div class="feedback" id="feedback"></div>
+                    <div id="ai-feedback-output" class="ai-feedback-output"></div>
                     <div class="log" id="log"></div>
                 </div>
             </div>

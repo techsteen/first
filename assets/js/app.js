@@ -6,6 +6,7 @@
     south: "↓",
     west: "←"
   };
+  const MAX_ACTIONS = 500;
 
   const LANGUAGE_CONFIG = {
     csharp: {
@@ -70,8 +71,8 @@
     tasks: normalizeTasks(Array.isArray(window.FALLBACK_TASKS) ? window.FALLBACK_TASKS : []),
     isRunning: false,
     hintIndex: 0,
-    pendingFeedback: "",
-    stepSession: null
+    stepSession: null,
+    lastExecution: null
   };
 
   const dom = {};
@@ -87,12 +88,19 @@
     dom.runBtn = document.getElementById("run-btn");
     dom.stepBtn = document.getElementById("step-btn");
     dom.resetBtn = document.getElementById("reset-btn");
+    dom.aiFeedbackBtn = document.getElementById("ai-feedback-btn");
     dom.hintBtn = document.getElementById("hint-btn");
     dom.feedback = document.getElementById("feedback");
+    dom.aiFeedback = document.getElementById("ai-feedback-output");
     dom.hint = document.getElementById("hint-output");
     dom.log = document.getElementById("log");
     dom.commandReference = document.getElementById("command-reference");
     dom.languageInputs = document.querySelectorAll('input[name="language"]');
+
+    if (dom.aiFeedback) {
+      dom.aiFeedback.textContent = "";
+      dom.aiFeedback.classList.add("hidden");
+    }
 
     const initialLanguage = Array.from(dom.languageInputs || []).find(input => input.checked);
     if (initialLanguage) {
@@ -122,6 +130,9 @@
       dom.stepBtn.addEventListener("click", handleStepRun);
     }
     dom.resetBtn.addEventListener("click", handleReset);
+    if (dom.aiFeedbackBtn) {
+      dom.aiFeedbackBtn.addEventListener("click", handleAiFeedback);
+    }
     if (dom.hintBtn) {
       dom.hintBtn.addEventListener("click", showNextHint);
     }
@@ -436,9 +447,10 @@
     state.boardState = createBoardState(task);
     buildBoardGrid(state.boardState.size);
     drawBoard();
-    state.pendingFeedback = "";
     dom.feedback.textContent = task.objective ? `Mål: ${task.objective}` : "";
     dom.feedback.className = "feedback";
+    clearAiFeedback();
+    state.lastExecution = null;
     state.hintIndex = 0;
     if (dom.hint) {
       dom.hint.innerHTML = "";
@@ -625,9 +637,10 @@
     if (!state.selectedTask || !state.boardState || state.isRunning) return;
 
     clearStepSession();
+    clearAiFeedback();
     state.isRunning = true;
-    state.pendingFeedback = "";
     setRunButtonBusy(true);
+    state.lastExecution = null;
 
     try {
       const task = state.selectedTask;
@@ -654,37 +667,45 @@
 
       appendLog("▶️ Validerer kode");
       const validation = await validateCode(rawCode, state.selectedLanguage, task.objective);
-      state.pendingFeedback = typeof validation.feedback === "string" ? validation.feedback.trim() : "";
 
       if (validation.warning) {
         appendLog(`⚠️ ${validation.warning}`);
       }
 
-      if (!validation.ok) {
-        const stopReason = typeof validation.stopReason === "string" ? validation.stopReason : "";
-        const runtimeBlock = stopReason === "runtime";
-        appendLog(runtimeBlock ? "❌ Kritisk runtime-fejl fundet" : "❌ Kompileringsfejl fundet");
+      const stopReason = typeof validation.stopReason === "string" ? validation.stopReason : "";
+      const hasCompileError = !validation.ok && stopReason === "compile";
+      const hasRuntimeBlock = !validation.ok && stopReason === "runtime";
+
+      if (hasCompileError) {
+        appendLog("❌ Kompileringsfejl fundet");
         (validation.errors || []).forEach(error => {
           const lineInfo = Number.isFinite(error.line) ? `Linje ${error.line}: ` : "";
           appendLog(`   ${lineInfo}${error.message}`);
         });
-        const fallbackMessage = runtimeBlock
-          ? (task.objective
-            ? `Programmet blev stoppet, fordi koden ser ud til at kunne låse eller crashe. Fokus: ${task.objective}`
-            : "Programmet blev stoppet, fordi koden ser ud til at kunne låse eller crashe. Ret koden og prøv igen.")
-          : (task.objective
-            ? `Koden indeholder fejl. Husk: ${task.objective}`
-            : "Koden indeholder fejl. Tjek loggen.");
+        const fallbackMessage = task.objective
+          ? `Koden indeholder fejl. Husk: ${task.objective}`
+          : "Koden indeholder fejl. Tjek loggen.";
         const stopMessage = validation.shortMessage || fallbackMessage;
-        appendPendingFeedback();
-        dom.feedback.textContent = withPendingFeedback(stopMessage);
+        dom.feedback.textContent = stopMessage;
         dom.feedback.className = "feedback error";
         drawBoard();
         return;
       }
 
+      if (hasRuntimeBlock) {
+        appendLog("⚠️ Mulig runtime-fejl opdaget (fortsætter efter ønske)");
+        (validation.errors || []).forEach(error => {
+          const lineInfo = Number.isFinite(error.line) ? `Linje ${error.line}: ` : "";
+          appendLog(`   ${lineInfo}${error.message}`);
+        });
+        if (validation.shortMessage) {
+          appendLog(`   ${validation.shortMessage}`);
+        }
+      } else if (!validation.ok) {
+        appendLog("⚠️ Valideringen kunne ikke bekræfte koden, men der blev ikke fundet kompileringsfejl");
+      }
+
       appendLog("✅ Ingen kompileringsfejl fundet");
-      appendPendingFeedback();
 
       resetBoardState(boardState);
       dom.feedback.textContent = task.objective
@@ -716,7 +737,7 @@
         const translationMessage = task.objective
           ? `Koden kunne ikke oversættes til simulatoren. Prøv igen med fokus på: ${task.objective}`
           : "Koden kunne ikke oversættes til simulatoren. Tjek syntaksen for det valgte sprog.";
-        dom.feedback.textContent = withPendingFeedback(translationMessage);
+        dom.feedback.textContent = translationMessage;
         dom.feedback.className = "feedback error";
         drawBoard();
         return;
@@ -732,9 +753,16 @@
         const runtimeMessage = task.objective
           ? `Der opstod en fejl i programmet. Sammenhold med målet: ${task.objective}`
           : "Der opstod en fejl i programmet. Tjek loggen.";
-        dom.feedback.textContent = withPendingFeedback(runtimeMessage);
+        dom.feedback.textContent = runtimeMessage;
         dom.feedback.className = "feedback error";
         drawBoard();
+        state.lastExecution = buildExecutionSnapshot({
+          language: state.selectedLanguage,
+          code: rawCode,
+          objective: task.objective,
+          success: false,
+          lastLog: state.logEntries.slice()
+        });
         return;
       }
 
@@ -744,22 +772,31 @@
         const successMessage = task.objective
           ? `✅ Opgaven løst: ${task.objective}`
           : "Godt gået! Robotten nåede målet.";
-        dom.feedback.textContent = withPendingFeedback(successMessage);
+        dom.feedback.textContent = successMessage;
         dom.feedback.className = "feedback success";
       } else {
         const resultMessage = task.objective
           ? `Programmet er kørt færdigt, men målet blev ikke nået. Husk: ${task.objective}`
           : "Programmet er kørt færdigt. Robotten nåede endnu ikke målet.";
-        dom.feedback.textContent = withPendingFeedback(resultMessage);
+        dom.feedback.textContent = resultMessage;
         dom.feedback.className = "feedback";
       }
+
+      state.lastExecution = buildExecutionSnapshot({
+        language: state.selectedLanguage,
+        code: rawCode,
+        objective: task.objective,
+        success,
+        lastLog: state.logEntries.slice()
+      });
     } catch (error) {
       appendLog(`⚠️ Uventet fejl: ${error instanceof Error ? error.message : error}`);
       const unexpectedMessage = task.objective
         ? `Der opstod en uventet fejl. Genbesøg målet: ${task.objective}`
         : "Der opstod en uventet fejl. Tjek loggen.";
-      dom.feedback.textContent = withPendingFeedback(unexpectedMessage);
+      dom.feedback.textContent = unexpectedMessage;
       dom.feedback.className = "feedback error";
+      state.lastExecution = null;
     } finally {
       setRunButtonBusy(false);
       state.isRunning = false;
@@ -778,9 +815,10 @@
       clearStepSession();
     }
 
+    clearAiFeedback();
     state.isRunning = true;
-    state.pendingFeedback = "";
     setStepButtonBusy(true);
+    state.lastExecution = null;
 
     let prepared = false;
 
@@ -803,43 +841,51 @@
         return;
       }
 
-      dom.feedback.textContent = "Validerer kode…";
+      dom.feedback.textContent = "Forbereder trinvis kørsel…";
       dom.feedback.className = "feedback";
 
       appendLog("▶️ Validerer kode");
       const validation = await validateCode(rawCode, state.selectedLanguage, task.objective);
-      state.pendingFeedback = typeof validation.feedback === "string" ? validation.feedback.trim() : "";
 
       if (validation.warning) {
         appendLog(`⚠️ ${validation.warning}`);
       }
 
-      if (!validation.ok) {
-        const stopReason = typeof validation.stopReason === "string" ? validation.stopReason : "";
-        const runtimeBlock = stopReason === "runtime";
-        appendLog(runtimeBlock ? "❌ Kritisk runtime-fejl fundet" : "❌ Kompileringsfejl fundet");
+      const stopReason = typeof validation.stopReason === "string" ? validation.stopReason : "";
+      const hasCompileError = !validation.ok && stopReason === "compile";
+      const hasRuntimeBlock = !validation.ok && stopReason === "runtime";
+
+      if (hasCompileError) {
+        appendLog("❌ Kompileringsfejl fundet");
         (validation.errors || []).forEach(error => {
           const lineInfo = Number.isFinite(error.line) ? `Linje ${error.line}: ` : "";
           appendLog(`   ${lineInfo}${error.message}`);
         });
-        const fallbackMessage = runtimeBlock
-          ? (task.objective
-            ? `Programmet blev stoppet, fordi koden ser ud til at kunne låse eller crashe. Fokus: ${task.objective}`
-            : "Programmet blev stoppet, fordi koden ser ud til at kunne låse eller crashe. Ret koden og prøv igen.")
-          : (task.objective
-            ? `Koden indeholder fejl. Husk: ${task.objective}`
-            : "Koden indeholder fejl. Tjek loggen.");
+        const fallbackMessage = task.objective
+          ? `Koden indeholder fejl. Husk: ${task.objective}`
+          : "Koden indeholder fejl. Tjek loggen.";
         const stopMessage = validation.shortMessage || fallbackMessage;
-        appendPendingFeedback();
-        dom.feedback.textContent = withPendingFeedback(stopMessage);
+        dom.feedback.textContent = stopMessage;
         dom.feedback.className = "feedback error";
         drawBoard();
         clearStepSession();
         return;
       }
 
+      if (hasRuntimeBlock) {
+        appendLog("⚠️ Mulig runtime-fejl opdaget (fortsætter efter ønske)");
+        (validation.errors || []).forEach(error => {
+          const lineInfo = Number.isFinite(error.line) ? `Linje ${error.line}: ` : "";
+          appendLog(`   ${lineInfo}${error.message}`);
+        });
+        if (validation.shortMessage) {
+          appendLog(`   ${validation.shortMessage}`);
+        }
+      } else if (!validation.ok) {
+        appendLog("⚠️ Valideringen kunne ikke bekræfte koden, men der blev ikke fundet kompileringsfejl");
+      }
+
       appendLog("✅ Ingen kompileringsfejl fundet");
-      appendPendingFeedback();
 
       resetBoardState(state.boardState);
       if (state.boardState.randomizeObstacles) {
@@ -862,10 +908,11 @@
         const translationMessage = task.objective
           ? `Koden kunne ikke oversættes til simulatoren. Prøv igen med fokus på: ${task.objective}`
           : "Koden kunne ikke oversættes til simulatoren. Tjek syntaksen for det valgte sprog.";
-        dom.feedback.textContent = withPendingFeedback(translationMessage);
+        dom.feedback.textContent = translationMessage;
         dom.feedback.className = "feedback error";
         drawBoard();
         clearStepSession();
+        state.lastExecution = null;
         return;
       }
 
@@ -917,7 +964,7 @@
 
       events.push({
         type: runtimeErrorMessage ? "status-error" : success ? "status-success" : "status",
-        message: withPendingFeedback(completionMessage),
+        message: completionMessage,
         snapshot: finalSnapshot,
         final: true,
         log: false,
@@ -927,6 +974,9 @@
       state.stepSession = {
         taskId: task.id,
         language: state.selectedLanguage,
+        source: rawCode,
+        objective: task.objective,
+        success,
         events,
         index: 0
       };
@@ -951,11 +1001,13 @@
       dom.feedback.textContent = "Programmet udførte ingen handlinger.";
       dom.feedback.className = "feedback";
       clearStepSession();
+      state.lastExecution = null;
       return;
     }
 
     if (session.index >= session.events.length) {
       clearStepSession();
+      state.lastExecution = null;
       return;
     }
 
@@ -992,6 +1044,17 @@
           : (dom.stepBtn.dataset.defaultLabel || "Kør ét skridt"));
       }
     }
+
+    state.lastExecution = buildExecutionSnapshot({
+      language: session.language,
+      code: session.source,
+      objective: session.objective,
+      success: isAtGoal(state.boardState),
+      lastLog: state.logEntries.slice(),
+      stepIndex: session.index,
+      totalSteps: session.events.length,
+      boardSnapshot: snapshotBoard(state.boardState)
+    });
   }
 
   function handleReset(event) {
@@ -1003,12 +1066,49 @@
     updateLog();
     dom.feedback.textContent = "";
     dom.feedback.className = "feedback";
-    state.pendingFeedback = "";
+    clearAiFeedback();
+    state.lastExecution = null;
 
     if (event && event.shiftKey) {
       const template = getTemplateForTask(state.selectedTask);
       dom.editor.value = template;
       storeCurrentCode();
+    }
+  }
+
+  async function handleAiFeedback() {
+    if (!state.selectedTask || !state.boardState) {
+      return;
+    }
+
+    const language = state.selectedLanguage;
+    const rawCode = dom.editor.value;
+    const objective = state.selectedTask.objective || "";
+    const progress = buildFeedbackProgress();
+
+    if (dom.aiFeedbackBtn) {
+      dom.aiFeedbackBtn.disabled = true;
+    }
+    showAiFeedback("Henter AI-feedback…");
+
+    try {
+      const response = await requestAiFeedback(rawCode, language, objective, progress);
+      const feedback = response && typeof response.feedback === "string" ? response.feedback.trim() : "";
+      if (feedback) {
+        showAiFeedback(feedback);
+        appendLog(`💡 AI-feedback: ${feedback}`);
+      } else if (response && typeof response.message === "string" && response.message.trim()) {
+        showAiFeedback(response.message.trim());
+      } else {
+        showAiFeedback("AI-feedback er ikke tilgængelig lige nu. Prøv igen senere.");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error ?? "Ukendt fejl");
+      showAiFeedback(`Kunne ikke hente AI-feedback: ${message}`);
+    } finally {
+      if (dom.aiFeedbackBtn) {
+        dom.aiFeedbackBtn.disabled = false;
+      }
     }
   }
 
@@ -1087,6 +1187,7 @@
 
   function createSandbox(boardState, options = {}) {
     const { log = appendLog, draw = true } = options;
+    let actionCount = 0;
     const api = {
       frem,
       venstre,
@@ -1101,6 +1202,10 @@
     return { argNames, argValues };
 
     function recordAction(message) {
+      actionCount += 1;
+      if (actionCount > MAX_ACTIONS) {
+        throw new Error(`Programmet udførte mere end ${MAX_ACTIONS} handlinger. Stopper for at undgå uendelig løkke.`);
+      }
       if (typeof log === "function") {
         log(message, boardState, "action");
       }
@@ -1244,23 +1349,52 @@
     updateLog();
   }
 
-  function appendPendingFeedback() {
-    if (!state.pendingFeedback) {
-      return;
-    }
-    appendLog(`ℹ️ AI-feedback: ${state.pendingFeedback}`);
+  function clearAiFeedback() {
+    if (!dom.aiFeedback) return;
+    dom.aiFeedback.textContent = "";
+    dom.aiFeedback.classList.add("hidden");
   }
 
-  function withPendingFeedback(message) {
-    const base = typeof message === "string" ? message : String(message ?? "");
-    if (!state.pendingFeedback) {
-      return base;
-    }
-    const trimmedBase = base.trim();
-    if (!trimmedBase) {
-      return `AI-feedback: ${state.pendingFeedback}`;
-    }
-    return `${trimmedBase}\nAI-feedback: ${state.pendingFeedback}`;
+  function showAiFeedback(message) {
+    if (!dom.aiFeedback) return;
+    dom.aiFeedback.textContent = typeof message === "string" ? message : String(message ?? "");
+    dom.aiFeedback.classList.remove("hidden");
+  }
+
+  function buildExecutionSnapshot(options = {}) {
+    const {
+      language = state.selectedLanguage,
+      code = dom.editor ? dom.editor.value : "",
+      objective = state.selectedTask ? state.selectedTask.objective : "",
+      success = false,
+      lastLog = [],
+      stepIndex = null,
+      totalSteps = null,
+      boardSnapshot = snapshotBoard(state.boardState)
+    } = options;
+
+    return {
+      language,
+      code,
+      objective,
+      success: Boolean(success),
+      log: Array.isArray(lastLog) ? [...lastLog] : [],
+      stepIndex: Number.isFinite(stepIndex) ? stepIndex : null,
+      totalSteps: Number.isFinite(totalSteps) ? totalSteps : null,
+      board: boardSnapshot
+    };
+  }
+
+  function buildFeedbackProgress() {
+    const execution = state.lastExecution;
+    const board = snapshotBoard(state.boardState);
+    return {
+      log: state.logEntries.slice(),
+      board,
+      stepIndex: execution && Number.isFinite(execution.stepIndex) ? execution.stepIndex : null,
+      totalSteps: execution && Number.isFinite(execution.totalSteps) ? execution.totalSteps : null,
+      success: execution ? execution.success : isAtGoal(state.boardState)
+    };
   }
 
   function updateLog() {
@@ -1305,7 +1439,7 @@
           "Content-Type": "application/json",
           Accept: "application/json"
         },
-        body: JSON.stringify({ code: source, language, objective })
+        body: JSON.stringify({ mode: "preflight", code: source, language, objective })
       });
 
       const text = await response.text();
@@ -1333,6 +1467,34 @@
         ]
       };
     }
+  }
+
+  async function requestAiFeedback(source, language, objective, progress) {
+    const payload = {
+      mode: "feedback",
+      code: source,
+      language,
+      objective,
+      progress
+    };
+
+    const response = await fetch("api/validate.php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
+
+    if (!response.ok) {
+      throw new Error(data.error || `Server-fejl ${response.status}`);
+    }
+
+    return data;
   }
 
   function setRunButtonBusy(isBusy) {
