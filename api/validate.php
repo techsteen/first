@@ -87,7 +87,7 @@ function runPreflightCheck(OpenAIClient $client, string $language, string $code,
                 'PowerShell-programmer starter via Invoke-Program, som allerede kaldes i skabelonen. Cmdlets som Write-Host er gyldige.'
             ]
         ],
-        'instructions' => 'Undersøg koden for (1) egentlige compiler-/parserfejl og (2) kritiske runtime-risici som uendelige løkker uden exit-betingelse, uendelig rekursion, division med nul, eller andre fejl der med stor sandsynlighed vil crashe eller fryse programmet. language er "csharp" eller "powershell". Returnér ok=false og stopReason="compile" ved syntaksfejl. Returnér ok=false og stopReason="runtime" når du identificerer sandsynlige runtime-fejl eller -loops som bør blokere kørslen. Angiv detaljer i errors-listen (linje når muligt). Hvis koden er sikker, returneres ok=true. shortMessage skal være tom når ok=true; ellers skal den forklare hvorfor programmet stoppes, f.eks. "Mulig uendelig løkke". Inkludér målet i shortMessage når objective ikke er tom, f.eks. "Fejl i opgaven: [objective]".'
+        'instructions' => 'Undersøg koden for (1) egentlige compiler-/parserfejl og (2) kritiske runtime-risici som uendelige løkker uden exit-betingelse, uendelig rekursion, division med nul, eller andre fejl der med stor sandsynlighed vil crashe eller fryse programmet. language er "csharp" eller "powershell". Frem(), venstre(), højre() og blokering(...) er allerede defineret af simulatoren og må ALDRIG markeres som udefinerede – accepter deres brug uden yderligere kode. Returnér ok=false og stopReason="compile" ved syntaksfejl. Returnér ok=false og stopReason="runtime" når du identificerer sandsynlige runtime-fejl eller -loops som bør blokere kørslen. Angiv detaljer i errors-listen (linje når muligt). Hvis koden er sikker, returneres ok=true. shortMessage skal være tom når ok=true; ellers skal den forklare hvorfor programmet stoppes, f.eks. "Mulig uendelig løkke". Inkludér målet i shortMessage når objective ikke er tom, f.eks. "Fejl i opgaven: [objective]".'
     ];
 
     $response = $client->chat([
@@ -210,12 +210,30 @@ function runFeedbackAnalysis(OpenAIClient $client, string $language, string $cod
 
     $systemPrompt = 'Du er en hjælpsom undervisningsassistent. Giv kort, konkret feedback til en elev, der programmerer en robotsimulator.';
 
+    $environment = [
+        'csharpEntryPoint' => 'static void Main(string[] args)',
+        'powershellEntryPoint' => 'Invoke-Program',
+        'commands' => [
+            'frem()',
+            'venstre()',
+            'højre()',
+            'blokering("retning")'
+        ],
+        'notes' => [
+            'Simulatoren leverer ovenstående kommandoer – de må aldrig markeres som udefinerede, selv hvis koden ikke deklarerer dem.',
+            'I C# er frem, venstre, højre og blokering tilgængelige som importerede statiske metoder og kan kaldes direkte fra Main.',
+            'Console.WriteLine(...) er understøttet og skal accepteres.',
+            'PowerShell-programmer starter via Invoke-Program, og Write-Host m.fl. er gyldige.'
+        ]
+    ];
+
     $promptPayload = [
         'language' => $language,
         'objective' => $objective,
         'code' => $code,
         'progress' => $normalisedProgress,
-        'instructions' => 'Giv 2-3 sætninger med konstruktiv feedback baseret på koden og den nuværende status. Kommentér kort på hvad der allerede virker, og foreslå næste skridt mod målet. Brug venligt tonefald og henvis til objective hvis det findes.'
+        'environment' => $environment,
+        'instructions' => 'Giv 2-3 sætninger med konstruktiv feedback baseret på koden og den nuværende status. Kommentér kort på hvad der allerede virker, og foreslå næste skridt mod målet. Brug venligt tonefald og henvis til objective hvis det findes. Hvis loggen rapporterer at de indbyggede kommandoer mangler, så korrigér misforståelsen og forklar at de er tilgængelige.'
     ];
 
     $response = $client->chat([
