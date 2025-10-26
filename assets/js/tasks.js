@@ -797,18 +797,19 @@
         }),
         templates: createTemplates(
           [
-            "while (!blokering(\"frem\")) {",
-            "    // Bevæg dig et skridt frem",
-            "}",
-            "// Drej til højre for at finde omvejen",
-            "// Fortsæt mod målet med passende kommandoer"
+            "// Pseudokode:",
+            "// while (!blokering(\\\"frem\\\")) {",
+            "//     frem();",
+            "// }",
+            null,
+            "// Drej til højre og skriv kommandoerne til omvejen frem til målet."
           ],
           [
-            "while (-not (blokering \"frem\")) {",
-            "    # Bevæg dig et skridt frem",
-            "}",
-            "# Drej til højre for at finde omvejen",
-            "# Fortsæt mod målet med passende kommandoer"
+            "# Pseudokode:",
+            "# while (-not (blokering \\\"frem\\\")) {",
+            "#     frem",
+            "# }",
+            "# Drej til højre og skriv kommandoerne til omvejen frem til målet."
           ]
         ),
         tips: [
@@ -827,14 +828,12 @@
         }),
         templates: createTemplates(
           [
-            "while (!blokering(\"mål\")) {",
-            "    // Fortsæt bevægelsen skridt for skridt",
-            "}"
+            "// Gentag frem(); indtil blokering(\\\"mål\\\") bliver sand.",
+            "// Når kommentaren er omsat til kode, skal robotten stå på målet."
           ],
           [
-            "while (-not (blokering \"mål\")) {",
-            "    # Fortsæt bevægelsen skridt for skridt",
-            "}"
+            "# Gentag frem indtil blokering \\\"mål\\\" bliver sand.",
+            "# Når du omskriver kommentaren til kode, skal robotten ende på målet."
           ]
         ),
         tips: [
@@ -854,22 +853,12 @@
         }),
         templates: createTemplates(
           [
-            "while (true) {",
-            "    if (blokering(\"frem\")) {",
-            "        // Lav en omvej",
-            "        break;",
-            "    }",
-            "    // Bevæg dig et skridt frem",
-            "}"
+            "// Skitser en løkke der gentager frem(); indtil blokering(\\\"frem\\\") bliver sand.",
+            "// Planlæg derefter en omvej rundt om blokken og fortsæt til målet."
           ],
           [
-            "while ($true) {",
-            "    if (blokering \"frem\") {",
-            "        # Lav en omvej",
-            "        break",
-            "    }",
-            "    # Bevæg dig et skridt frem",
-            "}"
+            "# Skitser en løkke der gentager frem indtil blokering \\\"frem\\\" bliver sand.",
+            "# Planlæg derefter en omvej rundt om blokken og fortsæt til målet."
           ]
         ),
         tips: [
@@ -962,22 +951,18 @@
         }),
         templates: createTemplates(
           [
-            "while (!blokering(\"mål\")) {",
-            "    if (blokering(\"frem\")) {",
-            "        // Indsæt en omvej udenom blokken",
-            "    } else {",
-            "        // Fortsæt direkte frem",
-            "    }",
-            "}"
+            "// Pseudokode:",
+            "// while (!blokering(\\\"mål\\\")) {",
+            "//     hvis blokering(\\\"frem\\\") er sand, så indsæt omvejen her.",
+            "//     ellers fortsæt mod målet med frem();",
+            "// }"
           ],
           [
-            "while (-not (blokering \"mål\")) {",
-            "    if (blokering \"frem\") {",
-            "        # Indsæt en omvej udenom blokken",
-            "    } else {",
-            "        # Fortsæt direkte frem",
-            "    }",
-            "}"
+            "# Pseudokode:",
+            "# while (-not (blokering \\\"mål\\\")) {",
+            "#     hvis blokering \\\"frem\\\" er sand, så indsæt omvejen her.",
+            "#     ellers fortsæt mod målet med frem.",
+            "# }"
           ]
         ),
         tips: [
@@ -1033,20 +1018,18 @@
         }),
         templates: createTemplates(
           [
-            "while (!blokering(\"mål\")) {",
-            "    if (blokering(\"frem\")) {",
-            "        // Tilføj en omvej her",
-            "    }",
-            "    // Flyt videre mod målet",
-            "}"
+            "// Pseudokode:",
+            "// while (!blokering(\\\"mål\\\")) {",
+            "//     hvis blokering(\\\"frem\\\") er sand, så planlæg omvejen.",
+            "//     ellers fortsæt med frem();",
+            "// }"
           ],
           [
-            "while (-not (blokering \"mål\")) {",
-            "    if (blokering \"frem\") {",
-            "        # Tilføj en omvej her",
-            "    }",
-            "    # Flyt videre mod målet",
-            "}"
+            "# Pseudokode:",
+            "# while (-not (blokering \\\"mål\\\")) {",
+            "#     hvis blokering \\\"frem\\\" er sand, så planlæg omvejen.",
+            "#     ellers fortsæt med frem.",
+            "# }"
           ]
         ),
         tips: [
@@ -1187,20 +1170,18 @@
         }),
         templates: createTemplates(
           [
-            "while (!blokering(\"mål\")) {",
-            "    if (blokering(\"frem\")) {",
-            "        // Planlæg en omvej",
-            "    }",
-            "    // Bevæg dig videre mod målet",
-            "}"
+            "// Pseudokode:",
+            "// while (!blokering(\\\"mål\\\")) {",
+            "//     hvis blokering(\\\"frem\\\") er sand, så vælg en omvej.",
+            "//     ellers fortsæt med frem();",
+            "// }"
           ],
           [
-            "while (-not (blokering \"mål\")) {",
-            "    if (blokering \"frem\") {",
-            "        # Planlæg en omvej",
-            "    }",
-            "    # Bevæg dig videre mod målet",
-            "}"
+            "# Pseudokode:",
+            "# while (-not (blokering \\\"mål\\\")) {",
+            "#     hvis blokering \\\"frem\\\" er sand, så vælg en omvej.",
+            "#     ellers fortsæt med frem.",
+            "# }"
           ]
         ),
         tips: [
@@ -1375,22 +1356,12 @@
         }),
         templates: createTemplates(
           [
-            "while (!blokering(\"mål\")) {",
-            "    if (blokering(\"frem\")) {",
-            "        // Beskriv hvordan du laver en omvej",
-            "    } else {",
-            "        // Fortsæt ligeud",
-            "    }",
-            "}"
+            "// Pseudokode: gentag indtil blokering(\\\"mål\\\") er sand.",
+            "// Når der står en blok foran, beskriver du omvejen, ellers fortsætter du ligeud."
           ],
           [
-            "while (-not (blokering \"mål\")) {",
-            "    if (blokering \"frem\") {",
-            "        # Beskriv hvordan du laver en omvej",
-            "    } else {",
-            "        # Fortsæt ligeud",
-            "    }",
-            "}"
+            "# Pseudokode: gentag indtil blokering \\\"mål\\\" er sand.",
+            "# Når der står en blok foran, beskriver du omvejen, ellers fortsætter du ligeud."
           ]
         ),
         tips: [
@@ -1440,26 +1411,12 @@
         }),
         templates: createTemplates(
           [
-            "if (!blokering(\"frem\")) {",
-            "    while (!blokering(\"mål\")) {",
-            "        // Bevæg dig et skridt ad gangen",
-            "    }",
-            "} else {",
-            "    // Drej ind i den anden korridor",
-            "    // Flyt dig frem til du kan dreje tilbage",
-            "    // Fortsæt i den alternative korridor",
-            "}"
+            "// Hvis blokering(\\\"frem\\\") er falsk, kan du beskrive en while-løkke der går direkte mod målet.",
+            "// Ellers skal du kommentere hvordan du drejer ind i den anden korridor og vender tilbage til hovedruten."
           ],
           [
-            "if (-not (blokering \"frem\")) {",
-            "    while (-not (blokering \"mål\")) {",
-            "        # Bevæg dig et skridt ad gangen",
-            "    }",
-            "} else {",
-            "    # Drej ind i den anden korridor",
-            "    # Flyt dig frem til du kan dreje tilbage",
-            "    # Fortsæt i den alternative korridor",
-            "}"
+            "# Hvis blokering \\\"frem\\\" er falsk, kan du beskrive en while-løkke der går direkte mod målet.",
+            "# Ellers kommenterer du hvordan du drejer ind i den anden korridor og vender tilbage til hovedruten."
           ]
         ),
         tips: [
@@ -1551,28 +1508,12 @@
         }),
         templates: createTemplates(
           [
-            "while (!blokering(\"mål\")) {",
-            "    if (blokering(\"frem\")) {",
-            "        if (!blokering(\"venstre\")) {",
-            "            // Beskriv hvordan du bruger venstre()-omvejen",
-            "        } else {",
-            "            // Ellers forklar højre()-omvejen",
-            "        }",
-            "    }",
-            "    // Bevæg dig videre mod målet",
-            "}"
+            "// Pseudokode: Brug en while-løkke til at kontrollere målet.",
+            "// Når der er en blok foran, beskriv hvordan du prioriterer venstre()- eller højre()-omvejen før du fortsætter frem."
           ],
           [
-            "while (-not (blokering \"mål\")) {",
-            "    if (blokering \"frem\") {",
-            "        if (-not (blokering \"venstre\")) {",
-            "            # Beskriv hvordan du bruger venstre()-omvejen",
-            "        } else {",
-            "            # Ellers forklar højre()-omvejen",
-            "        }",
-            "    }",
-            "    # Bevæg dig videre mod målet",
-            "}"
+            "# Pseudokode: Brug en while-løkke til at kontrollere målet.",
+            "# Når der er en blok foran, beskriv hvordan du prioriterer venstre- eller højre-omvejen før du fortsætter frem."
           ]
         ),
         tips: [
@@ -1597,34 +1538,14 @@
         }),
         templates: createTemplates(
           [
-            "while (!blokering(\"mål\")) {",
-            "    if (blokering(\"frem\")) {",
-            "        if (!blokering(\"venstre\")) {",
-            "            // Beskriv venstre()-strategien",
-            "        } else if (!blokering(\"højre\")) {",
-            "            // Beskriv højre()-strategien",
-            "        } else {",
-            "            // Forklar hvordan du vender om",
-            "        }",
-            "    } else {",
-            "        // Fortsæt fremad",
-            "    }",
-            "}"
+            "// Pseudokode: gentag indtil blokering(\\\"mål\\\") er sand.",
+            "// Undersøg først blokering(\\\"frem\\\"). Hvis den er sand, forklar hvordan du prøver venstre(), derefter højre(), og til sidst vender om.",
+            "// Hvis fronten er fri, beskriver du hvordan du fortsætter fremad."
           ],
           [
-            "while (-not (blokering \"mål\")) {",
-            "    if (blokering \"frem\") {",
-            "        if (-not (blokering \"venstre\")) {",
-            "            # Beskriv venstre()-strategien",
-            "        } elseif (-not (blokering \"højre\")) {",
-            "            # Beskriv højre()-strategien",
-            "        } else {",
-            "            # Forklar hvordan du vender om",
-            "        }",
-            "    } else {",
-            "        # Fortsæt fremad",
-            "    }",
-            "}"
+            "# Pseudokode: gentag indtil blokering \\\"mål\\\" er sand.",
+            "# Undersøg først blokering \\\"frem\\\". Hvis den er sand, forklar hvordan du prøver venstre, derefter højre og til sidst vender om.",
+            "# Hvis fronten er fri, beskriver du hvordan du fortsætter fremad."
           ]
         ),
         tips: [
@@ -1648,28 +1569,20 @@
         }),
         templates: createTemplates(
           [
-            "int besogt = 0;",
-            "while (!blokering(\"mål\")) {",
-            "    if (!besogt) {",
-            "        // Naviger mod checkpointet og sæt besogt = 1 når du rammer det",
-            "    } else if (!blokering(\"frem\")) {",
-            "        // Fortsæt frem mod målet",
-            "    } else {",
-            "        // Vælg en ny retning, fx højre()",
-            "    }",
-            "}"
+            "int besogt = 0; // Brug en variabel til at huske checkpointet.",
+            "// while (!blokering(\\\"mål\\\")) {",
+            "//     hvis besogt == 0: naviger mod checkpointet og opdater variablen.",
+            "//     ellers hvis blokering(\\\"frem\\\") er falsk: fortsæt frem.",
+            "//     ellers: beskriv hvordan du vælger en ny retning.",
+            "// }"
           ],
           [
-            "$besogt = $false;",
-            "while (-not (blokering \"mål\")) {",
-            "    if (-not $besogt) {",
-            "        # Naviger mod checkpointet og sæt $besogt = $true når du rammer det",
-            "    } elseif (-not (blokering \"frem\")) {",
-            "        # Fortsæt frem mod målet",
-            "    } else {",
-            "        # Vælg en ny retning, fx højre",
-            "    }",
-            "}"
+            "$besogt = $false # Brug en variabel til at huske checkpointet.",
+            "# while (-not (blokering \\\"mål\\\")) {",
+            "#     hvis -not $besogt: naviger mod checkpointet og sæt $besogt = $true.",
+            "#     elseif -not (blokering \\\"frem\\\"): fortsæt frem.",
+            "#     ellers: beskriv hvordan du vælger en ny retning.",
+            "# }"
           ]
         ),
         tips: [
@@ -1693,30 +1606,12 @@
         }),
         templates: createTemplates(
           [
-            "while (!blokering(\"mål\")) {",
-            "    if (!blokering(\"frem\")) {",
-            "        // Gå frem når der er fri bane",
-            "    } else if (!blokering(\"venstre\")) {",
-            "        // Drej til venstre og fortsæt",
-            "    } else if (!blokering(\"højre\")) {",
-            "        // Drej til højre og fortsæt",
-            "    } else {",
-            "        // Beskriv hvordan du vender om",
-            "    }",
-            "}"
+            "// Pseudokode: bliv ved indtil blokering(\\\"mål\\\") er sand.",
+            "// Test retningerne i rækkefølgen frem, venstre, højre og derefter omvendt, og forklar hvad der skal ske i hvert tilfælde."
           ],
           [
-            "while (-not (blokering \"mål\")) {",
-            "    if (-not (blokering \"frem\")) {",
-            "        # Gå frem når der er fri bane",
-            "    } elseif (-not (blokering \"venstre\")) {",
-            "        # Drej til venstre og fortsæt",
-            "    } elseif (-not (blokering \"højre\")) {",
-            "        # Drej til højre og fortsæt",
-            "    } else {",
-            "        # Beskriv hvordan du vender om",
-            "    }",
-            "}"
+            "# Pseudokode: bliv ved indtil blokering \\\"mål\\\" er sand.",
+            "# Test retningerne i rækkefølgen frem, venstre, højre og derefter omvendt, og forklar hvad der skal ske i hvert tilfælde."
           ]
         ),
         tips: [
