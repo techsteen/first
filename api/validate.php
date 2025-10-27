@@ -296,21 +296,23 @@ function runFeedbackAnalysis(OpenAIClient $client, string $language, string $cod
 
 function format_code_for_prompt(string $code): string
 {
+    // Erstat linjeskift med mellemrum så hele programmet kan læses i én linje.
     $flattened = str_replace(["\r\n", "\n", "\r"], ' ', $code);
-    $flattened = str_replace(['(', ')'], '', $flattened);
 
-    // Normalise generic spacing first so braces and semicolons can be formatted consistently.
+    // Reducér gentagne mellemrum og tabulatorer til et enkelt mellemrum.
     $flattened = preg_replace('/\s+/', ' ', $flattened);
 
-    // Ensure braces are separated and semicolons retain a trailing gap for readability.
-    $flattened = preg_replace('/\s*{\s*/', '{ ', $flattened);
-    $flattened = preg_replace('/\s*}\s*/', ' }', $flattened);
-    $flattened = preg_replace('/;\s*/', ';  ', $flattened);
+    // Sørg for, at klammepar fremstår tydeligt adskilt uden at ændre andre symboler.
+    $flattened = preg_replace('/\s*{\s*/', ' { ', $flattened);
+    $flattened = preg_replace('/\s*}\s*/', ' } ', $flattened);
 
-    // Collapse any excessive spaces introduced around braces while preserving the intentional
-    // double-space after semicolons.
+    // Ryd op efter klammeanpasning, så almindelige mellemrum bevares.
+    $flattened = preg_replace('/\)\s+{/', ') {', $flattened);
     $flattened = preg_replace('/\s+/', ' ', $flattened);
-    $flattened = str_replace('; ', ';  ', $flattened);
+
+    // Normaliser semikolon, så der ikke er mellemrum før, men et dobbelt efter for læsbarhed.
+    $flattened = preg_replace('/\s*;\s*/', ';  ', $flattened);
+    $flattened = preg_replace('/;  +/', ';  ', $flattened);
 
     return trim($flattened);
 }
