@@ -67,7 +67,7 @@ function runPreflightCheck(OpenAIClient $client, string $language, string $code,
 
     $promptPayload = [
         'language' => $language,
-        'code' => $code,
+        'code' => format_code_for_prompt($code),
         'objective' => $objective,
         'environment' => [
             'csharpEntryPoint' => 'static void Main(string[] args)',
@@ -230,7 +230,7 @@ function runFeedbackAnalysis(OpenAIClient $client, string $language, string $cod
     $promptPayload = [
         'language' => $language,
         'objective' => $objective,
-        'code' => $code,
+        'code' => format_code_for_prompt($code),
         'progress' => $normalisedProgress,
         'environment' => $environment,
         'instructions' => 'Giv 2-3 sætninger med konstruktiv feedback baseret på koden og den nuværende status. Kommentér kort på hvad der allerede virker, og foreslå næste skridt mod målet. Brug venligt tonefald og henvis til objective hvis det findes. Hvis loggen rapporterer at de indbyggede kommandoer mangler, så korrigér misforståelsen og forklar at de er tilgængelige.'
@@ -292,6 +292,27 @@ function runFeedbackAnalysis(OpenAIClient $client, string $language, string $cod
     ];
 
     return $payload;
+}
+
+function format_code_for_prompt(string $code): string
+{
+    $flattened = str_replace(["\r\n", "\n", "\r"], ' ', $code);
+    $flattened = str_replace(['(', ')'], '', $flattened);
+
+    // Normalise generic spacing first so braces and semicolons can be formatted consistently.
+    $flattened = preg_replace('/\s+/', ' ', $flattened);
+
+    // Ensure braces are separated and semicolons retain a trailing gap for readability.
+    $flattened = preg_replace('/\s*{\s*/', '{ ', $flattened);
+    $flattened = preg_replace('/\s*}\s*/', ' }', $flattened);
+    $flattened = preg_replace('/;\s*/', ';  ', $flattened);
+
+    // Collapse any excessive spaces introduced around braces while preserving the intentional
+    // double-space after semicolons.
+    $flattened = preg_replace('/\s+/', ' ', $flattened);
+    $flattened = str_replace('; ', ';  ', $flattened);
+
+    return trim($flattened);
 }
 
 function normaliseProgress(array $progress): array
