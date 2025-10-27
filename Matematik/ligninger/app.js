@@ -521,7 +521,9 @@
 
     dom.stagePanels?.forEach((panel) => {
       const active = panel.dataset.stagePanel === stageKey;
-      panel.toggleAttribute('hidden', !active);
+      panel.hidden = !active;
+      panel.setAttribute('aria-hidden', active ? 'false' : 'true');
+      panel.classList.toggle('is-active', active);
       if (active) {
         panel.setAttribute('tabindex', '-1');
       }

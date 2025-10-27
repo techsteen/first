@@ -286,12 +286,22 @@ main {
 }
 
 .stage-panel {
+  display: none;
   background: var(--bg-subtle);
   border-radius: 14px;
   padding: 1.75rem;
   border: 1px solid rgba(148, 163, 236, 0.2);
-  display: grid;
   gap: 1.25rem;
+}
+
+.stage-panel.is-active,
+.stage-panel[hidden="false"],
+.stage-panel:not([hidden]) {
+  display: grid;
+}
+
+.stage-panel[hidden] {
+  display: none !important;
 }
 
 .stage-panel header h3 {
