@@ -27,7 +27,6 @@
     <nav class="main-nav" aria-label="Hovednavigation">
       <ul>
         <li><a href="#tutorial">Tutorial</a></li>
-        <li><a href="#visualisering">Visualisering</a></li>
         <li><a href="#simulationer">Simulationer</a></li>
         <li><a href="#opgaver">Opgaver</a></li>
         <li><a href="#fejlbank">Fejlbank</a></li>
@@ -62,7 +61,7 @@
           <div class="tutorial-demo__text" id="demo-step-text" aria-live="polite">
             <p>Vælg et eksempel for at se hvordan ligningen hænger sammen med grafen.</p>
           </div>
-          <canvas id="demo-graph" width="520" height="340" role="img" aria-label="Illustration af trinvis løsning"></canvas>
+          <canvas id="demo-graph" width="520" height="340" role="img" aria-label="Illustration af trinvis løsning" tabindex="0"></canvas>
         </div>
         <p class="tutorial-demo__note" id="demo-step-note" aria-live="polite"></p>
       </div>
@@ -94,7 +93,7 @@
               </section>
               <div class="stage-example" data-stage-example="i-do">
                 <h4>Prøv selv</h4>
-                <p class="stage-example__prompt">Løs ligningen <code>2x + 3 = 11</code>. Justér <em>x</em> og se ændringen på grafen.</p>
+                <p class="stage-example__prompt">Løs ligningen <code data-stage-equation="i-do">2x + 3 = 11</code>. Justér <em>x</em> og se ændringen på grafen.</p>
                 <div class="stage-example__controls">
                   <label for="stage-i-do-slider">Juster x</label>
                   <input type="range" id="stage-i-do-slider" min="-4" max="8" step="0.5" value="2" data-stage-value="i-do:x">
@@ -135,7 +134,7 @@
               </section>
               <div class="stage-example" data-stage-example="we-do">
                 <h4>Prøv selv</h4>
-                <p class="stage-example__prompt">Løs ligningen <code>3(x - 1) + 2 = 17</code>. Brug grafen til at se hvornår venstre og højre side er lige store.</p>
+                <p class="stage-example__prompt">Løs ligningen <code data-stage-equation="we-do">3(x - 1) + 2 = 17</code>. Brug grafen til at se hvornår venstre og højre side er lige store.</p>
                 <div class="stage-example__controls">
                   <label for="stage-we-do-slider">Juster x</label>
                   <input type="range" id="stage-we-do-slider" min="0" max="8" step="0.5" value="3" data-stage-value="we-do:x">
@@ -173,7 +172,7 @@
               </section>
               <div class="stage-example" data-stage-example="you-do">
                 <h4>Prøv selv</h4>
-                <p class="stage-example__prompt">Løs systemet <code>{ x + 2y = 11, y = x + 1 }</code>. Indtast dit forslag til <em>x</em> og <em>y</em>, og aflæs grafen.</p>
+                <p class="stage-example__prompt">Løs systemet <code data-stage-equation="you-do-1">x + 2y = 11</code> og <code data-stage-equation="you-do-2">y = x + 1</code>. Indtast dit forslag til <em>x</em> og <em>y</em>, og aflæs grafen.</p>
                 <div class="stage-example__controls stage-example__controls--grid">
                   <div>
                     <label for="stage-you-do-x">x</label>
@@ -193,7 +192,7 @@
             </article>
           </div>
           <aside class="tutorial-stage-visual" aria-live="polite">
-            <canvas id="stage-graph" width="520" height="340" role="img" aria-label="Graf for den valgte fase"></canvas>
+            <canvas id="stage-graph" width="520" height="340" role="img" aria-label="Graf for den valgte fase" tabindex="0"></canvas>
             <p id="stage-graph-feedback" class="muted"></p>
           </aside>
         </div>
@@ -212,40 +211,6 @@
           <dd>Metode hvor én variabel fjernes ved addition/subtraktion.</dd>
         </dl>
       </aside>
-    </section>
-
-    <section id="visualisering" class="card" aria-labelledby="visualisering-title">
-      <div class="card__header">
-        <h2 id="visualisering-title">Visualisering – tegn og undersøg</h2>
-        <p>Justér skydeknapperne. Snap-til-heltal aktiveres automatisk for skæringer.</p>
-      </div>
-      <div class="visual-panel">
-        <div class="visual-panel__controls" role="group" aria-label="Koefficienter for linjer">
-          <label for="line1-slope">Hældning a₁
-            <input type="range" id="line1-slope" min="-5" max="5" step="0.1" value="1" aria-valuetext="Hældning for første linje">
-          </label>
-          <label for="line1-intercept">Skæring b₁
-            <input type="range" id="line1-intercept" min="-10" max="10" step="1" value="0" aria-valuetext="Skæring for første linje">
-          </label>
-          <label for="line2-slope">Hældning a₂
-            <input type="range" id="line2-slope" min="-5" max="5" step="0.1" value="-1" aria-valuetext="Hældning for anden linje">
-          </label>
-          <label for="line2-intercept">Skæring b₂
-            <input type="range" id="line2-intercept" min="-10" max="10" step="1" value="4" aria-valuetext="Skæring for anden linje">
-          </label>
-          <div class="visual-panel__actions">
-            <button id="snap-integers" class="chip">Snap til heltal</button>
-            <button id="reset-graph" class="chip">Nulstil</button>
-          </div>
-        </div>
-        <div class="visual-panel__output">
-          <canvas id="graph" width="640" height="420" role="img" aria-label="Koordinatsystem for to linjer"></canvas>
-          <div class="graph-info" role="status" aria-live="polite">
-            <p id="intersection">Skæringspunkt vises her.</p>
-            <p id="diagnostic">Status vises her.</p>
-          </div>
-        </div>
-      </div>
     </section>
 
     <section id="simulationer" class="card" aria-labelledby="simulation-title">

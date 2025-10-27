@@ -8,7 +8,7 @@ Denne webapp er bygget til upload i mappen `/stha/_www2/Matematik/ligninger/`. D
 /Matematik/ligninger/
 ├── index.html       # UI og indhold (single-page)
 ├── styles.css       # Tema, typografi og tilgængelighed
-├── app.js           # Klientlogik, visualisering, opgaver, progression
+├── app.js           # Klientlogik, tutorial-graf, opgaver, progression
 ├── exercises.json   # 30 opgaver (10 udfyldte, 20 pladsholdere)
 ├── llm_proxy.php    # Proxy til OpenAI (inkluderer config fra /Config)
 └── readme.md        # Denne vejledning
@@ -31,8 +31,8 @@ Appen kræver ingen build-processer. Åbn blot `index.html` i browseren (eller v
 
 ## Funktioner
 
-- **Tutorial** med I Do → We Do → You Do progression, gloser (hover), og direkte links til graf-visualisering.
-- **Visualisering** (Canvas) med tastaturnavigerbare skydeknapper, snap-til-heltal, reset og automatisk forklaring af skæringspunkt, parallelle eller sammenfaldende linjer.
+- **Tutorial** med I Do → We Do → You Do progression, gloser (hover) og en fast graf, der følger den valgte fase og opdateres live.
+- **Guidet graf** der står ved siden af den aktive fase, så eleverne altid ser sammenhængen mellem metode og visualisering.
 - **Simulationer** fra IT-arbejde: cloud-priser, netværksbåndbredde, serverkapacitet, backup-vindue og helpdesk-planlægning – alle med “Vis matematikken bag”.
 - **Opgaver**: filterbar liste med 10 færdige opgaver (Rød/Gul/Grøn) og 20 pladsholdere. Feedback gives lokalt og (valgfrit) via LLM-proxy, altid i strukturen “Korrekthed → Hvorfor → Næste skridt”.
 - **Fejlbank** og **Progression** (localStorage). Log kan hentes lokalt som CSV.
@@ -47,7 +47,7 @@ Appen kræver ingen build-processer. Åbn blot `index.html` i browseren (eller v
    - `hints`: 2-3 stigende hints.
    - `expected_solution`: tal, tekst eller `[x, y]` afhængigt af schema.
    - `solution_schema`: definér `kind` (`number`, `pair`, `text`) samt evt. `tolerance`, `allowFractions`, `order`.
-   - `links`: hver kan pege på tutorial-anker (`#tutorial-...`) eller visualisering via `{ "action": "graph", "graph": { ... } }`.
+   - `links`: hver kan pege på tutorial-anker (`#tutorial-...`) eller åbne den tilhørende graf via `{ "action": "graph", "stage": "i-do|we-do|you-do", "graph": { ... } }`.
 3. Fjern `"placeholder": true` når opgaven er klar – ellers vises den ikke for eleverne.
 4. Validér filen (fx med `python -m json.tool exercises.json`).
 
@@ -75,7 +75,7 @@ Hvis LLM ikke kan nås, gives en dansk fejlbesked og lokal evaluering kan stadig
 
 ## Test efter upload
 
-- Åbn `index.html` og navigér gennem tutorial, visualisering og simulationer.
+- Åbn `index.html` og navigér gennem tutorial og simulationer.
 - Løs mindst én opgave fra hvert niveau (R/G/Gr) og verificér feedback + hints.
 - Tænd og sluk for LLM-feedback for at sikre at `llm_proxy.php` svarer med JSON.
 - Kontrollér at progressionen opdateres og kan nulstilles.

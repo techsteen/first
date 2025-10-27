@@ -8,11 +8,6 @@
     log: loadJson('matd-log', []),
     exercises: [],
     skills: new Set(),
-    graph: {
-      line1: { slope: 1, intercept: 0 },
-      line2: { slope: -1, intercept: 4 }
-    },
-    snapIntegers: false,
     demo: {
       key: 'isolation',
       step: 0,
@@ -30,6 +25,11 @@
     maximumFractionDigits: 2,
     minimumFractionDigits: 0
   });
+
+  function round(value, digits = 2) {
+    const factor = 10 ** digits;
+    return Math.round(value * factor) / factor;
+  }
 
   const tutorialDemos = {
     isolation: {
@@ -165,6 +165,7 @@
       tolerance: 0.05,
       defaults: { x: 2 },
       range: { min: -4, max: 12 },
+      display: '2x + 3 = 11',
       graph: {
         lines: [
           { slope: 2, intercept: 3, color: '#38bdf8', emphasis: true },
@@ -181,6 +182,7 @@
       tolerance: 0.05,
       defaults: { x: 3 },
       range: { min: -2, max: 24 },
+      display: '3(x - 1) + 2 = 17',
       graph: {
         lines: [
           { slope: 3, intercept: -1, color: '#0ea5e9', emphasis: true },
@@ -196,6 +198,8 @@
       tolerance: 0.15,
       defaults: { x: 2, y: 3 },
       range: { min: -2, max: 12 },
+      display1: 'x + 2y = 11',
+      display2: 'y = x + 1',
       graph: {
         lines: [
           { slope: -0.5, intercept: 5.5, color: '#38bdf8', emphasis: true },
@@ -213,7 +217,6 @@
     mapDom();
     setupToggles();
     setupGlossary();
-    setupGraph();
     setupTutorialDemo();
     setupTutorialStages();
     setupSimulation();
@@ -227,16 +230,6 @@
     dom.toggleText = document.getElementById('toggle-text');
     dom.toggleDetail = document.getElementById('toggle-detail');
     dom.toggleLlm = document.getElementById('toggle-llm');
-    dom.graph = document.getElementById('graph');
-    dom.ctx = dom.graph.getContext('2d');
-    dom.line1Slope = document.getElementById('line1-slope');
-    dom.line1Intercept = document.getElementById('line1-intercept');
-    dom.line2Slope = document.getElementById('line2-slope');
-    dom.line2Intercept = document.getElementById('line2-intercept');
-    dom.intersection = document.getElementById('intersection');
-    dom.diagnostic = document.getElementById('diagnostic');
-    dom.resetGraph = document.getElementById('reset-graph');
-    dom.snapIntegers = document.getElementById('snap-integers');
 
     dom.demoSelect = document.getElementById('demo-select');
     dom.demoPrev = document.getElementById('demo-prev');
@@ -262,6 +255,10 @@
     dom.stageDetailNodes = new Map();
     document.querySelectorAll('[data-stage-detail]').forEach((node) => {
       dom.stageDetailNodes.set(node.dataset.stageDetail, node);
+    });
+    dom.stageEquationNodes = new Map();
+    document.querySelectorAll('[data-stage-equation]').forEach((node) => {
+      dom.stageEquationNodes.set(node.dataset.stageEquation, node);
     });
 
     dom.scenarioSelect = document.getElementById('scenario-select');
@@ -342,53 +339,6 @@
         span.dataset.detail = glossary[key];
       }
     });
-  }
-
-  function setupGraph() {
-    const controls = [dom.line1Slope, dom.line1Intercept, dom.line2Slope, dom.line2Intercept];
-    controls.forEach((control) => {
-      control.addEventListener('input', () => {
-        if (state.snapIntegers && Number(control.step) === 1) {
-          control.value = String(Math.round(Number(control.value)));
-        }
-        syncGraphFromInputs();
-      });
-    });
-
-    dom.resetGraph.addEventListener('click', () => {
-      state.snapIntegers = false;
-      dom.snapIntegers.setAttribute('aria-pressed', 'false');
-      dom.snapIntegers.textContent = 'Snap til heltal';
-      dom.line1Slope.value = '1';
-      dom.line1Intercept.value = '0';
-      dom.line2Slope.value = '-1';
-      dom.line2Intercept.value = '4';
-      syncGraphFromInputs();
-    });
-
-    dom.snapIntegers.addEventListener('click', () => {
-      state.snapIntegers = !state.snapIntegers;
-      dom.snapIntegers.setAttribute('aria-pressed', String(state.snapIntegers));
-      dom.snapIntegers.textContent = state.snapIntegers ? 'Snap aktiv' : 'Snap til heltal';
-      if (state.snapIntegers) {
-        [dom.line1Intercept, dom.line2Intercept].forEach((input) => {
-          input.value = String(Math.round(Number(input.value)));
-        });
-      }
-      syncGraphFromInputs();
-    });
-
-    document.querySelectorAll('.graph-link').forEach((button) => {
-      button.addEventListener('click', () => {
-        const type = button.dataset.graph;
-        const preset = JSON.parse(button.dataset.preset || '{}');
-        applyGraphPreset(type, preset);
-        dom.graph.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        dom.graph.focus({ preventScroll: true });
-      });
-    });
-
-    syncGraphFromInputs();
   }
 
   function setupTutorialDemo() {
@@ -472,6 +422,7 @@
       state.stage.active = 'i-do';
     }
 
+    refreshStageEquationText();
     selectTutorialStage(state.stage.active);
   }
 
@@ -527,6 +478,31 @@
         element.value = String(value);
       }
     });
+  }
+
+  function refreshStageEquationText() {
+    if (!dom.stageEquationNodes) return;
+    const iDoNode = dom.stageEquationNodes.get('i-do');
+    const iDoConfig = tutorialStages['i-do'];
+    if (iDoNode && iDoConfig?.display) {
+      iDoNode.textContent = iDoConfig.display;
+    }
+
+    const weDoNode = dom.stageEquationNodes.get('we-do');
+    const weDoConfig = tutorialStages['we-do'];
+    if (weDoNode && weDoConfig?.display) {
+      weDoNode.textContent = weDoConfig.display;
+    }
+
+    const youDoNode1 = dom.stageEquationNodes.get('you-do-1');
+    const youDoNode2 = dom.stageEquationNodes.get('you-do-2');
+    const youDoConfig = tutorialStages['you-do'];
+    if (youDoNode1 && youDoConfig?.display1) {
+      youDoNode1.textContent = youDoConfig.display1;
+    }
+    if (youDoNode2 && youDoConfig?.display2) {
+      youDoNode2.textContent = youDoConfig.display2;
+    }
   }
 
   function selectTutorialStage(stageKey = 'i-do') {
@@ -823,10 +799,6 @@
       dom.demoStepNote.textContent = step.note || '';
     }
 
-    if (syncGraph && step.preset) {
-      applyGraphPreset(step.preset.type, step.preset.data || {});
-    }
-
     drawDemoGraph(step.graph);
   }
 
@@ -938,166 +910,6 @@
   function drawDemoGraph(config = {}) {
     if (!dom.demoCtx || !dom.demoGraph) return;
     renderCartesianGraph(dom.demoCtx, dom.demoGraph, config);
-  }
-
-  function syncGraphFromInputs() {
-    state.graph.line1 = {
-      slope: Number(dom.line1Slope.value),
-      intercept: Number(dom.line1Intercept.value)
-    };
-    state.graph.line2 = {
-      slope: Number(dom.line2Slope.value),
-      intercept: Number(dom.line2Intercept.value)
-    };
-    drawGraph();
-  }
-
-  function drawGraph() {
-    const ctx = dom.ctx;
-    const width = dom.graph.width;
-    const height = dom.graph.height;
-    ctx.clearRect(0, 0, width, height);
-
-    const padding = 50;
-    const min = -10;
-    const max = 10;
-
-    ctx.fillStyle = '#0b1221';
-    ctx.fillRect(0, 0, width, height);
-
-    const xToCanvas = (x) => ((x - min) / (max - min)) * (width - padding * 2) + padding;
-    const yToCanvas = (y) => height - ((y - min) / (max - min)) * (height - padding * 2) - padding;
-
-    ctx.strokeStyle = 'rgba(148,163,236,0.15)';
-    ctx.lineWidth = 1;
-    for (let value = min; value <= max; value++) {
-      const x = xToCanvas(value);
-      const y = yToCanvas(value);
-      ctx.beginPath();
-      ctx.moveTo(x, padding);
-      ctx.lineTo(x, height - padding);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(padding, y);
-      ctx.lineTo(width - padding, y);
-      ctx.stroke();
-    }
-
-    ctx.strokeStyle = 'rgba(148,163,236,0.4)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(padding, yToCanvas(0));
-    ctx.lineTo(width - padding, yToCanvas(0));
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(xToCanvas(0), padding);
-    ctx.lineTo(xToCanvas(0), height - padding);
-    ctx.stroke();
-
-    ctx.fillStyle = 'rgba(203,213,225,0.9)';
-    ctx.font = '12px "Inter", sans-serif';
-    for (let value = min; value <= max; value++) {
-      ctx.fillText(String(value), xToCanvas(value) - 4, yToCanvas(0) + 14);
-      if (value !== 0) {
-        ctx.fillText(String(value), xToCanvas(0) + 6, yToCanvas(value) + 4);
-      }
-    }
-
-    plotLine(ctx, state.graph.line1, '#38bdf8', xToCanvas, yToCanvas);
-    plotLine(ctx, state.graph.line2, '#f87171', xToCanvas, yToCanvas);
-    describeIntersection();
-  }
-
-  function plotLine(ctx, line, color, xMap, yMap) {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2.4;
-    ctx.beginPath();
-    let first = true;
-    for (let x = -10; x <= 10; x += 0.1) {
-      const y = line.slope * x + line.intercept;
-      if (!Number.isFinite(y)) continue;
-      const cx = xMap(x);
-      const cy = yMap(y);
-      if (first) {
-        ctx.moveTo(cx, cy);
-        first = false;
-      } else {
-        ctx.lineTo(cx, cy);
-      }
-    }
-    ctx.stroke();
-  }
-
-  function describeIntersection() {
-    const { line1, line2 } = state.graph;
-    const slopeDiff = line1.slope - line2.slope;
-    const interceptDiff = line2.intercept - line1.intercept;
-
-    if (Math.abs(slopeDiff) < 1e-6) {
-      if (Math.abs(interceptDiff) < 1e-6) {
-        dom.intersection.textContent = 'Linjerne overlapper: uendeligt mange løsninger.';
-        dom.diagnostic.textContent = 'Hældning og skæring er identiske – hele linjen er løsningen.';
-      } else {
-        dom.intersection.textContent = 'Linjerne er parallelle: ingen løsning.';
-        dom.diagnostic.textContent = 'Samme hældning men forskellig skæring ⇒ ingen skæringspunkt.';
-      }
-      return;
-    }
-
-    const x = interceptDiff / slopeDiff;
-    const y = line1.slope * x + line1.intercept;
-    if (!Number.isFinite(x) || !Number.isFinite(y)) {
-      dom.intersection.textContent = 'Skæringspunkt uden for visningen.';
-      dom.diagnostic.textContent = 'Juster koefficienterne for at se løsningen i koordinatsystemet.';
-      return;
-    }
-
-    dom.intersection.textContent = `Skæringspunkt: (${round(x)}, ${round(y)})`;
-    dom.diagnostic.textContent = 'Dette punkt løser begge ligninger samtidigt.';
-  }
-
-  function round(value) {
-    return Math.round(value * 100) / 100;
-  }
-
-  function applyGraphPreset(type, preset) {
-    if (type === 'single') {
-      dom.line1Slope.value = String(preset.a ?? 1);
-      dom.line1Intercept.value = String(preset.b ?? 0);
-      dom.line2Slope.value = '0';
-      dom.line2Intercept.value = String(preset.c ?? 0);
-    } else if (type === 'system') {
-      const m1 = deriveSlope(preset.a1, preset.b1);
-      const b1 = deriveIntercept(preset.b1, preset.c1);
-      const m2 = deriveSlope(preset.a2, preset.b2);
-      const b2 = deriveIntercept(preset.b2, preset.c2);
-      dom.line1Slope.value = limit(m1, -5, 5);
-      dom.line1Intercept.value = limit(b1, -10, 10);
-      dom.line2Slope.value = limit(m2, -5, 5);
-      dom.line2Intercept.value = limit(b2, -10, 10);
-    } else if (type === 'model') {
-      dom.line1Slope.value = String(preset.a ?? 1);
-      dom.line1Intercept.value = String(preset.b ?? 0);
-      dom.line2Slope.value = String(preset.a2 ?? 1);
-      dom.line2Intercept.value = String(preset.b2 ?? 0);
-    }
-    syncGraphFromInputs();
-  }
-
-  function deriveSlope(a = 1, b = 1) {
-    const denom = b === 0 ? 1 : b;
-    return -Number(a ?? 0) / Number(denom);
-  }
-
-  function deriveIntercept(b = 1, c = 0) {
-    const denom = b === 0 ? 1 : b;
-    return Number(c ?? 0) / Number(denom);
-  }
-
-  function limit(value, min, max) {
-    const safe = Number.isFinite(Number(value)) ? Number(value) : 0;
-    return String(Math.min(Math.max(safe, min), max));
   }
 
   const scenarios = {
@@ -1280,9 +1092,11 @@
       anchor.addEventListener('click', (event) => {
         if (link.action === 'graph') {
           event.preventDefault();
-          applyGraphPreset(link.graph?.type || 'system', link.graph?.preset || {});
-          document.getElementById('visualisering').scrollIntoView({ behavior: 'smooth' });
-          dom.graph.focus({ preventScroll: true });
+          const stageKey = link.stage || (link.graph?.type === 'system' ? 'you-do' : 'i-do');
+          selectTutorialStage(stageKey);
+          const tutorialSection = document.getElementById('tutorial');
+          tutorialSection?.scrollIntoView({ behavior: 'smooth' });
+          dom.stageGraph?.focus({ preventScroll: true });
         }
       });
       dom.taskLinks.appendChild(anchor);
@@ -1388,7 +1202,7 @@
 
     const message = correct ? 'Korrekt! Din løsning passer.' : 'Ikke helt endnu.';
     const reason = correct ? 'Kontrollen viser at din beregning stemmer.' : 'Der er forskel mellem dit svar og facit.';
-    const next = correct ? 'Vælg en ny opgave eller udforsk visualiseringerne.' : 'Gennemgå dine trin eller brug et hint.';
+    const next = correct ? 'Vælg en ny opgave eller slå op i tutorialens graf.' : 'Gennemgå dine trin eller brug et hint.';
 
     return {
       evaluation: { correct, message, reason, next },
