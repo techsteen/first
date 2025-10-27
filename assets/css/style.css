@@ -498,61 +498,6 @@ body {
     font-style: italic;
 }
 
-.prompt-debug-section {
-    margin: 0 2rem 2rem;
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.2rem 1.5rem 1.5rem;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-}
-
-.prompt-debug-section h2 {
-    margin: 0 0 0.5rem 0;
-    color: var(--primary);
-}
-
-.prompt-debug-section h3 {
-    margin: 1.2rem 0 0.4rem 0;
-    color: var(--primary);
-    font-size: 1rem;
-}
-
-.prompt-debug-help {
-    margin: 0 0 0.8rem 0;
-    font-size: 0.9rem;
-    color: #4b5a66;
-}
-
-#prompt-debug {
-    margin: 0;
-    background: #0f172a;
-    color: #dbe4f5;
-    border-radius: 10px;
-    border: 1px solid rgba(27, 75, 122, 0.35);
-    padding: 1rem 1.2rem;
-    max-height: 260px;
-    overflow: auto;
-    white-space: pre-wrap;
-    font-family: "Fira Code", "Courier New", monospace;
-    font-size: 0.85rem;
-    line-height: 1.5;
-}
-
-#response-debug {
-    margin: 0;
-    background: #111827;
-    color: #e2e8f0;
-    border-radius: 10px;
-    border: 1px solid rgba(27, 75, 122, 0.35);
-    padding: 1rem 1.2rem;
-    max-height: 260px;
-    overflow: auto;
-    white-space: pre-wrap;
-    font-family: "Fira Code", "Courier New", monospace;
-    font-size: 0.85rem;
-    line-height: 1.5;
-}
 
 .app-footer {
     margin: 0;
@@ -584,8 +529,4 @@ body {
         min-height: 220px;
     }
 
-    .prompt-debug-section {
-        margin: 0 1rem 1.5rem;
-        padding: 1rem 1.1rem 1.2rem;
-    }
 }

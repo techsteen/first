@@ -72,9 +72,7 @@
     isRunning: false,
     hintIndex: 0,
     stepSession: null,
-    lastExecution: null,
-    lastPrompt: null,
-    lastModelResponse: null
+    lastExecution: null
   };
 
   const dom = {};
@@ -98,9 +96,6 @@
     dom.log = document.getElementById("log");
     dom.commandReference = document.getElementById("command-reference");
     dom.languageInputs = document.querySelectorAll('input[name="language"]');
-    dom.promptSection = document.getElementById("prompt-debug-section");
-    dom.promptDebug = document.getElementById("prompt-debug");
-    dom.responseDebug = document.getElementById("response-debug");
 
     if (dom.aiFeedback) {
       dom.aiFeedback.textContent = "";
@@ -115,8 +110,6 @@
     renderCommandReference();
     bindEvents();
     initializeTasks();
-    updatePromptDebug(state.lastPrompt);
-    updateResponseDebug(state.lastModelResponse);
   }
 
   function initializeTasks() {
@@ -674,8 +667,6 @@
 
       appendLog("▶️ Validerer kode");
       const validation = await validateCode(rawCode, state.selectedLanguage, task.objective);
-      applyPromptFromResponse(validation, "preflight");
-      applyModelResponseFromPayload(validation, "preflight");
 
       if (validation.warning) {
         appendLog(`⚠️ ${validation.warning}`);
@@ -855,8 +846,6 @@
 
       appendLog("▶️ Validerer kode");
       const validation = await validateCode(rawCode, state.selectedLanguage, task.objective);
-      applyPromptFromResponse(validation, "preflight");
-      applyModelResponseFromPayload(validation, "preflight");
 
       if (validation.warning) {
         appendLog(`⚠️ ${validation.warning}`);
@@ -1104,8 +1093,6 @@
 
     try {
       const response = await requestAiFeedback(rawCode, language, objective, progress);
-      applyPromptFromResponse(response, "feedback");
-      applyModelResponseFromPayload(response, "feedback");
       const feedback = response && typeof response.feedback === "string" ? response.feedback.trim() : "";
       if (feedback) {
         showAiFeedback(feedback);
@@ -1508,162 +1495,6 @@
     }
 
     return data;
-  }
-
-  function applyPromptFromResponse(response, fallbackMode) {
-    if (!response || typeof response !== "object") {
-      return;
-    }
-
-    const prompt = response.prompt;
-    if (!prompt) {
-      return;
-    }
-
-    const info = { ...prompt };
-    if ((!info.mode || typeof info.mode !== "string" || !info.mode.trim()) && typeof fallbackMode === "string") {
-      info.mode = fallbackMode;
-    }
-
-    updatePromptDebug(info);
-  }
-
-  function applyModelResponseFromPayload(response, fallbackMode) {
-    if (!response || typeof response !== "object") {
-      return;
-    }
-
-    const modelResponse = response.modelResponse;
-    if (!modelResponse || typeof modelResponse !== "object") {
-      return;
-    }
-
-    const info = { ...modelResponse };
-    if ((!info.mode || typeof info.mode !== "string" || !info.mode.trim()) && typeof fallbackMode === "string") {
-      info.mode = fallbackMode;
-    }
-
-    updateResponseDebug(info);
-  }
-
-  function updatePromptDebug(promptInfo) {
-    state.lastPrompt = promptInfo && typeof promptInfo === "object" ? promptInfo : null;
-
-    if (!dom.promptDebug) {
-      return;
-    }
-
-    if (!state.lastPrompt) {
-      dom.promptDebug.textContent = "Ingen prompt sendt endnu.";
-      return;
-    }
-
-    const { mode, system, user, payload, messages } = state.lastPrompt;
-    const sections = [];
-    const timestamp = new Date();
-    sections.push(`Seneste opdatering: ${timestamp.toLocaleTimeString("da-DK", { hour12: false })}`);
-
-    if (typeof mode === "string" && mode.trim()) {
-      sections.push(`Mode: ${mode.trim()}`);
-    }
-
-    if (typeof system === "string" && system.trim()) {
-      sections.push(`System:\n${system.trim()}`);
-    }
-
-    let userContent = null;
-    if (user !== undefined) {
-      try {
-        userContent = JSON.stringify(user, null, 2);
-      } catch (error) {
-        userContent = String(user);
-      }
-    } else if (typeof payload === "string" && payload.trim()) {
-      userContent = payload.trim();
-    }
-
-    if (!userContent && Array.isArray(messages)) {
-      const messageStrings = messages
-        .map(entry => {
-          if (!entry || typeof entry !== "object") {
-            return null;
-          }
-          const role = typeof entry.role === "string" ? entry.role : "";
-          let contentString = "";
-          if (typeof entry.content === "string") {
-            contentString = entry.content;
-          } else if (entry.content) {
-            try {
-              contentString = JSON.stringify(entry.content, null, 2);
-            } catch (error) {
-              contentString = String(entry.content);
-            }
-          }
-          if (!role && !contentString) {
-            return null;
-          }
-          return role ? `${role.toUpperCase()}:\n${contentString}` : contentString;
-        })
-        .filter(Boolean);
-
-      if (messageStrings.length) {
-        userContent = messageStrings.join("\n\n");
-      }
-    }
-
-    if (userContent) {
-      sections.push(`User:\n${userContent}`);
-    }
-
-    dom.promptDebug.textContent = sections.join("\n\n");
-  }
-
-  function updateResponseDebug(modelInfo) {
-    state.lastModelResponse = modelInfo && typeof modelInfo === "object" ? modelInfo : null;
-
-    if (!dom.responseDebug) {
-      return;
-    }
-
-    if (!state.lastModelResponse) {
-      dom.responseDebug.textContent = "Ingen AI-svar modtaget endnu.";
-      return;
-    }
-
-    const { mode, id, usage, content, raw } = state.lastModelResponse;
-    const sections = [];
-    const timestamp = new Date();
-    sections.push(`Seneste opdatering: ${timestamp.toLocaleTimeString("da-DK", { hour12: false })}`);
-
-    if (typeof mode === "string" && mode.trim()) {
-      sections.push(`Mode: ${mode.trim()}`);
-    }
-
-    if (typeof id === "string" && id.trim()) {
-      sections.push(`Svar-ID: ${id.trim()}`);
-    }
-
-    if (usage && typeof usage === "object") {
-      try {
-        sections.push(`Forbrug:\n${JSON.stringify(usage, null, 2)}`);
-      } catch (error) {
-        sections.push(`Forbrug: ${String(usage)}`);
-      }
-    }
-
-    if (typeof content === "string" && content.trim()) {
-      sections.push(`Rå svar:\n${content.trim()}`);
-    }
-
-    if (raw) {
-      try {
-        sections.push(`Fuldt svar:\n${JSON.stringify(raw, null, 2)}`);
-      } catch (error) {
-        sections.push(`Fuldt svar: ${String(raw)}`);
-      }
-    }
-
-    dom.responseDebug.textContent = sections.join("\n\n");
   }
 
   function setRunButtonBusy(isBusy) {

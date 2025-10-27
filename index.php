@@ -61,14 +61,6 @@
             </div>
         </section>
     </main>
-    <section class="prompt-debug-section" id="prompt-debug-section">
-        <h2>AI prompt (debug)</h2>
-        <p class="prompt-debug-help">Her kan du se den seneste prompt, der blev sendt til AI’et for validering eller feedback.</p>
-        <pre id="prompt-debug" aria-live="polite">Ingen prompt sendt endnu.</pre>
-        <h3>AI svar</h3>
-        <p class="prompt-debug-help">Dette er svaret fra ChatGPT API’et. Brug det til at forstå hvorfor valideringen reagerede som den gjorde.</p>
-        <pre id="response-debug" aria-live="polite">Ingen AI-svar modtaget endnu.</pre>
-    </section>
     <footer class="app-footer">
         <p>Simulatoren er designet til at blive uploadet som statiske PHP/HTML/JS/CSS-filer.</p>
     </footer>
