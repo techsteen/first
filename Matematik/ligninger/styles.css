@@ -207,8 +207,14 @@ main {
 .tutorial-demo__body {
   display: grid;
   gap: 1.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
   align-items: center;
+}
+
+@media (max-width: 900px) {
+  .tutorial-demo__body {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
 }
 
 .tutorial-demo__text {
