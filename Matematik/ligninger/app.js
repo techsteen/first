@@ -18,8 +18,18 @@
       step: 0,
       playing: false,
       timer: null
+    },
+    stage: {
+      active: 'i-do',
+      values: {},
+      checked: {}
     }
   };
+
+  const numberFormatter = new Intl.NumberFormat('da-DK', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0
+  });
 
   const tutorialDemos = {
     isolation: {
@@ -145,6 +155,56 @@
     }
   };
 
+  const tutorialStages = {
+    'i-do': {
+      type: 'single',
+      slope: 2,
+      intercept: 3,
+      constant: 11,
+      solution: 4,
+      tolerance: 0.05,
+      defaults: { x: 2 },
+      range: { min: -4, max: 12 },
+      graph: {
+        lines: [
+          { slope: 2, intercept: 3, color: '#38bdf8', emphasis: true },
+          { slope: 0, intercept: 11, color: '#facc15', emphasis: true }
+        ]
+      }
+    },
+    'we-do': {
+      type: 'single',
+      slope: 3,
+      intercept: -1,
+      constant: 17,
+      solution: 6,
+      tolerance: 0.05,
+      defaults: { x: 3 },
+      range: { min: -2, max: 24 },
+      graph: {
+        lines: [
+          { slope: 3, intercept: -1, color: '#0ea5e9', emphasis: true },
+          { slope: 0, intercept: 17, color: '#facc15', emphasis: true }
+        ]
+      }
+    },
+    'you-do': {
+      type: 'system',
+      line1: { slope: -0.5, intercept: 5.5, color: '#38bdf8', emphasis: true },
+      line2: { slope: 1, intercept: 1, color: '#f97316', emphasis: true },
+      solution: { x: 3, y: 4 },
+      tolerance: 0.15,
+      defaults: { x: 2, y: 3 },
+      range: { min: -2, max: 12 },
+      graph: {
+        lines: [
+          { slope: -0.5, intercept: 5.5, color: '#38bdf8', emphasis: true },
+          { slope: 1, intercept: 1, color: '#f97316', emphasis: true }
+        ]
+      }
+    }
+  };
+
   const dom = {};
 
   document.addEventListener('DOMContentLoaded', init);
@@ -155,6 +215,7 @@
     setupGlossary();
     setupGraph();
     setupTutorialDemo();
+    setupTutorialStages();
     setupSimulation();
     setupTasks();
     bindGlobalActions();
@@ -186,6 +247,22 @@
     dom.demoStepNote = document.getElementById('demo-step-note');
     dom.demoGraph = document.getElementById('demo-graph');
     dom.demoCtx = dom.demoGraph?.getContext('2d');
+
+    dom.stageGraph = document.getElementById('stage-graph');
+    dom.stageCtx = dom.stageGraph?.getContext('2d');
+    dom.stageGraphFeedback = document.getElementById('stage-graph-feedback');
+    dom.stageButtons = Array.from(document.querySelectorAll('[data-stage-toggle]'));
+    dom.stagePanels = Array.from(document.querySelectorAll('[data-stage-panel]'));
+    dom.stageValueElements = Array.from(document.querySelectorAll('[data-stage-value]'));
+    dom.stageCheckButtons = Array.from(document.querySelectorAll('[data-stage-check]'));
+    dom.stageFeedbackNodes = new Map();
+    document.querySelectorAll('[data-stage-feedback]').forEach((node) => {
+      dom.stageFeedbackNodes.set(node.dataset.stageFeedback, node);
+    });
+    dom.stageDetailNodes = new Map();
+    document.querySelectorAll('[data-stage-detail]').forEach((node) => {
+      dom.stageDetailNodes.set(node.dataset.stageDetail, node);
+    });
 
     dom.scenarioSelect = document.getElementById('scenario-select');
     dom.paramA = document.getElementById('param-a');
@@ -349,6 +426,320 @@
     });
   }
 
+  function setupTutorialStages() {
+    if (!dom.stageGraph || !dom.stageButtons?.length) return;
+
+    dom.stageValueGroups = new Map();
+
+    dom.stageButtons.forEach((button) => {
+      const stageKey = button.dataset.stageToggle;
+      if (!stageKey) return;
+      button.addEventListener('click', () => selectTutorialStage(stageKey));
+    });
+
+    dom.stageValueElements?.forEach((element) => {
+      const key = element.dataset.stageValue;
+      if (!key) return;
+      const [stageKey, field] = key.split(':');
+      if (!stageKey || !field) return;
+      const groupKey = `${stageKey}:${field}`;
+      if (!dom.stageValueGroups.has(groupKey)) {
+        dom.stageValueGroups.set(groupKey, new Set());
+      }
+      dom.stageValueGroups.get(groupKey).add(element);
+      element.addEventListener('input', () => handleStageValueInput(element, stageKey, field));
+    });
+
+    dom.stageCheckButtons?.forEach((button) => {
+      const stageKey = button.dataset.stageCheck;
+      if (!stageKey) return;
+      button.addEventListener('click', () => {
+        state.stage.checked[stageKey] = true;
+        selectTutorialStage(stageKey);
+      });
+    });
+
+    Object.keys(tutorialStages).forEach((stageKey) => {
+      const defaults = tutorialStages[stageKey]?.defaults || {};
+      if (!state.stage.values[stageKey]) {
+        state.stage.values[stageKey] = { ...defaults };
+      } else {
+        state.stage.values[stageKey] = { ...defaults, ...state.stage.values[stageKey] };
+      }
+    });
+
+    if (!tutorialStages[state.stage.active]) {
+      state.stage.active = 'i-do';
+    }
+
+    selectTutorialStage(state.stage.active);
+  }
+
+  function handleStageValueInput(element, stageKey, field) {
+    const rawValue = element.value;
+    const value = rawValue === '' ? '' : Number(rawValue);
+    if (rawValue !== '' && !Number.isFinite(value)) {
+      return;
+    }
+
+    if (!state.stage.values[stageKey]) {
+      state.stage.values[stageKey] = {};
+    }
+
+    state.stage.values[stageKey][field] = value;
+
+    syncStageValueElements(stageKey, field, value, element);
+
+    state.stage.checked[stageKey] = false;
+
+    if (stageKey === state.stage.active) {
+      updateStageFeedback(stageKey);
+      drawStageGraph(stageKey);
+    }
+  }
+
+  function syncStageValueElements(stageKey, field, value, origin) {
+    const groupKey = `${stageKey}:${field}`;
+    const elements = dom.stageValueGroups?.get(groupKey);
+    if (!elements) return;
+    elements.forEach((element) => {
+      if (element === origin) return;
+      if (value === '') {
+        if (element.type !== 'range') {
+          element.value = '';
+        }
+      } else {
+        element.value = String(value);
+      }
+    });
+  }
+
+  function updateStageInputs(stageKey, field, value) {
+    const groupKey = `${stageKey}:${field}`;
+    const elements = dom.stageValueGroups?.get(groupKey);
+    if (!elements) return;
+    elements.forEach((element) => {
+      if (value === '') {
+        if (element.type !== 'range') {
+          element.value = '';
+        }
+      } else {
+        element.value = String(value);
+      }
+    });
+  }
+
+  function selectTutorialStage(stageKey = 'i-do') {
+    if (!tutorialStages[stageKey]) {
+      stageKey = 'i-do';
+    }
+
+    state.stage.active = stageKey;
+
+    dom.stageButtons?.forEach((button) => {
+      const active = button.dataset.stageToggle === stageKey;
+      button.setAttribute('aria-selected', active ? 'true' : 'false');
+      button.classList.toggle('is-active', active);
+      button.tabIndex = active ? 0 : -1;
+    });
+
+    dom.stagePanels?.forEach((panel) => {
+      const active = panel.dataset.stagePanel === stageKey;
+      panel.toggleAttribute('hidden', !active);
+      if (active) {
+        panel.setAttribute('tabindex', '-1');
+      }
+    });
+
+    const defaults = tutorialStages[stageKey]?.defaults || {};
+    const values = { ...defaults, ...(state.stage.values[stageKey] || {}) };
+    state.stage.values[stageKey] = values;
+    Object.entries(values).forEach(([field, value]) => {
+      updateStageInputs(stageKey, field, value);
+    });
+
+    if (!(stageKey in state.stage.checked)) {
+      state.stage.checked[stageKey] = false;
+    }
+
+    updateStageFeedback(stageKey);
+    drawStageGraph(stageKey);
+  }
+
+  function updateStageFeedback(stageKey = state.stage.active) {
+    const evaluation = evaluateStage(stageKey, state.stage.values[stageKey] || {});
+    const summaryNode = dom.stageFeedbackNodes?.get(stageKey);
+    const detailNode = dom.stageDetailNodes?.get(stageKey);
+
+    if (summaryNode) {
+      summaryNode.textContent = evaluation.summary;
+      if (evaluation.status === 'correct') {
+        summaryNode.dataset.status = 'correct';
+      } else if (evaluation.status === 'incorrect' && state.stage.checked[stageKey]) {
+        summaryNode.dataset.status = 'incorrect';
+      } else {
+        summaryNode.removeAttribute('data-status');
+      }
+    }
+
+    if (detailNode) {
+      let detailText = evaluation.detail;
+      if (evaluation.status === 'incorrect' && state.stage.checked[stageKey]) {
+        detailText = `${detailText} Prøv at justere værdierne og læs grafen igen.`;
+      }
+      detailNode.textContent = detailText;
+    }
+
+    if (dom.stageGraphFeedback) {
+      dom.stageGraphFeedback.textContent = evaluation.graphText;
+    }
+  }
+
+  function drawStageGraph(stageKey = state.stage.active) {
+    if (!dom.stageCtx || !dom.stageGraph) return;
+    const stageConfig = tutorialStages[stageKey];
+    if (!stageConfig) return;
+
+    const baseLines = stageConfig.graph?.lines ? stageConfig.graph.lines.map((line) => ({ ...line })) : [];
+    const values = state.stage.values[stageKey] || {};
+    const evaluation = evaluateStage(stageKey, values);
+    const graphConfig = { lines: baseLines };
+
+    if (stageConfig.type === 'single' && evaluation.hasValue) {
+      const xValue = Number(values.x);
+      if (Number.isFinite(xValue)) {
+        const color = evaluation.correct ? '#34d399' : '#22d3ee';
+        graphConfig.lines.push({ vertical: xValue, color, dashed: !evaluation.correct });
+        graphConfig.point = {
+          x: xValue,
+          y: stageConfig.slope * xValue + stageConfig.intercept,
+          color: evaluation.correct ? '#34d399' : '#f97316',
+          label: evaluation.correct ? 'Løsning' : undefined
+        };
+      }
+    }
+
+    if (stageConfig.type === 'system' && evaluation.hasValue) {
+      const xValue = Number(values.x);
+      const yValue = Number(values.y);
+      if (Number.isFinite(xValue) && Number.isFinite(yValue)) {
+        graphConfig.point = {
+          x: xValue,
+          y: yValue,
+          color: evaluation.correct ? '#34d399' : '#f97316',
+          label: evaluation.correct ? 'Skæring' : undefined
+        };
+      }
+    }
+
+    const options = stageConfig.range
+      ? { min: stageConfig.range.min, max: stageConfig.range.max }
+      : {};
+    renderCartesianGraph(dom.stageCtx, dom.stageGraph, graphConfig, options);
+  }
+
+  function evaluateStage(stageKey, values = {}) {
+    const config = tutorialStages[stageKey];
+    if (!config) {
+      return {
+        summary: '',
+        detail: '',
+        graphText: '',
+        status: 'hint',
+        hasValue: false
+      };
+    }
+
+    if (config.type === 'single') {
+      const x = Number(values.x);
+      if (!Number.isFinite(x)) {
+        return {
+          summary: 'Indtast en værdi for x for at undersøge ligningen.',
+          detail: 'Grafen viser venstresiden (blå) og højresiden (gul).',
+          graphText: 'Justér x for at se hvordan linjerne mødes.',
+          status: 'hint',
+          hasValue: false
+        };
+      }
+      const left = config.slope * x + config.intercept;
+      const right = config.constant;
+      const diff = left - right;
+      const tolerance = config.tolerance ?? 0.05;
+      const correct = Math.abs(diff) <= tolerance;
+      const summary = correct
+        ? `Stærkt! x = ${formatNumber(x)} gør ligningen sand.`
+        : `Venstresiden bliver ${formatNumber(left)}, men højresiden er ${formatNumber(right)}.`;
+      const detail = correct
+        ? 'Begge funktioner mødes i det markerede punkt.'
+        : diff > 0
+          ? 'Venstresiden er for stor – prøv et mindre x.'
+          : 'Venstresiden er for lille – prøv et større x.';
+      const graphText = correct
+        ? `Punktet (${formatNumber(x)}, ${formatNumber(right)}) er løsningen.`
+        : `Den turkise linje viser dit valg af x = ${formatNumber(x)}.`;
+      return {
+        summary,
+        detail,
+        graphText,
+        status: correct ? 'correct' : 'incorrect',
+        hasValue: true,
+        correct
+      };
+    }
+
+    if (config.type === 'system') {
+      const x = Number(values.x);
+      const y = Number(values.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        return {
+          summary: 'Indtast både x og y for at teste din løsning.',
+          detail: 'Begge linjer skal rammes af samme punkt for at løse systemet.',
+          graphText: 'Når du skriver værdier, vises dit punkt på grafen.',
+          status: 'hint',
+          hasValue: false
+        };
+      }
+      const expected1 = config.line1.slope * x + config.line1.intercept;
+      const expected2 = config.line2.slope * x + config.line2.intercept;
+      const diff1 = y - expected1;
+      const diff2 = y - expected2;
+      const tolerance = config.tolerance ?? 0.15;
+      const close1 = Math.abs(diff1) <= tolerance;
+      const close2 = Math.abs(diff2) <= tolerance;
+      const correct = close1 && close2;
+      let summary;
+      if (correct) {
+        summary = `Flot! Punktet (${formatNumber(x)}, ${formatNumber(y)}) opfylder begge ligninger.`;
+      } else if (close1 || close2) {
+        summary = close1
+          ? 'Punktet passer til ligning 1, men ikke til ligning 2 endnu.'
+          : 'Punktet passer til ligning 2, men mangler at ramme ligning 1.';
+      } else {
+        summary = 'Punktet rammer ingen af ligningerne endnu.';
+      }
+      const detail = `For ligning 1 giver y = ${formatNumber(expected1)} og for ligning 2 y = ${formatNumber(expected2)}.`;
+      const graphText = correct
+        ? 'Det markerede punkt viser skæringen mellem linjerne.'
+        : 'Det turkise punkt viser dit forslag. Flyt det hen til skæringen mellem linjerne.';
+      return {
+        summary,
+        detail,
+        graphText,
+        status: correct ? 'correct' : 'incorrect',
+        hasValue: true,
+        correct
+      };
+    }
+
+    return {
+      summary: '',
+      detail: '',
+      graphText: '',
+      status: 'hint',
+      hasValue: false
+    };
+  }
+
   function changeDemoStep(offset, options = {}) {
     const { auto = false } = options;
     const demo = tutorialDemos[state.demo.key];
@@ -445,24 +836,27 @@
     return demo.steps[state.demo.step] || null;
   }
 
-  function drawDemoGraph(config = {}) {
-    if (!dom.demoCtx || !dom.demoGraph) return;
-    const ctx = dom.demoCtx;
-    const width = dom.demoGraph.width;
-    const height = dom.demoGraph.height;
+  function renderCartesianGraph(ctx, canvas, config = {}, options = {}) {
+    if (!ctx || !canvas) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const padding = options.padding ?? 40;
+    const min = options.min ?? -10;
+    const max = options.max ?? 10;
+    const background = options.background ?? '#0b1221';
+    const gridColor = options.gridColor ?? 'rgba(148,163,236,0.12)';
+    const axisColor = options.axisColor ?? 'rgba(148,163,236,0.4)';
+    const labelColor = options.labelColor ?? 'rgba(226,232,240,0.85)';
+
     ctx.clearRect(0, 0, width, height);
-
-    const padding = 40;
-    const min = -10;
-    const max = 10;
-
-    ctx.fillStyle = '#0b1221';
+    ctx.fillStyle = background;
     ctx.fillRect(0, 0, width, height);
 
     const xToCanvas = (x) => ((x - min) / (max - min)) * (width - padding * 2) + padding;
     const yToCanvas = (y) => height - ((y - min) / (max - min)) * (height - padding * 2) - padding;
 
-    ctx.strokeStyle = 'rgba(148,163,236,0.12)';
+    ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
     for (let value = min; value <= max; value++) {
       const x = xToCanvas(value);
@@ -477,7 +871,7 @@
       ctx.stroke();
     }
 
-    ctx.strokeStyle = 'rgba(148,163,236,0.4)';
+    ctx.strokeStyle = axisColor;
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(padding, yToCanvas(0));
@@ -489,7 +883,7 @@
     ctx.lineTo(xToCanvas(0), height - padding);
     ctx.stroke();
 
-    ctx.fillStyle = 'rgba(226,232,240,0.85)';
+    ctx.fillStyle = labelColor;
     ctx.font = '12px "Inter", sans-serif';
     for (let value = min; value <= max; value++) {
       ctx.fillText(String(value), xToCanvas(value) - 4, yToCanvas(0) + 14);
@@ -539,6 +933,11 @@
         ctx.fillText(config.point.label, cx + 10, cy - 10);
       }
     }
+  }
+
+  function drawDemoGraph(config = {}) {
+    if (!dom.demoCtx || !dom.demoGraph) return;
+    renderCartesianGraph(dom.demoCtx, dom.demoGraph, config);
   }
 
   function syncGraphFromInputs() {
@@ -1125,6 +1524,13 @@
         stopDemoPlayback();
       }
     });
+  }
+
+  function formatNumber(value) {
+    if (!Number.isFinite(value)) {
+      return '';
+    }
+    return numberFormatter.format(value);
   }
 
   function logAttempt(answer, correct) {

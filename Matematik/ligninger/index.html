@@ -67,88 +67,137 @@
         <p class="tutorial-demo__note" id="demo-step-note" aria-live="polite"></p>
       </div>
 
-      <ol class="tutorial-steps" role="list">
-        <li id="tutorial-single-equation" class="tutorial-step" data-stage="i-do">
-          <header>
-            <h3>I Do · Enkeltligninger</h3>
-            <p data-detail="Husk at gøre det samme på begge sider for at bevare lighed." class="lead">En ligning som <code>ax + b = c</code> løses ved at isolere <span class="gloss" data-term="variabel">variablen</span>.</p>
-          </header>
-          <ol>
-            <li>Flyt konstanter væk fra venstresiden ved at lægge det modsatte tal til på begge sider.</li>
-            <li>Divider eller gang for at få <em>x</em> alene.</li>
-            <li>Kontrollér løsningen ved indsættelse.</li>
-          </ol>
-          <button class="graph-link" data-graph="single" data-preset='{"a":2,"b":3,"c":11}'>Se det på grafen</button>
-        </li>
-
-        <li id="tutorial-parentheses" class="tutorial-step" data-stage="we-do">
-          <header>
-            <h3>We Do · Parenteser og brøker</h3>
-            <p data-detail="Brug distributiv lov og fællesnævner før isolering." class="lead">Parenteser og brøker håndteres, før variablen isoleres.</p>
-          </header>
-          <ol>
-            <li>Udvid parenteser (fx <code>k(a + b) = ka + kb</code>).</li>
-            <li>Saml brøker med fællesnævner.</li>
-            <li>Løs den nye enkeltligning.</li>
-          </ol>
-          <button class="graph-link" data-graph="single" data-preset='{"a":1.5,"b":-4,"c":5}'>Se det på grafen</button>
-        </li>
-
-        <li id="tutorial-two-equations" class="tutorial-step" data-stage="you-do">
-          <header>
-            <h3>You Do · Systemer med substitution</h3>
-            <p data-detail="Vælg den letteste ligning at isolere først." class="lead">Erstat én variabel med et udtryk fra en anden ligning.</p>
-          </header>
-          <ol>
-            <li>Isolér en variabel i den ene ligning.</li>
-            <li>Indsæt udtrykket i den anden ligning.</li>
-            <li>Regn løsningen og indsæt tilbage.</li>
-          </ol>
-          <button class="graph-link" data-graph="system" data-preset='{"a1":1,"b1":2,"c1":8,"a2":2,"b2":-1,"c2":3}'>Se det på grafen</button>
-        </li>
-
-        <li id="tutorial-elimination" class="tutorial-step" data-stage="we-do">
-          <header>
-            <h3>We Do · Elimination</h3>
-            <p data-detail="Multiplicér så koefficienterne bliver ens (evt. med fortegn)." class="lead">Fjern en variabel ved at lægge ligninger sammen eller trække fra.</p>
-          </header>
-          <ol>
-            <li>Gør koefficienterne ens.</li>
-            <li>Plus/minus ligningerne for at eliminere variablen.</li>
-            <li>Løs den tilbageværende ligning.</li>
-          </ol>
-          <button class="graph-link" data-graph="system" data-preset='{"a1":3,"b1":-2,"c1":4,"a2":2,"b2":1,"c2":9}'>Se det på grafen</button>
-        </li>
-
-        <li id="tutorial-graph" class="tutorial-step" data-stage="i-do">
-          <header>
-            <h3>I Do · Grafisk løsning</h3>
-            <p data-detail="Skriv ligningen som y = ax + b for at aflæse hældning og skæring." class="lead">Skæringspunktet viser løsningen. Parallelle linjer ⇒ ingen løsning.</p>
-          </header>
-          <button class="graph-link" data-graph="system" data-preset='{"a1":1,"b1":-3,"c1":6,"a2":1,"b2":-3,"c2":2}'>Se det på grafen</button>
-        </li>
-
-        <li id="tutorial-models" class="tutorial-step" data-stage="we-do">
-          <header>
-            <h3>We Do · Proportionale &amp; lineære modeller</h3>
-            <p data-detail="Break-even findes hvor to funktioner har samme værdi." class="lead">Brug modeller til at sammenligne løsninger i data-scenarier.</p>
-          </header>
-          <button class="graph-link" data-graph="model" data-preset='{"a":15,"b":200,"a2":10,"b2":400}'>Se det på grafen</button>
-        </li>
-
-        <li id="tutorial-pitfalls" class="tutorial-step" data-stage="you-do">
-          <header>
-            <h3>You Do · Typiske fejl</h3>
-          </header>
-          <ul class="pitfalls">
-            <li><strong>Fortegn:</strong> skift fortegn ved at gange med −1.</li>
-            <li><strong>Brøker:</strong> divider ikke med brøk – gang med den omvendte.</li>
-            <li><strong>Parallelle linjer:</strong> samme hældning, forskellig skæring ⇒ ingen løsning.</li>
-            <li><strong>Sammenfaldende linjer:</strong> samme hældning og skæring ⇒ uendeligt mange løsninger.</li>
-          </ul>
-          <button class="graph-link" data-graph="system" data-preset='{"a1":2,"b1":-4,"c1":6,"a2":1,"b2":-2,"c2":3}'>Se det på grafen</button>
-        </li>
-      </ol>
+      <div class="tutorial-stages" role="region" aria-label="Læringsfaser">
+        <div class="tutorial-stages__nav" role="tablist" aria-label="Vælg fase">
+          <button type="button" class="tutorial-stage-button" data-stage-toggle="i-do" id="stage-tab-i-do" role="tab" aria-selected="true" aria-controls="stage-panel-i-do" tabindex="0">I Do</button>
+          <button type="button" class="tutorial-stage-button" data-stage-toggle="we-do" id="stage-tab-we-do" role="tab" aria-selected="false" aria-controls="stage-panel-we-do" tabindex="-1">We Do</button>
+          <button type="button" class="tutorial-stage-button" data-stage-toggle="you-do" id="stage-tab-you-do" role="tab" aria-selected="false" aria-controls="stage-panel-you-do" tabindex="-1">You Do</button>
+        </div>
+        <div class="tutorial-stages__layout">
+          <div class="tutorial-stages__panels">
+            <article class="stage-panel" id="stage-panel-i-do" data-stage-panel="i-do" role="tabpanel" aria-labelledby="stage-tab-i-do">
+              <header>
+                <h3>I Do · Før læreren viser strategien</h3>
+                <p class="lead">Følg isoleringsprocessen trin for trin og se hvordan grafen viser samme historie.</p>
+              </header>
+              <section aria-labelledby="stage-i-do-single">
+                <h4 id="stage-i-do-single">Enkeltligninger</h4>
+                <ol>
+                  <li>Flyt konstanter til den anden side ved at lægge det modsatte tal til på begge sider.</li>
+                  <li>Divider eller gang for at få <em>x</em> alene.</li>
+                  <li>Kontrollér løsningen ved at indsætte den tilbage i ligningen.</li>
+                </ol>
+              </section>
+              <section aria-labelledby="stage-i-do-graph">
+                <h4 id="stage-i-do-graph">Grafisk perspektiv</h4>
+                <p>Omskriv ligningen til <code>y = ax + b</code> og tegn begge sider som funktioner. Skæringspunktet svarer til løsningen.</p>
+              </section>
+              <div class="stage-example" data-stage-example="i-do">
+                <h4>Prøv selv</h4>
+                <p class="stage-example__prompt">Løs ligningen <code>2x + 3 = 11</code>. Justér <em>x</em> og se ændringen på grafen.</p>
+                <div class="stage-example__controls">
+                  <label for="stage-i-do-slider">Juster x</label>
+                  <input type="range" id="stage-i-do-slider" min="-4" max="8" step="0.5" value="2" data-stage-value="i-do:x">
+                  <label for="stage-i-do-input">Dit forslag til x</label>
+                  <input type="number" id="stage-i-do-input" step="0.1" value="2" data-stage-value="i-do:x">
+                  <button type="button" class="chip" data-stage-check="i-do">Tjek svar</button>
+                </div>
+                <div class="stage-example__feedback">
+                  <p data-stage-feedback="i-do" aria-live="polite"></p>
+                  <p data-stage-detail="i-do" class="muted"></p>
+                </div>
+              </div>
+            </article>
+            <article class="stage-panel" id="stage-panel-we-do" data-stage-panel="we-do" role="tabpanel" aria-labelledby="stage-tab-we-do" hidden>
+              <header>
+                <h3>We Do · Vi løser sammen</h3>
+                <p class="lead">Vi udvider parenteser, samler brøker og bruger elimination til at nå frem til løsningen.</p>
+              </header>
+              <section aria-labelledby="stage-we-do-parentheses">
+                <h4 id="stage-we-do-parentheses">Parenteser og brøker</h4>
+                <ol>
+                  <li>Udvid parenteser, fx <code>3(x - 1) = 3x - 3</code>.</li>
+                  <li>Saml brøker til én fælles nævner, før du isolerer variablen.</li>
+                  <li>Løs den nye ligning og kontrollér med indsættelse.</li>
+                </ol>
+              </section>
+              <section aria-labelledby="stage-we-do-elimination">
+                <h4 id="stage-we-do-elimination">Elimination</h4>
+                <ol>
+                  <li>Gør koefficienterne ens ved at gange ligningerne.</li>
+                  <li>Plus eller minus ligningerne for at fjerne en variabel.</li>
+                  <li>Løs den tilbageværende ligning og indsæt tilbage.</li>
+                </ol>
+              </section>
+              <section aria-labelledby="stage-we-do-models">
+                <h4 id="stage-we-do-models">Proportionale og lineære modeller</h4>
+                <p>Break-even findes hvor to funktioner skærer hinanden. Brug graferne til at aflæse hældning, skæring og løsninger.</p>
+              </section>
+              <div class="stage-example" data-stage-example="we-do">
+                <h4>Prøv selv</h4>
+                <p class="stage-example__prompt">Løs ligningen <code>3(x - 1) + 2 = 17</code>. Brug grafen til at se hvornår venstre og højre side er lige store.</p>
+                <div class="stage-example__controls">
+                  <label for="stage-we-do-slider">Juster x</label>
+                  <input type="range" id="stage-we-do-slider" min="0" max="8" step="0.5" value="3" data-stage-value="we-do:x">
+                  <label for="stage-we-do-input">Vores fælles gæt på x</label>
+                  <input type="number" id="stage-we-do-input" step="0.1" value="3" data-stage-value="we-do:x">
+                  <button type="button" class="chip" data-stage-check="we-do">Tjek svar</button>
+                </div>
+                <div class="stage-example__feedback">
+                  <p data-stage-feedback="we-do" aria-live="polite"></p>
+                  <p data-stage-detail="we-do" class="muted"></p>
+                </div>
+              </div>
+            </article>
+            <article class="stage-panel" id="stage-panel-you-do" data-stage-panel="you-do" role="tabpanel" aria-labelledby="stage-tab-you-do" hidden>
+              <header>
+                <h3>You Do · Du prøver selv</h3>
+                <p class="lead">Brug substitution eller elimination for at finde en løsning, og hold øje med grafen.</p>
+              </header>
+              <section aria-labelledby="stage-you-do-substitution">
+                <h4 id="stage-you-do-substitution">Substitution</h4>
+                <ol>
+                  <li>Isolér en variabel i den ene ligning.</li>
+                  <li>Indsæt udtrykket i den anden ligning.</li>
+                  <li>Find værdierne og kontrollér grafisk.</li>
+                </ol>
+              </section>
+              <section aria-labelledby="stage-you-do-pitfalls">
+                <h4 id="stage-you-do-pitfalls">Typiske fejl</h4>
+                <ul class="pitfalls">
+                  <li><strong>Fortegn:</strong> Husk at ændre fortegn når du ganger eller dividerer med negative tal.</li>
+                  <li><strong>Brøker:</strong> Gang med den omvendte i stedet for at dividere med en brøk.</li>
+                  <li><strong>Parallelle linjer:</strong> Samme hældning, forskellig skæring ⇒ ingen løsning.</li>
+                  <li><strong>Sammenfaldende linjer:</strong> Samme hældning og skæring ⇒ uendeligt mange løsninger.</li>
+                </ul>
+              </section>
+              <div class="stage-example" data-stage-example="you-do">
+                <h4>Prøv selv</h4>
+                <p class="stage-example__prompt">Løs systemet <code>{ x + 2y = 11, y = x + 1 }</code>. Indtast dit forslag til <em>x</em> og <em>y</em>, og aflæs grafen.</p>
+                <div class="stage-example__controls stage-example__controls--grid">
+                  <div>
+                    <label for="stage-you-do-x">x</label>
+                    <input type="number" id="stage-you-do-x" step="0.1" value="2" data-stage-value="you-do:x">
+                  </div>
+                  <div>
+                    <label for="stage-you-do-y">y</label>
+                    <input type="number" id="stage-you-do-y" step="0.1" value="3" data-stage-value="you-do:y">
+                  </div>
+                  <button type="button" class="chip" data-stage-check="you-do">Tjek løsning</button>
+                </div>
+                <div class="stage-example__feedback">
+                  <p data-stage-feedback="you-do" aria-live="polite"></p>
+                  <p data-stage-detail="you-do" class="muted"></p>
+                </div>
+              </div>
+            </article>
+          </div>
+          <aside class="tutorial-stage-visual" aria-live="polite">
+            <canvas id="stage-graph" width="520" height="340" role="img" aria-label="Graf for den valgte fase"></canvas>
+            <p id="stage-graph-feedback" class="muted"></p>
+          </aside>
+        </div>
+      </div>
 
       <aside id="glossary" aria-label="Gloseliste" class="card__aside">
         <h3>Gloser</h3>
