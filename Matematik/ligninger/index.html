@@ -38,7 +38,33 @@
     <section id="tutorial" class="card" aria-labelledby="tutorial-title">
       <div class="card__header">
         <h2 id="tutorial-title">Guidet tutorial – I Do → We Do → You Do</h2>
-        <p>Følg forløbet trin for trin. Hold musen over <span class="gloss" data-term="koefficient">fagord</span> for forklaringer.</p>
+        <p>Følg forløbet trin for trin. Hold musen over <span class="gloss" data-term="koefficient">fagord</span> for forklaringer. Brug den guidede graf-demonstration til at se hvert trin visualiseret.</p>
+      </div>
+
+      <div class="tutorial-demo" role="region" aria-label="Guidet eksempel med graf">
+        <div class="tutorial-demo__controls">
+          <div class="tutorial-demo__select">
+            <label for="demo-select">Prøv et eksempel</label>
+            <select id="demo-select">
+              <option value="isolation">Isolering af x</option>
+              <option value="substitution">Substitution</option>
+              <option value="elimination">Elimination</option>
+            </select>
+          </div>
+          <div class="tutorial-demo__stepper" role="group" aria-label="Trinkontrol">
+            <button id="demo-prev" class="chip" aria-label="Forrige trin">◀</button>
+            <span id="demo-step-indicator" aria-live="polite">Trin 1 af 3</span>
+            <button id="demo-next" class="chip" aria-label="Næste trin">▶</button>
+            <button id="demo-play" class="chip" aria-pressed="false">Afspil trin</button>
+          </div>
+        </div>
+        <div class="tutorial-demo__body">
+          <div class="tutorial-demo__text" id="demo-step-text" aria-live="polite">
+            <p>Vælg et eksempel for at se hvordan ligningen hænger sammen med grafen.</p>
+          </div>
+          <canvas id="demo-graph" width="520" height="340" role="img" aria-label="Illustration af trinvis løsning"></canvas>
+        </div>
+        <p class="tutorial-demo__note" id="demo-step-note" aria-live="polite"></p>
       </div>
 
       <ol class="tutorial-steps" role="list">

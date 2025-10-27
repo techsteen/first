@@ -12,7 +12,137 @@
       line1: { slope: 1, intercept: 0 },
       line2: { slope: -1, intercept: 4 }
     },
-    snapIntegers: false
+    snapIntegers: false,
+    demo: {
+      key: 'isolation',
+      step: 0,
+      playing: false,
+      timer: null
+    }
+  };
+
+  const tutorialDemos = {
+    isolation: {
+      label: 'Isolering af x',
+      steps: [
+        {
+          text: '<strong>1. Opskriv funktionerne:</strong> Vi ser ligningen <code>2x + 3 = 11</code> som to funktioner. Den blå linje viser venstresiden <code>y = 2x + 3</code>, og den gule linje er højresiden <code>y = 11</code>.',
+          note: 'Skæringspunktet viser hvor begge sider er lige store – løsningen til ligningen.',
+          preset: { type: 'single', data: { a: 2, b: 3, c: 11 } },
+          graph: {
+            lines: [
+              { slope: 2, intercept: 3, color: '#38bdf8' },
+              { slope: 0, intercept: 11, color: '#facc15' }
+            ],
+            point: { x: 4, y: 11, label: 'Skæring (x = 4)' }
+          }
+        },
+        {
+          text: '<strong>2. Flyt +3:</strong> Vi trækker 3 fra på begge sider, så venstresiden bliver <code>2x</code> og højresiden <code>8</code>. Grafen viser, at den gule linje flyttes ned til <code>y = 8</code>.',
+          note: 'Afstanden mellem linjerne svarer til det +3, vi fjernede.',
+          preset: { type: 'single', data: { a: 2, b: 0, c: 8 } },
+          graph: {
+            lines: [
+              { slope: 2, intercept: 0, color: '#38bdf8' },
+              { slope: 0, intercept: 8, color: '#facc15' }
+            ],
+            point: { x: 4, y: 8, label: 'x = 4 giver y = 8' }
+          }
+        },
+        {
+          text: '<strong>3. Divider med 2:</strong> Når vi deler begge sider med 2, får vi <code>x = 4</code>. På grafen markerer den stiplede linje værdien <code>x = 4</code>, hvor funktionerne krydser.',
+          note: 'Aflæs x-koordinaten (4) – det er løsningen på ligningen.',
+          preset: { type: 'single', data: { a: 2, b: 0, c: 8 } },
+          graph: {
+            lines: [
+              { slope: 2, intercept: 0, color: '#38bdf8' },
+              { slope: 0, intercept: 8, color: '#facc15' },
+              { vertical: 4, color: '#f97316', dashed: true }
+            ],
+            point: { x: 4, y: 8, label: 'Løsning (4, 8)' }
+          }
+        }
+      ]
+    },
+    substitution: {
+      label: 'Substitution',
+      steps: [
+        {
+          text: '<strong>1. Isolér en variabel:</strong> Vi omskriver første ligning til <code>y = x + 2</code>. Den blå linje viser udtrykket, mens den stiplede linje viser den anden ligning, som vi snart erstatter i.',
+          note: 'Grafen gør det tydeligt, hvilken hældning og skæring første ligning har.',
+          preset: { type: 'system', data: { a1: -1, b1: 1, c1: 2, a2: 1, b2: 1, c2: 6 } },
+          graph: {
+            lines: [
+              { slope: 1, intercept: 2, color: '#38bdf8' },
+              { slope: -1, intercept: 6, color: '#f97316', dashed: true }
+            ]
+          }
+        },
+        {
+          text: '<strong>2. Erstat i den anden ligning:</strong> Vi indsætter <code>y = x + 2</code> i <code>x + y = 6</code> og får <code>x + 2 = -x + 6</code>. På grafen ses nu begge linjer tydeligt.',
+          note: 'Deres skæring svarer til punktet, hvor de to ligninger er ens.',
+          preset: { type: 'system', data: { a1: -1, b1: 1, c1: 2, a2: 1, b2: 1, c2: 6 } },
+          graph: {
+            lines: [
+              { slope: 1, intercept: 2, color: '#38bdf8' },
+              { slope: -1, intercept: 6, color: '#f97316' }
+            ]
+          }
+        },
+        {
+          text: '<strong>3. Aflæs løsningen:</strong> Når vi løser ligningen, finder vi <code>x = 2</code> og <code>y = 4</code>. Det er præcis skæringspunktet mellem de to linjer.',
+          note: 'Punktet (2, 4) fortæller både x- og y-værdien for løsningen.',
+          preset: { type: 'system', data: { a1: -1, b1: 1, c1: 2, a2: 1, b2: 1, c2: 6 } },
+          graph: {
+            lines: [
+              { slope: 1, intercept: 2, color: '#38bdf8' },
+              { slope: -1, intercept: 6, color: '#f97316' }
+            ],
+            point: { x: 2, y: 4, label: 'Skæring (2, 4)' }
+          }
+        }
+      ]
+    },
+    elimination: {
+      label: 'Elimination',
+      steps: [
+        {
+          text: '<strong>1. Tegn begge ligninger:</strong> Vi arbejder med <code>x + 2y = 10</code> og <code>3x - 2y = 2</code>. Omskrevet til funktioner bliver de til <code>y = -0,5x + 5</code> og <code>y = 1,5x - 1</code>.',
+          note: 'Grafen viser to linjer med forskellig hældning – derfor findes der én løsning.',
+          preset: { type: 'system', data: { a1: 1, b1: 2, c1: 10, a2: 3, b2: -2, c2: 2 } },
+          graph: {
+            lines: [
+              { slope: -0.5, intercept: 5, color: '#38bdf8' },
+              { slope: 1.5, intercept: -1, color: '#f97316' }
+            ]
+          }
+        },
+        {
+          text: '<strong>2. Læg ligningerne sammen:</strong> Når vi summerer dem, får vi <code>4x = 12</code>. Den stiplede linje markerer <code>x = 3</code>, hvor begge ligninger giver samme resultat.',
+          note: 'Elimination svarer til at finde den x-værdi, hvor graferne krydser hinanden.',
+          graph: {
+            lines: [
+              { slope: -0.5, intercept: 5, color: '#38bdf8', dashed: true },
+              { slope: 1.5, intercept: -1, color: '#f97316', dashed: true },
+              { vertical: 3, color: '#facc15', dashed: true }
+            ],
+            point: { x: 3, y: 3.5, label: 'x = 3' }
+          }
+        },
+        {
+          text: '<strong>3. Find y-værdien:</strong> Med <code>x = 3</code> indsætter vi i en af ligningerne og får <code>y = 3,5</code>. Punktet (3, 3,5) er løsningen på systemet.',
+          note: 'Skæringspunktet (3, 3,5) opfylder begge ligninger samtidigt.',
+          preset: { type: 'system', data: { a1: 1, b1: 2, c1: 10, a2: 3, b2: -2, c2: 2 } },
+          graph: {
+            lines: [
+              { slope: -0.5, intercept: 5, color: '#38bdf8' },
+              { slope: 1.5, intercept: -1, color: '#f97316' }
+            ],
+            point: { x: 3, y: 3.5, label: 'Løsning (3, 3,5)' }
+          }
+        }
+      ]
+    }
   };
 
   const dom = {};
@@ -24,6 +154,7 @@
     setupToggles();
     setupGlossary();
     setupGraph();
+    setupTutorialDemo();
     setupSimulation();
     setupTasks();
     bindGlobalActions();
@@ -45,6 +176,16 @@
     dom.diagnostic = document.getElementById('diagnostic');
     dom.resetGraph = document.getElementById('reset-graph');
     dom.snapIntegers = document.getElementById('snap-integers');
+
+    dom.demoSelect = document.getElementById('demo-select');
+    dom.demoPrev = document.getElementById('demo-prev');
+    dom.demoNext = document.getElementById('demo-next');
+    dom.demoPlay = document.getElementById('demo-play');
+    dom.demoStepIndicator = document.getElementById('demo-step-indicator');
+    dom.demoStepText = document.getElementById('demo-step-text');
+    dom.demoStepNote = document.getElementById('demo-step-note');
+    dom.demoGraph = document.getElementById('demo-graph');
+    dom.demoCtx = dom.demoGraph?.getContext('2d');
 
     dom.scenarioSelect = document.getElementById('scenario-select');
     dom.paramA = document.getElementById('param-a');
@@ -171,6 +312,233 @@
     });
 
     syncGraphFromInputs();
+  }
+
+  function setupTutorialDemo() {
+    if (!dom.demoGraph || !dom.demoSelect) return;
+
+    dom.demoSelect.value = state.demo.key;
+    dom.demoPlay?.setAttribute('aria-pressed', 'false');
+
+    dom.demoPrev?.addEventListener('click', () => changeDemoStep(-1));
+    dom.demoNext?.addEventListener('click', () => changeDemoStep(1));
+    dom.demoSelect.addEventListener('change', () => {
+      const value = dom.demoSelect.value;
+      if (!tutorialDemos[value]) return;
+      stopDemoPlayback();
+      state.demo.key = value;
+      state.demo.step = 0;
+      renderDemoStep();
+    });
+
+    dom.demoPlay?.addEventListener('click', () => {
+      if (state.demo.playing) {
+        stopDemoPlayback();
+      } else {
+        startDemoPlayback();
+      }
+    });
+
+    renderDemoStep();
+
+    window.addEventListener('resize', () => {
+      const step = getCurrentDemoStep();
+      if (step) {
+        drawDemoGraph(step.graph);
+      }
+    });
+  }
+
+  function changeDemoStep(offset, options = {}) {
+    const { auto = false } = options;
+    const demo = tutorialDemos[state.demo.key];
+    if (!demo) return;
+
+    if (!auto) {
+      stopDemoPlayback();
+    }
+
+    const next = Math.min(Math.max(state.demo.step + offset, 0), demo.steps.length - 1);
+    if (next === state.demo.step) {
+      if (!auto) {
+        renderDemoStep();
+      }
+      return;
+    }
+    state.demo.step = next;
+    renderDemoStep();
+  }
+
+  function startDemoPlayback() {
+    const demo = tutorialDemos[state.demo.key];
+    if (!demo) return;
+    stopDemoPlayback();
+    state.demo.playing = true;
+    if (dom.demoPlay) {
+      dom.demoPlay.textContent = 'Stop afspilning';
+      dom.demoPlay.setAttribute('aria-pressed', 'true');
+    }
+    state.demo.timer = setInterval(() => {
+      const currentDemo = tutorialDemos[state.demo.key];
+      if (!currentDemo) {
+        stopDemoPlayback();
+        return;
+      }
+      if (state.demo.step >= currentDemo.steps.length - 1) {
+        stopDemoPlayback();
+        return;
+      }
+      changeDemoStep(1, { auto: true });
+    }, 4500);
+  }
+
+  function stopDemoPlayback() {
+    if (state.demo.timer) {
+      clearInterval(state.demo.timer);
+      state.demo.timer = null;
+    }
+    const wasPlaying = state.demo.playing;
+    state.demo.playing = false;
+    if (dom.demoPlay) {
+      dom.demoPlay.textContent = 'Afspil trin';
+      dom.demoPlay.setAttribute('aria-pressed', 'false');
+    }
+    if (!wasPlaying) {
+      return;
+    }
+  }
+
+  function renderDemoStep(options = {}) {
+    if (!dom.demoStepText) return;
+    const { syncGraph = true } = options;
+    const demo = tutorialDemos[state.demo.key];
+    if (!demo) return;
+    const step = demo.steps[state.demo.step];
+    if (!step) return;
+
+    dom.demoSelect.value = state.demo.key;
+    if (dom.demoStepIndicator) {
+      dom.demoStepIndicator.textContent = `Trin ${state.demo.step + 1} af ${demo.steps.length}`;
+    }
+    if (dom.demoPrev) {
+      dom.demoPrev.disabled = state.demo.step === 0;
+    }
+    if (dom.demoNext) {
+      dom.demoNext.disabled = state.demo.step === demo.steps.length - 1;
+    }
+
+    dom.demoStepText.innerHTML = `<p>${step.text}</p>`;
+    if (dom.demoStepNote) {
+      dom.demoStepNote.textContent = step.note || '';
+    }
+
+    if (syncGraph && step.preset) {
+      applyGraphPreset(step.preset.type, step.preset.data || {});
+    }
+
+    drawDemoGraph(step.graph);
+  }
+
+  function getCurrentDemoStep() {
+    const demo = tutorialDemos[state.demo.key];
+    if (!demo) return null;
+    return demo.steps[state.demo.step] || null;
+  }
+
+  function drawDemoGraph(config = {}) {
+    if (!dom.demoCtx || !dom.demoGraph) return;
+    const ctx = dom.demoCtx;
+    const width = dom.demoGraph.width;
+    const height = dom.demoGraph.height;
+    ctx.clearRect(0, 0, width, height);
+
+    const padding = 40;
+    const min = -10;
+    const max = 10;
+
+    ctx.fillStyle = '#0b1221';
+    ctx.fillRect(0, 0, width, height);
+
+    const xToCanvas = (x) => ((x - min) / (max - min)) * (width - padding * 2) + padding;
+    const yToCanvas = (y) => height - ((y - min) / (max - min)) * (height - padding * 2) - padding;
+
+    ctx.strokeStyle = 'rgba(148,163,236,0.12)';
+    ctx.lineWidth = 1;
+    for (let value = min; value <= max; value++) {
+      const x = xToCanvas(value);
+      const y = yToCanvas(value);
+      ctx.beginPath();
+      ctx.moveTo(x, padding);
+      ctx.lineTo(x, height - padding);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(padding, y);
+      ctx.lineTo(width - padding, y);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = 'rgba(148,163,236,0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padding, yToCanvas(0));
+    ctx.lineTo(width - padding, yToCanvas(0));
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(xToCanvas(0), padding);
+    ctx.lineTo(xToCanvas(0), height - padding);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(226,232,240,0.85)';
+    ctx.font = '12px "Inter", sans-serif';
+    for (let value = min; value <= max; value++) {
+      ctx.fillText(String(value), xToCanvas(value) - 4, yToCanvas(0) + 14);
+      if (value !== 0) {
+        ctx.fillText(String(value), xToCanvas(0) + 6, yToCanvas(value) + 4);
+      }
+    }
+
+    (config.lines || []).forEach((line) => {
+      ctx.save();
+      ctx.strokeStyle = line.color || '#38bdf8';
+      ctx.lineWidth = line.emphasis ? 3 : 2;
+      if (line.dashed) {
+        ctx.setLineDash([8, 8]);
+      }
+      if (typeof line.vertical === 'number') {
+        const x = xToCanvas(line.vertical);
+        ctx.beginPath();
+        ctx.moveTo(x, padding);
+        ctx.lineTo(x, height - padding);
+        ctx.stroke();
+      } else if (typeof line.slope === 'number') {
+        const slope = Number(line.slope);
+        const intercept = Number(line.intercept || 0);
+        ctx.beginPath();
+        ctx.moveTo(xToCanvas(min), yToCanvas(slope * min + intercept));
+        ctx.lineTo(xToCanvas(max), yToCanvas(slope * max + intercept));
+        ctx.stroke();
+      }
+      ctx.restore();
+    });
+
+    if (config.point && Number.isFinite(config.point.x) && Number.isFinite(config.point.y)) {
+      const { x, y } = config.point;
+      const cx = xToCanvas(x);
+      const cy = yToCanvas(y);
+      ctx.fillStyle = config.point.color || '#22d3ee';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#020617';
+      ctx.stroke();
+      if (config.point.label) {
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '14px "Inter", sans-serif';
+        ctx.fillText(config.point.label, cx + 10, cy - 10);
+      }
+    }
   }
 
   function syncGraphFromInputs() {
@@ -750,6 +1118,12 @@
       link.download = 'ligninger-log.csv';
       link.click();
       URL.revokeObjectURL(url);
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        stopDemoPlayback();
+      }
     });
   }
 
