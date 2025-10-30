@@ -1,0 +1,1379 @@
+(() => {
+  const state = {
+    detail: false,
+    llmEnabled: false,
+    hintsUsed: 0,
+    currentTask: null,
+    progress: loadJson('matd-progress', {}),
+    log: loadJson('matd-log', []),
+    exercises: [],
+    skills: new Set(),
+    demo: {
+      key: 'isolation',
+      step: 0,
+      playing: false,
+      timer: null
+    },
+    stage: {
+      active: 'i-do',
+      values: {},
+      checked: {}
+    }
+  };
+
+  const numberFormatter = new Intl.NumberFormat('da-DK', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0
+  });
+
+  function round(value, digits = 2) {
+    const factor = 10 ** digits;
+    return Math.round(value * factor) / factor;
+  }
+
+  const tutorialDemos = {
+    isolation: {
+      label: 'Isolering af x',
+      steps: [
+        {
+          text: '<strong>1. Opskriv funktionerne:</strong> Vi ser ligningen <code>2x + 3 = 11</code> som to funktioner. Den blå linje viser venstresiden <code>y = 2x + 3</code>, og den gule linje er højresiden <code>y = 11</code>.',
+          note: 'Skæringspunktet viser hvor begge sider er lige store – løsningen til ligningen.',
+          preset: { type: 'single', data: { a: 2, b: 3, c: 11 } },
+          graph: {
+            lines: [
+              { slope: 2, intercept: 3, color: '#38bdf8' },
+              { slope: 0, intercept: 11, color: '#facc15' }
+            ],
+            point: { x: 4, y: 11, label: 'Skæring (x = 4)' }
+          }
+        },
+        {
+          text: '<strong>2. Flyt +3:</strong> Vi trækker 3 fra på begge sider, så venstresiden bliver <code>2x</code> og højresiden <code>8</code>. Grafen viser, at den gule linje flyttes ned til <code>y = 8</code>.',
+          note: 'Afstanden mellem linjerne svarer til det +3, vi fjernede.',
+          preset: { type: 'single', data: { a: 2, b: 0, c: 8 } },
+          graph: {
+            lines: [
+              { slope: 2, intercept: 0, color: '#38bdf8' },
+              { slope: 0, intercept: 8, color: '#facc15' }
+            ],
+            point: { x: 4, y: 8, label: 'x = 4 giver y = 8' }
+          }
+        },
+        {
+          text: '<strong>3. Divider med 2:</strong> Når vi deler begge sider med 2, får vi <code>x = 4</code>. På grafen markerer den stiplede linje værdien <code>x = 4</code>, hvor funktionerne krydser.',
+          note: 'Aflæs x-koordinaten (4) – det er løsningen på ligningen.',
+          preset: { type: 'single', data: { a: 2, b: 0, c: 8 } },
+          graph: {
+            lines: [
+              { slope: 2, intercept: 0, color: '#38bdf8' },
+              { slope: 0, intercept: 8, color: '#facc15' },
+              { vertical: 4, color: '#f97316', dashed: true }
+            ],
+            point: { x: 4, y: 8, label: 'Løsning (4, 8)' }
+          }
+        }
+      ]
+    },
+    substitution: {
+      label: 'Substitution',
+      steps: [
+        {
+          text: '<strong>1. Isolér en variabel:</strong> Vi omskriver første ligning til <code>y = x + 2</code>. Den blå linje viser udtrykket, mens den stiplede linje viser den anden ligning, som vi snart erstatter i.',
+          note: 'Grafen gør det tydeligt, hvilken hældning og skæring første ligning har.',
+          preset: { type: 'system', data: { a1: -1, b1: 1, c1: 2, a2: 1, b2: 1, c2: 6 } },
+          graph: {
+            lines: [
+              { slope: 1, intercept: 2, color: '#38bdf8' },
+              { slope: -1, intercept: 6, color: '#f97316', dashed: true }
+            ]
+          }
+        },
+        {
+          text: '<strong>2. Erstat i den anden ligning:</strong> Vi indsætter <code>y = x + 2</code> i <code>x + y = 6</code> og får <code>x + 2 = -x + 6</code>. På grafen ses nu begge linjer tydeligt.',
+          note: 'Deres skæring svarer til punktet, hvor de to ligninger er ens.',
+          preset: { type: 'system', data: { a1: -1, b1: 1, c1: 2, a2: 1, b2: 1, c2: 6 } },
+          graph: {
+            lines: [
+              { slope: 1, intercept: 2, color: '#38bdf8' },
+              { slope: -1, intercept: 6, color: '#f97316' }
+            ]
+          }
+        },
+        {
+          text: '<strong>3. Aflæs løsningen:</strong> Når vi løser ligningen, finder vi <code>x = 2</code> og <code>y = 4</code>. Det er præcis skæringspunktet mellem de to linjer.',
+          note: 'Punktet (2, 4) fortæller både x- og y-værdien for løsningen.',
+          preset: { type: 'system', data: { a1: -1, b1: 1, c1: 2, a2: 1, b2: 1, c2: 6 } },
+          graph: {
+            lines: [
+              { slope: 1, intercept: 2, color: '#38bdf8' },
+              { slope: -1, intercept: 6, color: '#f97316' }
+            ],
+            point: { x: 2, y: 4, label: 'Skæring (2, 4)' }
+          }
+        }
+      ]
+    },
+    elimination: {
+      label: 'Elimination',
+      steps: [
+        {
+          text: '<strong>1. Tegn begge ligninger:</strong> Vi arbejder med <code>x + 2y = 10</code> og <code>3x - 2y = 2</code>. Omskrevet til funktioner bliver de til <code>y = -0,5x + 5</code> og <code>y = 1,5x - 1</code>.',
+          note: 'Grafen viser to linjer med forskellig hældning – derfor findes der én løsning.',
+          preset: { type: 'system', data: { a1: 1, b1: 2, c1: 10, a2: 3, b2: -2, c2: 2 } },
+          graph: {
+            lines: [
+              { slope: -0.5, intercept: 5, color: '#38bdf8' },
+              { slope: 1.5, intercept: -1, color: '#f97316' }
+            ]
+          }
+        },
+        {
+          text: '<strong>2. Læg ligningerne sammen:</strong> Når vi summerer dem, får vi <code>4x = 12</code>. Den stiplede linje markerer <code>x = 3</code>, hvor begge ligninger giver samme resultat.',
+          note: 'Elimination svarer til at finde den x-værdi, hvor graferne krydser hinanden.',
+          graph: {
+            lines: [
+              { slope: -0.5, intercept: 5, color: '#38bdf8', dashed: true },
+              { slope: 1.5, intercept: -1, color: '#f97316', dashed: true },
+              { vertical: 3, color: '#facc15', dashed: true }
+            ],
+            point: { x: 3, y: 3.5, label: 'x = 3' }
+          }
+        },
+        {
+          text: '<strong>3. Find y-værdien:</strong> Med <code>x = 3</code> indsætter vi i en af ligningerne og får <code>y = 3,5</code>. Punktet (3, 3,5) er løsningen på systemet.',
+          note: 'Skæringspunktet (3, 3,5) opfylder begge ligninger samtidigt.',
+          preset: { type: 'system', data: { a1: 1, b1: 2, c1: 10, a2: 3, b2: -2, c2: 2 } },
+          graph: {
+            lines: [
+              { slope: -0.5, intercept: 5, color: '#38bdf8' },
+              { slope: 1.5, intercept: -1, color: '#f97316' }
+            ],
+            point: { x: 3, y: 3.5, label: 'Løsning (3, 3,5)' }
+          }
+        }
+      ]
+    }
+  };
+
+  const tutorialStages = {
+    'i-do': {
+      type: 'single',
+      slope: 2,
+      intercept: 3,
+      constant: 11,
+      solution: 4,
+      tolerance: 0.05,
+      defaults: { x: 2 },
+      range: { min: -4, max: 12 },
+      display: '2x + 3 = 11',
+      graph: {
+        lines: [
+          { slope: 2, intercept: 3, color: '#38bdf8', emphasis: true },
+          { slope: 0, intercept: 11, color: '#facc15', emphasis: true }
+        ]
+      }
+    },
+    'we-do': {
+      type: 'single',
+      slope: 3,
+      intercept: -1,
+      constant: 17,
+      solution: 6,
+      tolerance: 0.05,
+      defaults: { x: 3 },
+      range: { min: -2, max: 24 },
+      display: '3(x - 1) + 2 = 17',
+      graph: {
+        lines: [
+          { slope: 3, intercept: -1, color: '#0ea5e9', emphasis: true },
+          { slope: 0, intercept: 17, color: '#facc15', emphasis: true }
+        ]
+      }
+    },
+    'you-do': {
+      type: 'system',
+      line1: { slope: -0.5, intercept: 5.5, color: '#38bdf8', emphasis: true },
+      line2: { slope: 1, intercept: 1, color: '#f97316', emphasis: true },
+      solution: { x: 3, y: 4 },
+      tolerance: 0.15,
+      defaults: { x: 2, y: 3 },
+      range: { min: -2, max: 12 },
+      display1: 'x + 2y = 11',
+      display2: 'y = x + 1',
+      graph: {
+        lines: [
+          { slope: -0.5, intercept: 5.5, color: '#38bdf8', emphasis: true },
+          { slope: 1, intercept: 1, color: '#f97316', emphasis: true }
+        ]
+      }
+    }
+  };
+
+  const dom = {};
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  function init() {
+    mapDom();
+    setupToggles();
+    setupGlossary();
+    setupTutorialDemo();
+    setupTutorialStages();
+    setupSimulation();
+    setupTasks();
+    bindGlobalActions();
+    refreshProgress();
+  }
+
+  function mapDom() {
+    dom.body = document.body;
+    dom.toggleText = document.getElementById('toggle-text');
+    dom.toggleDetail = document.getElementById('toggle-detail');
+    dom.toggleLlm = document.getElementById('toggle-llm');
+
+    dom.demoSelect = document.getElementById('demo-select');
+    dom.demoPrev = document.getElementById('demo-prev');
+    dom.demoNext = document.getElementById('demo-next');
+    dom.demoPlay = document.getElementById('demo-play');
+    dom.demoStepIndicator = document.getElementById('demo-step-indicator');
+    dom.demoStepText = document.getElementById('demo-step-text');
+    dom.demoStepNote = document.getElementById('demo-step-note');
+    dom.demoGraph = document.getElementById('demo-graph');
+    dom.demoCtx = dom.demoGraph?.getContext('2d');
+
+    dom.stageGraph = document.getElementById('stage-graph');
+    dom.stageCtx = dom.stageGraph?.getContext('2d');
+    dom.stageGraphFeedback = document.getElementById('stage-graph-feedback');
+    dom.stageButtons = Array.from(document.querySelectorAll('[data-stage-toggle]'));
+    dom.stagePanels = Array.from(document.querySelectorAll('[data-stage-panel]'));
+    dom.stageValueElements = Array.from(document.querySelectorAll('[data-stage-value]'));
+    dom.stageCheckButtons = Array.from(document.querySelectorAll('[data-stage-check]'));
+    dom.stageFeedbackNodes = new Map();
+    document.querySelectorAll('[data-stage-feedback]').forEach((node) => {
+      dom.stageFeedbackNodes.set(node.dataset.stageFeedback, node);
+    });
+    dom.stageDetailNodes = new Map();
+    document.querySelectorAll('[data-stage-detail]').forEach((node) => {
+      dom.stageDetailNodes.set(node.dataset.stageDetail, node);
+    });
+    dom.stageEquationNodes = new Map();
+    document.querySelectorAll('[data-stage-equation]').forEach((node) => {
+      dom.stageEquationNodes.set(node.dataset.stageEquation, node);
+    });
+
+    dom.scenarioSelect = document.getElementById('scenario-select');
+    dom.paramA = document.getElementById('param-a');
+    dom.paramB = document.getElementById('param-b');
+    dom.paramC = document.getElementById('param-c');
+    dom.paramALabel = document.getElementById('param-a-label');
+    dom.paramBLabel = document.getElementById('param-b-label');
+    dom.paramCLabel = document.getElementById('param-c-label');
+    dom.scenarioTitle = document.getElementById('scenario-title');
+    dom.scenarioDescription = document.getElementById('scenario-description');
+    dom.scenarioMath = document.getElementById('scenario-math');
+    dom.showMath = document.getElementById('show-math');
+
+    dom.taskGrid = document.getElementById('task-grid');
+    dom.taskPlayer = document.getElementById('task-player');
+    dom.taskTitle = document.getElementById('task-title');
+    dom.taskMeta = document.getElementById('task-meta');
+    dom.taskPrompt = document.getElementById('task-prompt');
+    dom.taskLinks = document.getElementById('task-links');
+    dom.taskForm = document.getElementById('task-form');
+    dom.taskAnswer = document.getElementById('task-answer');
+    dom.taskFormat = document.getElementById('task-format');
+    dom.taskFeedback = document.getElementById('task-feedback');
+    dom.taskHints = document.getElementById('task-hints');
+    dom.hintButton = document.getElementById('hint-button');
+    dom.solutionButton = document.getElementById('solution-button');
+    dom.filterDifficulty = document.getElementById('filter-difficulty');
+    dom.filterSkill = document.getElementById('filter-skill');
+    dom.taskCount = document.getElementById('task-count');
+
+    dom.progressBar = document.getElementById('progress-bar');
+    dom.resetProgress = document.getElementById('reset-progress');
+    dom.downloadLog = document.getElementById('download-log');
+  }
+
+  function setupToggles() {
+    dom.toggleText.addEventListener('click', () => {
+      const active = dom.body.classList.toggle('large-text');
+      dom.toggleText.setAttribute('aria-pressed', String(active));
+    });
+
+    dom.toggleDetail.addEventListener('click', () => {
+      state.detail = !state.detail;
+      dom.toggleDetail.setAttribute('aria-pressed', String(state.detail));
+      dom.toggleDetail.textContent = state.detail ? 'Kort forklaring' : 'Detaljeret forklaring';
+      toggleDetailText(state.detail);
+    });
+
+    dom.toggleLlm.addEventListener('click', () => {
+      state.llmEnabled = !state.llmEnabled;
+      dom.toggleLlm.setAttribute('aria-pressed', String(state.llmEnabled));
+      dom.toggleLlm.textContent = state.llmEnabled ? 'LLM-feedback: til' : 'LLM-feedback: fra';
+    });
+  }
+
+  function toggleDetailText(show) {
+    document.querySelectorAll('[data-detail]').forEach((el) => {
+      if (!el.dataset.original) {
+        el.dataset.original = el.textContent.trim();
+      }
+      el.textContent = show ? `${el.dataset.original} – ${el.dataset.detail || ''}` : el.dataset.original;
+    });
+  }
+
+  function setupGlossary() {
+    const glossary = {};
+    document.querySelectorAll('#glossary dt').forEach((dt) => {
+      const key = dt.id?.replace('gloss-', '') || dt.textContent.trim().toLowerCase();
+      const definition = dt.nextElementSibling?.textContent.trim();
+      if (key && definition) glossary[key] = definition;
+    });
+
+    document.querySelectorAll('.gloss').forEach((span) => {
+      const key = span.dataset.term || span.textContent.trim().toLowerCase();
+      if (glossary[key]) {
+        span.setAttribute('title', glossary[key]);
+        span.dataset.detail = glossary[key];
+      }
+    });
+  }
+
+  function setupTutorialDemo() {
+    if (!dom.demoGraph || !dom.demoSelect) return;
+
+    dom.demoSelect.value = state.demo.key;
+    dom.demoPlay?.setAttribute('aria-pressed', 'false');
+
+    dom.demoPrev?.addEventListener('click', () => changeDemoStep(-1));
+    dom.demoNext?.addEventListener('click', () => changeDemoStep(1));
+    dom.demoSelect.addEventListener('change', () => {
+      const value = dom.demoSelect.value;
+      if (!tutorialDemos[value]) return;
+      stopDemoPlayback();
+      state.demo.key = value;
+      state.demo.step = 0;
+      renderDemoStep();
+    });
+
+    dom.demoPlay?.addEventListener('click', () => {
+      if (state.demo.playing) {
+        stopDemoPlayback();
+      } else {
+        startDemoPlayback();
+      }
+    });
+
+    renderDemoStep();
+
+    window.addEventListener('resize', () => {
+      const step = getCurrentDemoStep();
+      if (step) {
+        drawDemoGraph(step.graph);
+      }
+    });
+  }
+
+  function setupTutorialStages() {
+    if (!dom.stageGraph || !dom.stageButtons?.length) return;
+
+    dom.stageValueGroups = new Map();
+
+    dom.stageButtons.forEach((button) => {
+      const stageKey = button.dataset.stageToggle;
+      if (!stageKey) return;
+      button.addEventListener('click', () => selectTutorialStage(stageKey));
+    });
+
+    dom.stageValueElements?.forEach((element) => {
+      const key = element.dataset.stageValue;
+      if (!key) return;
+      const [stageKey, field] = key.split(':');
+      if (!stageKey || !field) return;
+      const groupKey = `${stageKey}:${field}`;
+      if (!dom.stageValueGroups.has(groupKey)) {
+        dom.stageValueGroups.set(groupKey, new Set());
+      }
+      dom.stageValueGroups.get(groupKey).add(element);
+      element.addEventListener('input', () => handleStageValueInput(element, stageKey, field));
+    });
+
+    dom.stageCheckButtons?.forEach((button) => {
+      const stageKey = button.dataset.stageCheck;
+      if (!stageKey) return;
+      button.addEventListener('click', () => {
+        state.stage.checked[stageKey] = true;
+        selectTutorialStage(stageKey);
+      });
+    });
+
+    Object.keys(tutorialStages).forEach((stageKey) => {
+      const defaults = tutorialStages[stageKey]?.defaults || {};
+      if (!state.stage.values[stageKey]) {
+        state.stage.values[stageKey] = { ...defaults };
+      } else {
+        state.stage.values[stageKey] = { ...defaults, ...state.stage.values[stageKey] };
+      }
+    });
+
+    if (!tutorialStages[state.stage.active]) {
+      state.stage.active = 'i-do';
+    }
+
+    refreshStageEquationText();
+    selectTutorialStage(state.stage.active);
+  }
+
+  function handleStageValueInput(element, stageKey, field) {
+    const rawValue = element.value;
+    const value = rawValue === '' ? '' : Number(rawValue);
+    if (rawValue !== '' && !Number.isFinite(value)) {
+      return;
+    }
+
+    if (!state.stage.values[stageKey]) {
+      state.stage.values[stageKey] = {};
+    }
+
+    state.stage.values[stageKey][field] = value;
+
+    syncStageValueElements(stageKey, field, value, element);
+
+    state.stage.checked[stageKey] = false;
+
+    if (stageKey === state.stage.active) {
+      updateStageFeedback(stageKey);
+      drawStageGraph(stageKey);
+    }
+  }
+
+  function syncStageValueElements(stageKey, field, value, origin) {
+    const groupKey = `${stageKey}:${field}`;
+    const elements = dom.stageValueGroups?.get(groupKey);
+    if (!elements) return;
+    elements.forEach((element) => {
+      if (element === origin) return;
+      if (value === '') {
+        if (element.type !== 'range') {
+          element.value = '';
+        }
+      } else {
+        element.value = String(value);
+      }
+    });
+  }
+
+  function updateStageInputs(stageKey, field, value) {
+    const groupKey = `${stageKey}:${field}`;
+    const elements = dom.stageValueGroups?.get(groupKey);
+    if (!elements) return;
+    elements.forEach((element) => {
+      if (value === '') {
+        if (element.type !== 'range') {
+          element.value = '';
+        }
+      } else {
+        element.value = String(value);
+      }
+    });
+  }
+
+  function refreshStageEquationText() {
+    if (!dom.stageEquationNodes) return;
+    const iDoNode = dom.stageEquationNodes.get('i-do');
+    const iDoConfig = tutorialStages['i-do'];
+    if (iDoNode && iDoConfig?.display) {
+      iDoNode.textContent = iDoConfig.display;
+    }
+
+    const weDoNode = dom.stageEquationNodes.get('we-do');
+    const weDoConfig = tutorialStages['we-do'];
+    if (weDoNode && weDoConfig?.display) {
+      weDoNode.textContent = weDoConfig.display;
+    }
+
+    const youDoNode1 = dom.stageEquationNodes.get('you-do-1');
+    const youDoNode2 = dom.stageEquationNodes.get('you-do-2');
+    const youDoConfig = tutorialStages['you-do'];
+    if (youDoNode1 && youDoConfig?.display1) {
+      youDoNode1.textContent = youDoConfig.display1;
+    }
+    if (youDoNode2 && youDoConfig?.display2) {
+      youDoNode2.textContent = youDoConfig.display2;
+    }
+  }
+
+  function selectTutorialStage(stageKey = 'i-do') {
+    if (!tutorialStages[stageKey]) {
+      stageKey = 'i-do';
+    }
+
+    state.stage.active = stageKey;
+
+    dom.stageButtons?.forEach((button) => {
+      const active = button.dataset.stageToggle === stageKey;
+      button.setAttribute('aria-selected', active ? 'true' : 'false');
+      button.classList.toggle('is-active', active);
+      button.tabIndex = active ? 0 : -1;
+    });
+
+    dom.stagePanels?.forEach((panel) => {
+      const active = panel.dataset.stagePanel === stageKey;
+      panel.hidden = !active;
+      panel.setAttribute('aria-hidden', active ? 'false' : 'true');
+      panel.classList.toggle('is-active', active);
+      if (active) {
+        panel.setAttribute('tabindex', '-1');
+      }
+    });
+
+    const defaults = tutorialStages[stageKey]?.defaults || {};
+    const values = { ...defaults, ...(state.stage.values[stageKey] || {}) };
+    state.stage.values[stageKey] = values;
+    Object.entries(values).forEach(([field, value]) => {
+      updateStageInputs(stageKey, field, value);
+    });
+
+    if (!(stageKey in state.stage.checked)) {
+      state.stage.checked[stageKey] = false;
+    }
+
+    updateStageFeedback(stageKey);
+    drawStageGraph(stageKey);
+  }
+
+  function updateStageFeedback(stageKey = state.stage.active) {
+    const evaluation = evaluateStage(stageKey, state.stage.values[stageKey] || {});
+    const summaryNode = dom.stageFeedbackNodes?.get(stageKey);
+    const detailNode = dom.stageDetailNodes?.get(stageKey);
+
+    if (summaryNode) {
+      summaryNode.textContent = evaluation.summary;
+      if (evaluation.status === 'correct') {
+        summaryNode.dataset.status = 'correct';
+      } else if (evaluation.status === 'incorrect' && state.stage.checked[stageKey]) {
+        summaryNode.dataset.status = 'incorrect';
+      } else {
+        summaryNode.removeAttribute('data-status');
+      }
+    }
+
+    if (detailNode) {
+      let detailText = evaluation.detail;
+      if (evaluation.status === 'incorrect' && state.stage.checked[stageKey]) {
+        detailText = `${detailText} Prøv at justere værdierne og læs grafen igen.`;
+      }
+      detailNode.textContent = detailText;
+    }
+
+    if (dom.stageGraphFeedback) {
+      dom.stageGraphFeedback.textContent = evaluation.graphText;
+    }
+  }
+
+  function drawStageGraph(stageKey = state.stage.active) {
+    if (!dom.stageCtx || !dom.stageGraph) return;
+    const stageConfig = tutorialStages[stageKey];
+    if (!stageConfig) return;
+
+    const baseLines = stageConfig.graph?.lines ? stageConfig.graph.lines.map((line) => ({ ...line })) : [];
+    const values = state.stage.values[stageKey] || {};
+    const evaluation = evaluateStage(stageKey, values);
+    const graphConfig = { lines: baseLines };
+
+    if (stageConfig.type === 'single' && evaluation.hasValue) {
+      const xValue = Number(values.x);
+      if (Number.isFinite(xValue)) {
+        const color = evaluation.correct ? '#34d399' : '#22d3ee';
+        graphConfig.lines.push({ vertical: xValue, color, dashed: !evaluation.correct });
+        graphConfig.point = {
+          x: xValue,
+          y: stageConfig.slope * xValue + stageConfig.intercept,
+          color: evaluation.correct ? '#34d399' : '#f97316',
+          label: evaluation.correct ? 'Løsning' : undefined
+        };
+      }
+    }
+
+    if (stageConfig.type === 'system' && evaluation.hasValue) {
+      const xValue = Number(values.x);
+      const yValue = Number(values.y);
+      if (Number.isFinite(xValue) && Number.isFinite(yValue)) {
+        graphConfig.point = {
+          x: xValue,
+          y: yValue,
+          color: evaluation.correct ? '#34d399' : '#f97316',
+          label: evaluation.correct ? 'Skæring' : undefined
+        };
+      }
+    }
+
+    const options = stageConfig.range
+      ? { min: stageConfig.range.min, max: stageConfig.range.max }
+      : {};
+    renderCartesianGraph(dom.stageCtx, dom.stageGraph, graphConfig, options);
+  }
+
+  function evaluateStage(stageKey, values = {}) {
+    const config = tutorialStages[stageKey];
+    if (!config) {
+      return {
+        summary: '',
+        detail: '',
+        graphText: '',
+        status: 'hint',
+        hasValue: false
+      };
+    }
+
+    if (config.type === 'single') {
+      const x = Number(values.x);
+      if (!Number.isFinite(x)) {
+        return {
+          summary: 'Indtast en værdi for x for at undersøge ligningen.',
+          detail: 'Grafen viser venstresiden (blå) og højresiden (gul).',
+          graphText: 'Justér x for at se hvordan linjerne mødes.',
+          status: 'hint',
+          hasValue: false
+        };
+      }
+      const left = config.slope * x + config.intercept;
+      const right = config.constant;
+      const diff = left - right;
+      const tolerance = config.tolerance ?? 0.05;
+      const correct = Math.abs(diff) <= tolerance;
+      const summary = correct
+        ? `Stærkt! x = ${formatNumber(x)} gør ligningen sand.`
+        : `Venstresiden bliver ${formatNumber(left)}, men højresiden er ${formatNumber(right)}.`;
+      const detail = correct
+        ? 'Begge funktioner mødes i det markerede punkt.'
+        : diff > 0
+          ? 'Venstresiden er for stor – prøv et mindre x.'
+          : 'Venstresiden er for lille – prøv et større x.';
+      const graphText = correct
+        ? `Punktet (${formatNumber(x)}, ${formatNumber(right)}) er løsningen.`
+        : `Den turkise linje viser dit valg af x = ${formatNumber(x)}.`;
+      return {
+        summary,
+        detail,
+        graphText,
+        status: correct ? 'correct' : 'incorrect',
+        hasValue: true,
+        correct
+      };
+    }
+
+    if (config.type === 'system') {
+      const x = Number(values.x);
+      const y = Number(values.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        return {
+          summary: 'Indtast både x og y for at teste din løsning.',
+          detail: 'Begge linjer skal rammes af samme punkt for at løse systemet.',
+          graphText: 'Når du skriver værdier, vises dit punkt på grafen.',
+          status: 'hint',
+          hasValue: false
+        };
+      }
+      const expected1 = config.line1.slope * x + config.line1.intercept;
+      const expected2 = config.line2.slope * x + config.line2.intercept;
+      const diff1 = y - expected1;
+      const diff2 = y - expected2;
+      const tolerance = config.tolerance ?? 0.15;
+      const close1 = Math.abs(diff1) <= tolerance;
+      const close2 = Math.abs(diff2) <= tolerance;
+      const correct = close1 && close2;
+      let summary;
+      if (correct) {
+        summary = `Flot! Punktet (${formatNumber(x)}, ${formatNumber(y)}) opfylder begge ligninger.`;
+      } else if (close1 || close2) {
+        summary = close1
+          ? 'Punktet passer til ligning 1, men ikke til ligning 2 endnu.'
+          : 'Punktet passer til ligning 2, men mangler at ramme ligning 1.';
+      } else {
+        summary = 'Punktet rammer ingen af ligningerne endnu.';
+      }
+      const detail = `For ligning 1 giver y = ${formatNumber(expected1)} og for ligning 2 y = ${formatNumber(expected2)}.`;
+      const graphText = correct
+        ? 'Det markerede punkt viser skæringen mellem linjerne.'
+        : 'Det turkise punkt viser dit forslag. Flyt det hen til skæringen mellem linjerne.';
+      return {
+        summary,
+        detail,
+        graphText,
+        status: correct ? 'correct' : 'incorrect',
+        hasValue: true,
+        correct
+      };
+    }
+
+    return {
+      summary: '',
+      detail: '',
+      graphText: '',
+      status: 'hint',
+      hasValue: false
+    };
+  }
+
+  function changeDemoStep(offset, options = {}) {
+    const { auto = false } = options;
+    const demo = tutorialDemos[state.demo.key];
+    if (!demo) return;
+
+    if (!auto) {
+      stopDemoPlayback();
+    }
+
+    const next = Math.min(Math.max(state.demo.step + offset, 0), demo.steps.length - 1);
+    if (next === state.demo.step) {
+      if (!auto) {
+        renderDemoStep();
+      }
+      return;
+    }
+    state.demo.step = next;
+    renderDemoStep();
+  }
+
+  function startDemoPlayback() {
+    const demo = tutorialDemos[state.demo.key];
+    if (!demo) return;
+    stopDemoPlayback();
+    state.demo.playing = true;
+    if (dom.demoPlay) {
+      dom.demoPlay.textContent = 'Stop afspilning';
+      dom.demoPlay.setAttribute('aria-pressed', 'true');
+    }
+    state.demo.timer = setInterval(() => {
+      const currentDemo = tutorialDemos[state.demo.key];
+      if (!currentDemo) {
+        stopDemoPlayback();
+        return;
+      }
+      if (state.demo.step >= currentDemo.steps.length - 1) {
+        stopDemoPlayback();
+        return;
+      }
+      changeDemoStep(1, { auto: true });
+    }, 4500);
+  }
+
+  function stopDemoPlayback() {
+    if (state.demo.timer) {
+      clearInterval(state.demo.timer);
+      state.demo.timer = null;
+    }
+    const wasPlaying = state.demo.playing;
+    state.demo.playing = false;
+    if (dom.demoPlay) {
+      dom.demoPlay.textContent = 'Afspil trin';
+      dom.demoPlay.setAttribute('aria-pressed', 'false');
+    }
+    if (!wasPlaying) {
+      return;
+    }
+  }
+
+  function renderDemoStep(options = {}) {
+    if (!dom.demoStepText) return;
+    const { syncGraph = true } = options;
+    const demo = tutorialDemos[state.demo.key];
+    if (!demo) return;
+    const step = demo.steps[state.demo.step];
+    if (!step) return;
+
+    dom.demoSelect.value = state.demo.key;
+    if (dom.demoStepIndicator) {
+      dom.demoStepIndicator.textContent = `Trin ${state.demo.step + 1} af ${demo.steps.length}`;
+    }
+    if (dom.demoPrev) {
+      dom.demoPrev.disabled = state.demo.step === 0;
+    }
+    if (dom.demoNext) {
+      dom.demoNext.disabled = state.demo.step === demo.steps.length - 1;
+    }
+
+    dom.demoStepText.innerHTML = `<p>${step.text}</p>`;
+    if (dom.demoStepNote) {
+      dom.demoStepNote.textContent = step.note || '';
+    }
+
+    drawDemoGraph(step.graph);
+  }
+
+  function getCurrentDemoStep() {
+    const demo = tutorialDemos[state.demo.key];
+    if (!demo) return null;
+    return demo.steps[state.demo.step] || null;
+  }
+
+  function renderCartesianGraph(ctx, canvas, config = {}, options = {}) {
+    if (!ctx || !canvas) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const padding = options.padding ?? 40;
+    const min = options.min ?? -10;
+    const max = options.max ?? 10;
+    const background = options.background ?? '#0b1221';
+    const gridColor = options.gridColor ?? 'rgba(148,163,236,0.12)';
+    const axisColor = options.axisColor ?? 'rgba(148,163,236,0.4)';
+    const labelColor = options.labelColor ?? 'rgba(226,232,240,0.85)';
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, width, height);
+
+    const xToCanvas = (x) => ((x - min) / (max - min)) * (width - padding * 2) + padding;
+    const yToCanvas = (y) => height - ((y - min) / (max - min)) * (height - padding * 2) - padding;
+
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 1;
+    for (let value = min; value <= max; value++) {
+      const x = xToCanvas(value);
+      const y = yToCanvas(value);
+      ctx.beginPath();
+      ctx.moveTo(x, padding);
+      ctx.lineTo(x, height - padding);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(padding, y);
+      ctx.lineTo(width - padding, y);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = axisColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padding, yToCanvas(0));
+    ctx.lineTo(width - padding, yToCanvas(0));
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(xToCanvas(0), padding);
+    ctx.lineTo(xToCanvas(0), height - padding);
+    ctx.stroke();
+
+    ctx.fillStyle = labelColor;
+    ctx.font = '12px "Inter", sans-serif';
+    for (let value = min; value <= max; value++) {
+      ctx.fillText(String(value), xToCanvas(value) - 4, yToCanvas(0) + 14);
+      if (value !== 0) {
+        ctx.fillText(String(value), xToCanvas(0) + 6, yToCanvas(value) + 4);
+      }
+    }
+
+    (config.lines || []).forEach((line) => {
+      ctx.save();
+      ctx.strokeStyle = line.color || '#38bdf8';
+      ctx.lineWidth = line.emphasis ? 3 : 2;
+      if (line.dashed) {
+        ctx.setLineDash([8, 8]);
+      }
+      if (typeof line.vertical === 'number') {
+        const x = xToCanvas(line.vertical);
+        ctx.beginPath();
+        ctx.moveTo(x, padding);
+        ctx.lineTo(x, height - padding);
+        ctx.stroke();
+      } else if (typeof line.slope === 'number') {
+        const slope = Number(line.slope);
+        const intercept = Number(line.intercept || 0);
+        ctx.beginPath();
+        ctx.moveTo(xToCanvas(min), yToCanvas(slope * min + intercept));
+        ctx.lineTo(xToCanvas(max), yToCanvas(slope * max + intercept));
+        ctx.stroke();
+      }
+      ctx.restore();
+    });
+
+    if (config.point && Number.isFinite(config.point.x) && Number.isFinite(config.point.y)) {
+      const { x, y } = config.point;
+      const cx = xToCanvas(x);
+      const cy = yToCanvas(y);
+      ctx.fillStyle = config.point.color || '#22d3ee';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#020617';
+      ctx.stroke();
+      if (config.point.label) {
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '14px "Inter", sans-serif';
+        ctx.fillText(config.point.label, cx + 10, cy - 10);
+      }
+    }
+  }
+
+  function drawDemoGraph(config = {}) {
+    if (!dom.demoCtx || !dom.demoGraph) return;
+    renderCartesianGraph(dom.demoCtx, dom.demoGraph, config);
+  }
+
+  const scenarios = {
+    cloud: {
+      title: 'Cloud-priser',
+      description: 'Sammenlign to udbydere: fast gebyr + pris pr. time. Find break-even for driftstimer.',
+      params: ['Fast gebyr (kr.)', 'Pris pr. time (kr.)', 'Forbrug (timer)'],
+      math: (a, b, c) => {
+        const providerA = `${a} + ${b}x`;
+        const providerBBase = Math.round(a * 0.6);
+        const providerBVar = Math.round(b * 1.35 * 10) / 10;
+        const denominator = b - providerBVar;
+        if (Math.abs(denominator) < 1e-6) {
+          return `Udbyder A: y = ${providerA}\nUdbyder B: y = ${providerBBase} + ${providerBVar}x\nIngen break-even: modellerne er parallelle.`;
+        }
+        const breakEven = (providerBBase - a) / denominator;
+        return `Udbyder A: y = ${providerA}\nUdbyder B: y = ${providerBBase} + ${providerBVar}x\nBreak-even ved x ≈ ${round(breakEven)} timer.`;
+      }
+    },
+    bandwidth: {
+      title: 'Netværksbåndbredde',
+      description: 'Restkapacitet falder lineært med antal brugere. Sammenlign to uplinks.',
+      params: ['Startkapacitet A (Mbit)', 'Startkapacitet B (Mbit)', 'Aktive brugere'],
+      math: (a, b, c) => {
+        const lineA = `${a} - 5x`;
+        const lineB = `${b} - 3x`;
+        const restA = Math.max(a - 5 * c, 0);
+        const restB = Math.max(b - 3 * c, 0);
+        return `Uplink A: y = ${lineA}\nUplink B: y = ${lineB}\nVed ${c} brugere: ${restA} Mbit tilbage i A og ${restB} Mbit i B.`;
+      }
+    },
+    server: {
+      title: 'Serverkapacitet',
+      description: 'RAM og CPU giver lineære begrænsninger på antal services.',
+      params: ['Tilgængelig RAM (GB)', 'RAM pr. service (GB)', 'CPU pr. service (%)'],
+      math: (a, b, c) => {
+        const ramLimit = Math.floor(a / Math.max(b, 1));
+        const cpuLimit = Math.floor(100 / Math.max(c, 1));
+        return `RAM-begrænsning: ${b}x ≤ ${a}\nCPU-begrænsning: ${c}x ≤ 100\nMaks services: min(${ramLimit}, ${cpuLimit}) = ${Math.min(ramLimit, cpuLimit)}.`;
+      }
+    },
+    backup: {
+      title: 'Backup-vindue',
+      description: 'Tid = datamængde / throughput. Sammenlign med tilladt vindue.',
+      params: ['Datamængde (GB)', 'Throughput (GB/time)', 'Tilgængeligt vindue (timer)'],
+      math: (a, b, c) => {
+        const timeNeeded = a / Math.max(b, 1);
+        const ok = timeNeeded <= c ? 'Kan nås i vinduet.' : 'Kræver hurtigere forbindelse eller længere vindue.';
+        return `Tid = ${a} / ${b} = ${timeNeeded.toFixed(1)} timer\nVindue: ${c} timer\nVurdering: ${ok}`;
+      }
+    },
+    helpdesk: {
+      title: 'Helpdesk-plan',
+      description: 'To skift skal dække dagens henvendelser. Opsæt system af ligninger.',
+      params: ['Kapacitet skift A (sager/time)', 'Kapacitet skift B (sager/time)', 'Samlet behov (sager)'],
+      math: (a, b, c) => {
+        const denominator = Math.max(a + b, 1);
+        const shiftHours = Math.round(c / denominator);
+        return `System:\n${a}a + ${b}b = ${c}\na + b = ${shiftHours}\nLøs for a og b for at fordele timerne.`;
+      }
+    }
+  };
+
+  function setupSimulation() {
+    dom.scenarioSelect.addEventListener('change', updateScenarioUI);
+    [dom.paramA, dom.paramB, dom.paramC].forEach((input) => input.addEventListener('input', renderScenarioMath));
+    dom.showMath.addEventListener('click', renderScenarioMath);
+    document.querySelector('[data-sim-math]').addEventListener('click', renderScenarioMath);
+    updateScenarioUI();
+  }
+
+  function updateScenarioUI() {
+    const scenario = scenarios[dom.scenarioSelect.value];
+    if (!scenario) return;
+    dom.paramALabel.textContent = scenario.params[0];
+    dom.paramBLabel.textContent = scenario.params[1];
+    dom.paramCLabel.textContent = scenario.params[2];
+    dom.scenarioTitle.textContent = scenario.title;
+    dom.scenarioDescription.textContent = scenario.description;
+    renderScenarioMath();
+  }
+
+  function renderScenarioMath() {
+    const scenario = scenarios[dom.scenarioSelect.value];
+    if (!scenario) return;
+    const a = Number(dom.paramA.value);
+    const b = Number(dom.paramB.value);
+    const c = Number(dom.paramC.value);
+    dom.scenarioMath.textContent = scenario.math(a, b, c);
+  }
+
+  async function setupTasks() {
+    try {
+      const response = await fetch('exercises.json');
+      const data = await response.json();
+      state.exercises = data;
+      data.filter((task) => !task.placeholder).forEach((task) => {
+        task.skills.forEach((skill) => state.skills.add(skill));
+      });
+      populateSkillFilter();
+      renderTaskCards();
+    } catch (error) {
+      dom.taskGrid.textContent = 'Kunne ikke indlæse opgaver. Kontroller filen exercises.json.';
+    }
+
+    dom.filterDifficulty.addEventListener('change', renderTaskCards);
+    dom.filterSkill.addEventListener('change', renderTaskCards);
+    dom.taskForm.addEventListener('submit', handleSubmitAnswer);
+    dom.hintButton.addEventListener('click', showHint);
+    dom.solutionButton.addEventListener('click', showSolution);
+  }
+
+  function populateSkillFilter() {
+    const sorted = Array.from(state.skills).sort((a, b) => a.localeCompare(b, 'da'));
+    sorted.forEach((skill) => {
+      const option = document.createElement('option');
+      option.value = skill;
+      option.textContent = skill.charAt(0).toUpperCase() + skill.slice(1);
+      dom.filterSkill.appendChild(option);
+    });
+  }
+
+  function renderTaskCards() {
+    dom.taskGrid.innerHTML = '';
+    const diff = dom.filterDifficulty.value;
+    const skill = dom.filterSkill.value;
+    const tasks = state.exercises.filter((task) => !task.placeholder)
+      .filter((task) => diff === 'alle' || task.difficulty === diff)
+      .filter((task) => skill === 'alle' || task.skills.includes(skill));
+
+    tasks.forEach((task) => {
+      const card = document.createElement('button');
+      card.className = 'task-card';
+      card.type = 'button';
+      card.setAttribute('role', 'listitem');
+      card.innerHTML = `
+        <span class="difficulty">${difficultyLabel(task.difficulty)}</span>
+        <h3>${task.title}</h3>
+        <p>${task.prompt}</p>
+      `;
+      card.addEventListener('click', () => loadTask(task));
+      dom.taskGrid.appendChild(card);
+    });
+
+    dom.taskCount.textContent = `${tasks.length} opgave${tasks.length === 1 ? '' : 'r'} vist.`;
+  }
+
+  function difficultyLabel(code) {
+    const map = { R: 'Rød', G: 'Gul', Gr: 'Grøn' };
+    return map[code] || code;
+  }
+
+  function loadTask(task) {
+    state.currentTask = clone(task);
+    state.hintsUsed = 0;
+    dom.taskTitle.textContent = task.title;
+    dom.taskMeta.textContent = `Type: ${task.type} · Niveau: ${difficultyLabel(task.difficulty)} · Færdigheder: ${task.skills.join(', ')}`;
+    dom.taskPrompt.textContent = task.prompt;
+    dom.taskFormat.textContent = describeSchema(task.solution_schema);
+    dom.taskFeedback.textContent = '';
+    dom.taskHints.innerHTML = '';
+    dom.taskAnswer.value = '';
+    dom.taskAnswer.setAttribute('aria-invalid', 'false');
+    renderTaskLinks(task.links || []);
+    dom.taskPlayer.hidden = false;
+    dom.taskAnswer.focus();
+  }
+
+  function renderTaskLinks(links) {
+    dom.taskLinks.innerHTML = '';
+    if (!links.length) {
+      dom.taskLinks.hidden = true;
+      return;
+    }
+    dom.taskLinks.hidden = false;
+    links.forEach((link) => {
+      const anchor = document.createElement('a');
+      anchor.href = link.target || '#';
+      anchor.textContent = link.label || 'Åbn link';
+      anchor.addEventListener('click', (event) => {
+        if (link.action === 'graph') {
+          event.preventDefault();
+          const stageKey = link.stage || (link.graph?.type === 'system' ? 'you-do' : 'i-do');
+          selectTutorialStage(stageKey);
+          const tutorialSection = document.getElementById('tutorial');
+          tutorialSection?.scrollIntoView({ behavior: 'smooth' });
+          dom.stageGraph?.focus({ preventScroll: true });
+        }
+      });
+      dom.taskLinks.appendChild(anchor);
+    });
+  }
+
+  function describeSchema(schema = {}) {
+    if (schema.kind === 'number') {
+      const tol = schema.tolerance ?? 0;
+      return `Format: tal ±${tol}. Brøker er ${schema.allowFractions ? 'tilladt' : 'ikke tilladt'}.`;
+    }
+    if (schema.kind === 'pair') {
+      return 'Format: (x; y) eller (x, y). Brug punktum eller komma for decimaler.';
+    }
+    if (schema.kind === 'text') {
+      return 'Format: kort tekst eller konklusion.';
+    }
+    return 'Format: følg opgaveteksten.';
+  }
+
+  async function handleSubmitAnswer(event) {
+    event.preventDefault();
+    if (!state.currentTask) return;
+    const answer = dom.taskAnswer.value.trim();
+    if (!answer) {
+      dom.taskAnswer.setAttribute('aria-invalid', 'true');
+      renderFeedback(false, 'Skriv et svar før du tjekker.', 'Systemet mangler noget at sammenligne med.', 'Notér et bud og prøv igen.');
+      return;
+    }
+    dom.taskAnswer.setAttribute('aria-invalid', 'false');
+
+    const { evaluation, formatOk } = evaluateLocally(state.currentTask, answer);
+    if (!formatOk) {
+      renderFeedback(false, 'Formatet kunne ikke genkendes.', 'Svaret matcher ikke det forventede format.', 'Læs formatbeskrivelsen og prøv igen.');
+      return;
+    }
+
+    let finalEvaluation = evaluation;
+    if (state.llmEnabled) {
+      try {
+        const response = await fetch('llm_proxy.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: state.currentTask.prompt,
+            studentAnswer: answer,
+            expected: state.currentTask.expected_solution,
+            schema: state.currentTask.solution_schema,
+            skills: state.currentTask.skills,
+            difficulty: state.currentTask.difficulty,
+            hintsUsed: state.hintsUsed
+          })
+        });
+        const llm = await response.json();
+        if (typeof llm.correct === 'boolean') {
+          finalEvaluation.correct = llm.correct;
+          finalEvaluation.message = llm.correct ? 'LLM bekræfter løsningen.' : 'LLM mener svaret kræver rettelser.';
+          finalEvaluation.reason = llm.reason || finalEvaluation.reason;
+          finalEvaluation.next = llm.next_step || finalEvaluation.next;
+        }
+      } catch (error) {
+        finalEvaluation.next += ' (LLM ikke tilgængelig).';
+      }
+    }
+
+    renderFeedback(finalEvaluation.correct, finalEvaluation.message, finalEvaluation.reason, finalEvaluation.next);
+    updateProgress(finalEvaluation.correct);
+    logAttempt(answer, finalEvaluation.correct);
+  }
+
+  function evaluateLocally(task, answer) {
+    const schema = task.solution_schema || {};
+    const parsed = parseAnswer(answer, schema);
+    if (!parsed.formatOk) {
+      return {
+        evaluation: {
+          correct: false,
+          message: 'Svaret kan ikke tolkes.',
+          reason: 'Formatet afviger fra kravene.',
+          next: 'Skriv i korrekt format og forsøg igen.'
+        },
+        formatOk: false
+      };
+    }
+
+    const expected = task.expected_solution;
+    const tolerance = schema.tolerance ?? 0.001;
+    let correct = false;
+
+    if (schema.kind === 'number') {
+      const expectedNumber = parseNumber(expected);
+      correct = Math.abs(parsed.value - expectedNumber) <= tolerance;
+    } else if (schema.kind === 'pair') {
+      const expectedPair = Array.isArray(expected) ? expected : parsePair(String(expected));
+      if (expectedPair && parsed.value) {
+        correct = Math.abs(parsed.value[0] - expectedPair[0]) <= tolerance && Math.abs(parsed.value[1] - expectedPair[1]) <= tolerance;
+      }
+    } else if (schema.kind === 'text') {
+      correct = normaliseText(answer) === normaliseText(String(expected));
+    } else {
+      correct = normaliseText(answer) === normaliseText(String(expected));
+    }
+
+    const message = correct ? 'Korrekt! Din løsning passer.' : 'Ikke helt endnu.';
+    const reason = correct ? 'Kontrollen viser at din beregning stemmer.' : 'Der er forskel mellem dit svar og facit.';
+    const next = correct ? 'Vælg en ny opgave eller slå op i tutorialens graf.' : 'Gennemgå dine trin eller brug et hint.';
+
+    return {
+      evaluation: { correct, message, reason, next },
+      formatOk: true
+    };
+  }
+
+  function parseAnswer(answer, schema) {
+    const cleaned = answer.replace(',', '.');
+    if (schema.kind === 'pair') {
+      const pair = parsePair(cleaned);
+      return { formatOk: Array.isArray(pair), value: pair };
+    }
+    if (schema.kind === 'number') {
+      const value = parseFraction(cleaned);
+      return { formatOk: Number.isFinite(value), value };
+    }
+    if (schema.kind === 'text') {
+      return { formatOk: cleaned.length > 0, value: cleaned };
+    }
+    return { formatOk: cleaned.length > 0, value: cleaned };
+  }
+
+  function parseNumber(value) {
+    if (typeof value === 'number') return value;
+    return parseFraction(String(value));
+  }
+
+  function parseFraction(str) {
+    const trimmed = str.trim();
+    if (/^[-+]?\d+\s*\/\s*\d+$/.test(trimmed)) {
+      const [num, den] = trimmed.split('/').map(Number);
+      if (den === 0) return NaN;
+      return num / den;
+    }
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : NaN;
+  }
+
+  function parsePair(str) {
+    const matches = str.match(/[-+]?\d+(?:\.\d+)?|[-+]?\d+\s*\/\s*\d+/g);
+    if (!matches || matches.length < 2) return null;
+    const first = parseFraction(matches[0]);
+    const second = parseFraction(matches[1]);
+    if (!Number.isFinite(first) || !Number.isFinite(second)) return null;
+    return [first, second];
+  }
+
+  function normaliseText(text) {
+    return text.trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  function renderFeedback(correct, message, reason, next) {
+    const status = correct ? '✅ Korrekt' : '❌ Ikke korrekt endnu';
+    dom.taskFeedback.innerHTML = `
+      <p><strong>${status}</strong> – ${message}</p>
+      <p><strong>Hvorfor:</strong> ${reason}</p>
+      <p><strong>Næste skridt:</strong> ${next}</p>
+    `;
+  }
+
+  function showHint() {
+    if (!state.currentTask) return;
+    const hints = state.currentTask.hints || [];
+    if (state.hintsUsed >= hints.length) {
+      dom.taskHints.innerHTML += '<p>Alle hints er brugt. Vis løsningen hvis du er gået i stå.</p>';
+      return;
+    }
+    const hint = document.createElement('p');
+    hint.textContent = `Hint ${state.hintsUsed + 1}: ${hints[state.hintsUsed]}`;
+    dom.taskHints.appendChild(hint);
+    state.hintsUsed += 1;
+  }
+
+  function showSolution() {
+    if (!state.currentTask) return;
+    const hints = state.currentTask.hints || [];
+    if (state.hintsUsed < hints.length) {
+      dom.taskHints.innerHTML += '<p>Brug alle hints først – derefter låses løsningen op.</p>';
+      return;
+    }
+    const solution = Array.isArray(state.currentTask.expected_solution)
+      ? `(${state.currentTask.expected_solution.join('; ')})`
+      : state.currentTask.expected_solution;
+    dom.taskHints.innerHTML += `<p><strong>Løsning:</strong> ${solution}</p>`;
+  }
+
+  function updateProgress(correct) {
+    if (!state.currentTask) return;
+    const id = state.currentTask.id;
+    if (correct) {
+      state.progress[id] = 1;
+      saveJson('matd-progress', state.progress);
+      refreshProgress();
+    }
+  }
+
+  function refreshProgress() {
+    const completed = Object.keys(state.progress).length;
+    const total = state.exercises.filter((task) => !task.placeholder).length || 1;
+    const percent = Math.round((completed / total) * 100);
+    dom.progressBar.style.width = `${percent}%`;
+    dom.progressBar.setAttribute('aria-valuenow', String(percent));
+  }
+
+  function bindGlobalActions() {
+    dom.resetProgress.addEventListener('click', () => {
+      if (confirm('Vil du nulstille din progression?')) {
+        state.progress = {};
+        saveJson('matd-progress', state.progress);
+        refreshProgress();
+      }
+    });
+
+    dom.downloadLog.addEventListener('click', () => {
+      if (!state.log.length) {
+        alert('Ingen logdata endnu. Løs opgaver først.');
+        return;
+      }
+      const csv = ['timestamp,task_id,correct,hints_used'];
+      state.log.forEach((entry) => csv.push(`${entry.timestamp},${entry.task},${entry.correct},${entry.hints}`));
+      const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'ligninger-log.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        stopDemoPlayback();
+      }
+    });
+  }
+
+  function formatNumber(value) {
+    if (!Number.isFinite(value)) {
+      return '';
+    }
+    return numberFormatter.format(value);
+  }
+
+  function logAttempt(answer, correct) {
+    if (!state.currentTask) return;
+    state.log.push({
+      timestamp: new Date().toISOString(),
+      task: state.currentTask.id,
+      correct: correct ? 1 : 0,
+      hints: state.hintsUsed,
+      answer
+    });
+    saveJson('matd-log', state.log);
+  }
+
+  function clone(value) {
+    return typeof structuredClone === 'function' ? structuredClone(value) : JSON.parse(JSON.stringify(value));
+  }
+
+  function loadJson(key, fallback) {
+    try {
+      return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function saveJson(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+})();

@@ -1,0 +1,469 @@
+[
+  {
+    "id": "R1",
+    "title": "Isolér x i 2x + 3 = 11",
+    "prompt": "Løs ligningen 2x + 3 = 11.",
+    "type": "single_equation",
+    "difficulty": "R",
+    "skills": ["isolering", "kontrol"],
+    "hints": [
+      "Flyt 3 ved at trække 3 fra på begge sider.",
+      "Divider derefter begge sider med 2.",
+      "Indsæt din løsning i ligningen for at tjekke den."
+    ],
+    "expected_solution": 4,
+    "solution_schema": { "kind": "number", "tolerance": 0.01, "allowFractions": true },
+    "links": [
+      { "label": "Åbn tutorial: Enkeltligninger", "target": "#tutorial-single-equation" },
+      { "label": "Se det på grafen", "action": "graph", "stage": "i-do", "graph": { "type": "single", "preset": { "a": 2, "b": 3, "c": 11 } } }
+    ]
+  },
+  {
+    "id": "R2",
+    "title": "Udvid parentes og løs",
+    "prompt": "Løs ligningen 3(x - 2) = 21.",
+    "type": "single_equation",
+    "difficulty": "R",
+    "skills": ["parentes", "isolering"],
+    "hints": [
+      "Udvid parentesen til 3x - 6.",
+      "Flyt -6 ved at lægge 6 til på begge sider.",
+      "Divider med 3 for at finde x."
+    ],
+    "expected_solution": 9,
+    "solution_schema": { "kind": "number", "tolerance": 0.01, "allowFractions": true },
+    "links": [
+      { "label": "Åbn tutorial: Parenteser", "target": "#tutorial-parentheses" },
+      { "label": "Se det på grafen", "action": "graph", "stage": "we-do", "graph": { "type": "single", "preset": { "a": 3, "b": -6, "c": 21 } } }
+    ]
+  },
+  {
+    "id": "R3",
+    "title": "Brøk-ligning",
+    "prompt": "Løs ligningen x/3 + 2 = 6.",
+    "type": "single_equation",
+    "difficulty": "R",
+    "skills": ["brøk", "isolering"],
+    "hints": [
+      "Træk 2 fra på begge sider.",
+      "Gang begge sider med 3 for at fjerne nævneren.",
+      "Kontrollér resultatet i originalen."
+    ],
+    "expected_solution": 12,
+    "solution_schema": { "kind": "number", "tolerance": 0.01, "allowFractions": true },
+    "links": [
+      { "label": "Åbn tutorial: Parenteser og brøker", "target": "#tutorial-parentheses" }
+    ]
+  },
+  {
+    "id": "G1",
+    "title": "System med substitution",
+    "prompt": "Løs systemet: y = 2x + 1 og x + y = 10.",
+    "type": "two_equations",
+    "difficulty": "G",
+    "skills": ["substitution", "kontrol"],
+    "hints": [
+      "Indsæt udtrykket for y i den anden ligning.",
+      "Løs den nye ligning for x.",
+      "Indsæt x i y = 2x + 1 for at finde y."
+    ],
+    "expected_solution": [3, 7],
+    "solution_schema": { "kind": "pair", "order": "xy", "tolerance": 0.01, "allowFractions": true },
+    "links": [
+      { "label": "Åbn tutorial: Systemer med substitution", "target": "#tutorial-two-equations" },
+      { "label": "Se det på grafen", "action": "graph", "stage": "you-do", "graph": { "type": "system", "preset": { "a1": -2, "b1": 1, "c1": 1, "a2": 1, "b2": 1, "c2": 10 } } }
+    ]
+  },
+  {
+    "id": "G2",
+    "title": "System med elimination",
+    "prompt": "Løs systemet: 3x - 2y = 4 og 2x + y = 9.",
+    "type": "two_equations",
+    "difficulty": "G",
+    "skills": ["elimination", "kontrol"],
+    "hints": [
+      "Gør y-koefficienterne ens ved at gange anden ligning med 2.",
+      "Læg ligningerne sammen for at eliminere y.",
+      "Indsæt værdien af x i en af ligningerne."
+    ],
+    "expected_solution": [2, 5],
+    "solution_schema": { "kind": "pair", "order": "xy", "tolerance": 0.01, "allowFractions": true },
+    "links": [
+      { "label": "Åbn tutorial: Elimination", "target": "#tutorial-elimination" },
+      { "label": "Se det på grafen", "action": "graph", "stage": "you-do", "graph": { "type": "system", "preset": { "a1": 3, "b1": -2, "c1": 4, "a2": 2, "b2": 1, "c2": 9 } } }
+    ]
+  },
+  {
+    "id": "G3",
+    "title": "Parallelle linjer",
+    "prompt": "Undersøg systemet 2x + y = 5 og 4x + 2y = 12. Er der en løsning?",
+    "type": "two_equations",
+    "difficulty": "G",
+    "skills": ["grafik", "analyse"],
+    "hints": [
+      "Omskriv begge ligninger til y = ax + b.",
+      "Sammenlign hældningerne.",
+      "Tjek også skæringerne.",
+      "Konkludér hvor mange løsninger systemet har."
+    ],
+    "expected_solution": "Ingen løsning",
+    "solution_schema": { "kind": "text" },
+    "links": [
+      { "label": "Åbn tutorial: Grafisk løsning", "target": "#tutorial-graph" },
+      { "label": "Se det på grafen", "action": "graph", "stage": "you-do", "graph": { "type": "system", "preset": { "a1": 2, "b1": 1, "c1": 5, "a2": 4, "b2": 2, "c2": 12 } } }
+    ]
+  },
+  {
+    "id": "Gr1",
+    "title": "Break-even på cloud-løsning",
+    "prompt": "En SaaS-løsning koster 250 kr. i basis plus 12 kr. pr. bruger. En konkurrent koster 120 kr. i basis plus 18 kr. pr. bruger. Find break-even i antal brugere.",
+    "type": "context",
+    "difficulty": "Gr",
+    "skills": ["modellering", "break-even"],
+    "hints": [
+      "Opskriv to lineære funktioner y = 250 + 12x og y = 120 + 18x.",
+      "Sæt funktionerne lig hinanden.",
+      "Løs ligningen for x."
+    ],
+    "expected_solution": 21.6667,
+    "solution_schema": { "kind": "number", "tolerance": 0.1, "allowFractions": true },
+    "links": [
+      { "label": "Åbn tutorial: Proportionale & lineære modeller", "target": "#tutorial-models" },
+      { "label": "Se det på grafen", "action": "graph", "stage": "you-do", "graph": { "type": "model", "preset": { "a": 12, "b": 250, "a2": 18, "b2": 120 } } }
+    ]
+  },
+  {
+    "id": "Gr2",
+    "title": "Backup-vindue",
+    "prompt": "Din backup skal overføre 820 GB med 95 GB/time. Har du plads i et 9-timers vindue?",
+    "type": "context",
+    "difficulty": "Gr",
+    "skills": ["proportion", "analyse"],
+    "hints": [
+      "Beregn tiden som 820 / 95.",
+      "Sammenlign resultatet med 9 timer.",
+      "Konkludér om vinduet er nok."
+    ],
+    "expected_solution": "Nej",
+    "solution_schema": { "kind": "text" },
+    "links": [
+      { "label": "Åbn simulation: Backup-vindue", "target": "#simulationer" }
+    ]
+  },
+  {
+    "id": "Gr3",
+    "title": "Helpdesk-planlægning",
+    "prompt": "To skift skal tilsammen håndtere 168 sager. Skift A klarer 15 sager/time, skift B 12 sager/time. Systemet er a + b = 12 timer. Hvor mange timer skal hvert skift arbejde?",
+    "type": "context",
+    "difficulty": "Gr",
+    "skills": ["elimination", "modellering"],
+    "hints": [
+      "Omskriv til ligninger: 15a + 12b = 168 og a + b = 12.",
+      "Gang den anden ligning op så koefficienterne matcher.",
+      "Løs systemet for a og b."
+    ],
+    "expected_solution": [6, 6],
+    "solution_schema": { "kind": "pair", "order": "ab", "tolerance": 0.01, "allowFractions": true },
+    "links": [
+      { "label": "Åbn simulation: Helpdesk-plan", "target": "#simulationer" }
+    ]
+  },
+  {
+    "id": "Gr4",
+    "title": "Sammenfaldende linjer",
+    "prompt": "Undersøg systemet 4x - 2y = 6 og 6x - 3y = 9. Hvor mange løsninger findes der?",
+    "type": "two_equations",
+    "difficulty": "Gr",
+    "skills": ["grafik", "analyse"],
+    "hints": [
+      "Omskriv begge ligninger til y = ax + b.",
+      "Sammenlign hældning og skæring.",
+      "Er de identiske?",
+      "Konkludér om der er uendeligt mange løsninger."
+    ],
+    "expected_solution": "Uendeligt mange",
+    "solution_schema": { "kind": "text" },
+    "links": [
+      { "label": "Åbn tutorial: Typiske fejl", "target": "#tutorial-pitfalls" },
+      { "label": "Se det på grafen", "action": "graph", "stage": "you-do", "graph": { "type": "system", "preset": { "a1": 4, "b1": -2, "c1": 6, "a2": 6, "b2": -3, "c2": 9 } } }
+    ]
+  },
+  {
+    "id": "Gr5",
+    "title": "Netværksbåndbredde pr. bruger",
+    "prompt": "Et uplink har modellen b(x) = 420 - 4x Mbit. Hvor mange brugere kan være aktive før b(x) = 140?",
+    "type": "single_equation",
+    "difficulty": "Gr",
+    "skills": ["isolering", "proportion"],
+    "hints": [
+      "Sæt 420 - 4x = 140.",
+      "Flyt 420 ved at trække 420 fra på begge sider.",
+      "Divider med -4 for at finde x."
+    ],
+    "expected_solution": 70,
+    "solution_schema": { "kind": "number", "tolerance": 0.01, "allowFractions": true },
+    "links": [
+      { "label": "Åbn simulation: Netværksbåndbredde", "target": "#simulationer" }
+    ]
+  },
+  {
+    "id": "P11",
+    "title": "Pladsholderopgave 11",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om enkeltligninger.",
+    "type": "single_equation",
+    "difficulty": "R",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": 0,
+    "solution_schema": { "kind": "number", "tolerance": 0.01, "allowFractions": true },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P12",
+    "title": "Pladsholderopgave 12",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om brøker.",
+    "type": "single_equation",
+    "difficulty": "R",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": 0,
+    "solution_schema": { "kind": "number", "tolerance": 0.01, "allowFractions": true },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P13",
+    "title": "Pladsholderopgave 13",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om grafer.",
+    "type": "two_equations",
+    "difficulty": "R",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": [0, 0],
+    "solution_schema": { "kind": "pair", "order": "xy", "tolerance": 0.01, "allowFractions": true },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P14",
+    "title": "Pladsholderopgave 14",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om elimination.",
+    "type": "two_equations",
+    "difficulty": "G",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": [0, 0],
+    "solution_schema": { "kind": "pair", "order": "xy", "tolerance": 0.01, "allowFractions": true },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P15",
+    "title": "Pladsholderopgave 15",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om modeller.",
+    "type": "context",
+    "difficulty": "G",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": "",
+    "solution_schema": { "kind": "text" },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P16",
+    "title": "Pladsholderopgave 16",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om kontekst.",
+    "type": "context",
+    "difficulty": "G",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": "",
+    "solution_schema": { "kind": "text" },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P17",
+    "title": "Pladsholderopgave 17",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om systemer.",
+    "type": "two_equations",
+    "difficulty": "G",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": [0, 0],
+    "solution_schema": { "kind": "pair", "order": "xy", "tolerance": 0.01, "allowFractions": true },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P18",
+    "title": "Pladsholderopgave 18",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om break-even.",
+    "type": "context",
+    "difficulty": "Gr",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": 0,
+    "solution_schema": { "kind": "number", "tolerance": 0.01, "allowFractions": true },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P19",
+    "title": "Pladsholderopgave 19",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om parallelle linjer.",
+    "type": "context",
+    "difficulty": "Gr",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": "",
+    "solution_schema": { "kind": "text" },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P20",
+    "title": "Pladsholderopgave 20",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om grafisk løsning.",
+    "type": "two_equations",
+    "difficulty": "G",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": [0, 0],
+    "solution_schema": { "kind": "pair", "order": "xy", "tolerance": 0.01, "allowFractions": true },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P21",
+    "title": "Pladsholderopgave 21",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om substitutionsmetoden.",
+    "type": "two_equations",
+    "difficulty": "G",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": [0, 0],
+    "solution_schema": { "kind": "pair", "order": "xy", "tolerance": 0.01, "allowFractions": true },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P22",
+    "title": "Pladsholderopgave 22",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om kontekst i IT.",
+    "type": "context",
+    "difficulty": "Gr",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": "",
+    "solution_schema": { "kind": "text" },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P23",
+    "title": "Pladsholderopgave 23",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om databaserede modeller.",
+    "type": "context",
+    "difficulty": "Gr",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": "",
+    "solution_schema": { "kind": "text" },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P24",
+    "title": "Pladsholderopgave 24",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om proportioner.",
+    "type": "context",
+    "difficulty": "G",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": "",
+    "solution_schema": { "kind": "text" },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P25",
+    "title": "Pladsholderopgave 25",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om break-even.",
+    "type": "context",
+    "difficulty": "Gr",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": 0,
+    "solution_schema": { "kind": "number", "tolerance": 0.01, "allowFractions": true },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P26",
+    "title": "Pladsholderopgave 26",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om grafer.",
+    "type": "two_equations",
+    "difficulty": "Gr",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": [0, 0],
+    "solution_schema": { "kind": "pair", "order": "xy", "tolerance": 0.01, "allowFractions": true },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P27",
+    "title": "Pladsholderopgave 27",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om sammenfaldende linjer.",
+    "type": "two_equations",
+    "difficulty": "Gr",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": [0, 0],
+    "solution_schema": { "kind": "pair", "order": "xy", "tolerance": 0.01, "allowFractions": true },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P28",
+    "title": "Pladsholderopgave 28",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om typiske fejl.",
+    "type": "context",
+    "difficulty": "Gr",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": "",
+    "solution_schema": { "kind": "text" },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P29",
+    "title": "Pladsholderopgave 29",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om procentvise modeller.",
+    "type": "context",
+    "difficulty": "Gr",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": "",
+    "solution_schema": { "kind": "text" },
+    "links": [],
+    "placeholder": true
+  },
+  {
+    "id": "P30",
+    "title": "Pladsholderopgave 30",
+    "prompt": "Lærer: Erstat denne pladsholder med en opgave om dataintegration.",
+    "type": "context",
+    "difficulty": "Gr",
+    "skills": [],
+    "hints": ["Tilføj hint 1", "Tilføj hint 2"],
+    "expected_solution": "",
+    "solution_schema": { "kind": "text" },
+    "links": [],
+    "placeholder": true
+  }
+]
