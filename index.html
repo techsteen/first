@@ -259,7 +259,7 @@
       stroke-dasharray: 6 6;
       stroke-width: 3;
       fill: none;
-      opacity: 0.4;
+      opacity: 0.12;
       transition: opacity 0.4s ease;
     }
 
@@ -324,24 +324,64 @@
     <div class="content">
       <section class="steps" aria-live="polite">
         <article class="step" id="step-1">
-          <h2>Trin 1 – Før NAT (på LAN)</h2>
-          <p>Klient A <span class="badge">192.168.1.10:51512</span> vil til webserver <span class="badge" style="background:var(--color-accent-public);">93.184.216.34:80</span>. Privat IP er ikke routbar på internettet.</p>
+          <h2>Trin 1 – Chrome-app starter</h2>
+          <p>Chrome på Klient A bruger intern port <span class="badge">51512</span> og vil kontakte <span class="badge" style="background:var(--color-accent-public);">93.184.216.34:80</span>.</p>
         </article>
         <article class="step" id="step-2">
-          <h2>Trin 2 – Routeren laver NAT/PAT (udgående)</h2>
-          <p>Routeren omskriver kilde-IP og -port til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40001</span> før pakken sendes ud.</p>
+          <h2>Trin 2 – Klient A sender til switch</h2>
+          <p>Pakken forlader Klient A <span class="badge">192.168.1.10</span> og går mod LAN-switchen.</p>
         </article>
         <article class="step" id="step-3">
-          <h2>Trin 3 – På internettet</h2>
-          <p>Internettet ser trafikken som <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40001</span> → <span class="badge" style="background:var(--color-accent-public);">93.184.216.34:80</span>. Flere klienter kan dele samme offentlige IP via forskellige kildeporte (PAT).</p>
+          <h2>Trin 3 – Switch videresender</h2>
+          <p>Switchen sender videre mod routerens LAN-interface <span class="badge">192.168.1.1</span>. Endnu ingen NAT.</p>
         </article>
         <article class="step" id="step-4">
-          <h2>Trin 4 – Svar tilbage (stateful)</h2>
-          <p>Svaret <span class="badge" style="background:var(--color-accent-public);">93.184.216.34:80</span> → <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40001</span> mappes tilbage til <span class="badge">192.168.1.10:51512</span>. State/timeout styrer hvor længe mappet lever. Indgående udefra kræver portforwarding (DNAT).</p>
+          <h2>Trin 4 – Router laver PAT (Chrome)</h2>
+          <p>Routeren oversætter kilden til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40001</span> og sender mod internettet.</p>
+        </article>
+        <article class="step" id="step-5">
+          <h2>Trin 5 – Webserver svarer Chrome</h2>
+          <p><span class="badge" style="background:var(--color-accent-public);">93.184.216.34:80</span> sender svaret tilbage til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40001</span>.</p>
+        </article>
+        <article class="step" id="step-6">
+          <h2>Trin 6 – Router slår NAT-op</h2>
+          <p>Routeren finder NAT-tabellens mapning og sender svaret mod LAN-switchen.</p>
+        </article>
+        <article class="step" id="step-7">
+          <h2>Trin 7 – Switch leverer til Chrome</h2>
+          <p>Switchen afleverer svaret til Chrome-appen på port <span class="badge">51512</span>.</p>
+        </article>
+        <article class="step" id="step-8">
+          <h2>Trin 8 – Edge-app starter</h2>
+          <p>Edge på Klient A bruger intern port <span class="badge">51516</span> og vil kontakte <span class="badge" style="background:var(--color-accent-public);">93.182.211.56:80</span>.</p>
+        </article>
+        <article class="step" id="step-9">
+          <h2>Trin 9 – Edge-pakke til switch</h2>
+          <p>Pakken forlader Klient A og går mod switchen ligesom Chrome-trafikken.</p>
+        </article>
+        <article class="step" id="step-10">
+          <h2>Trin 10 – Switch videresender Edge</h2>
+          <p>Switchen sender Edge-pakken mod routeren. Routeren kender endnu ikke forbindelsen.</p>
+        </article>
+        <article class="step" id="step-11">
+          <h2>Trin 11 – Router laver PAT (Edge)</h2>
+          <p>Routeren oversætter til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40011</span> og sender mod <span class="badge" style="background:var(--color-accent-public);">93.182.211.56:80</span>.</p>
+        </article>
+        <article class="step" id="step-12">
+          <h2>Trin 12 – Anden webserver svarer</h2>
+          <p><span class="badge" style="background:var(--color-accent-public);">93.182.211.56:80</span> sender svarpakke til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40011</span>.</p>
+        </article>
+        <article class="step" id="step-13">
+          <h2>Trin 13 – Router matcher Edge</h2>
+          <p>NAT-tabellen slår forbindelsen op og sender svaret tilbage mod LAN'et.</p>
+        </article>
+        <article class="step" id="step-14">
+          <h2>Trin 14 – Switch leverer til Edge</h2>
+          <p>Switchen afleverer svaret til Edge-appen på port <span class="badge">51516</span>. Begge apps har nu modtaget korrekt svar.</p>
         </article>
       </section>
       <section class="visual" aria-label="Visualisering af NAT/PAT" role="presentation">
-        <svg viewBox="0 0 820 480" role="img" aria-labelledby="nat-diagram-title">
+        <svg viewBox="0 0 840 520" role="img" aria-labelledby="nat-diagram-title">
           <title id="nat-diagram-title">Diagram over NAT og PAT flow</title>
           <defs>
             <!-- Ikoner kan tilpasses ved at ændre farver her -->
@@ -364,28 +404,42 @@
               <rect x="-25" y="-16" width="50" height="12" rx="2" fill="#c65d0a"></rect>
               <rect x="-25" y="4" width="50" height="12" rx="2" fill="#c65d0a"></rect>
             </g>
+            <g id="switch">
+              <rect x="-40" y="-18" width="80" height="36" rx="6" fill="#d9e4ef" stroke="#4d6a82" stroke-width="2"></rect>
+              <circle cx="-20" cy="0" r="4" fill="#4d6a82"></circle>
+              <circle cx="0" cy="0" r="4" fill="#4d6a82"></circle>
+              <circle cx="20" cy="0" r="4" fill="#4d6a82"></circle>
+            </g>
           </defs>
 
           <!-- LAN sky -->
-          <use href="#cloud" x="70" y="130"></use>
-          <text x="140" y="80" text-anchor="middle" fill="#1f1f1f" font-weight="600">LAN</text>
+          <use href="#cloud" x="60" y="120"></use>
+          <text x="130" y="70" text-anchor="middle" fill="#1f1f1f" font-weight="600">LAN</text>
 
           <!-- Klienter -->
-          <g transform="translate(120,210)">
+          <g transform="translate(130,200)">
             <use href="#client"></use>
             <text x="0" y="40" text-anchor="middle" fill="#005f99" font-weight="600">Klient A</text>
             <text x="0" y="58" text-anchor="middle" fill="#005f99" font-size="12">192.168.1.10</text>
-            <text x="0" y="74" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 51512</text>
-            <text x="0" y="90" text-anchor="middle" fill="#3c3c3c" font-size="11">App: Webbrowser</text>
+            <g transform="translate(0,82)">
+              <rect x="-48" y="-22" width="96" height="40" rx="6" fill="#fbe4dc" stroke="#c65d0a" stroke-width="1.5"></rect>
+              <text x="0" y="-4" text-anchor="middle" fill="#c65d0a" font-size="12" font-weight="600">Chrome</text>
+              <text x="0" y="12" text-anchor="middle" fill="#3c3c3c" font-size="11">Port 51512</text>
+            </g>
+            <g transform="translate(0,132)">
+              <rect x="-48" y="-22" width="96" height="40" rx="6" fill="#e3ecfb" stroke="#2a5cb3" stroke-width="1.5"></rect>
+              <text x="0" y="-4" text-anchor="middle" fill="#2a5cb3" font-size="12" font-weight="600">Edge</text>
+              <text x="0" y="12" text-anchor="middle" fill="#3c3c3c" font-size="11">Port 51516</text>
+            </g>
           </g>
-          <g transform="translate(40,300)">
+          <g transform="translate(40,320)">
             <use href="#client"></use>
             <text x="0" y="40" text-anchor="middle" fill="#005f99" font-weight="600">Klient B</text>
             <text x="0" y="58" text-anchor="middle" fill="#005f99" font-size="12">192.168.1.11</text>
             <text x="0" y="74" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 51513</text>
             <text x="0" y="90" text-anchor="middle" fill="#3c3c3c" font-size="11">App: Videomøde</text>
           </g>
-          <g transform="translate(240,300)">
+          <g transform="translate(250,320)">
             <use href="#client"></use>
             <text x="0" y="40" text-anchor="middle" fill="#005f99" font-weight="600">Klient C</text>
             <text x="0" y="58" text-anchor="middle" fill="#005f99" font-size="12">192.168.1.12</text>
@@ -393,8 +447,14 @@
             <text x="0" y="90" text-anchor="middle" fill="#3c3c3c" font-size="11">App: Fildeling</text>
           </g>
 
+          <!-- Switch -->
+          <g transform="translate(300,220)">
+            <use href="#switch"></use>
+            <text x="0" y="-28" text-anchor="middle" fill="#4d6a82" font-weight="600">LAN-switch</text>
+          </g>
+
           <!-- Router -->
-          <g transform="translate(420,220)">
+          <g transform="translate(440,220)">
             <use href="#router"></use>
             <text x="0" y="-50" text-anchor="middle" fill="#ffffff" font-weight="600">Router</text>
             <text x="0" y="-35" text-anchor="middle" fill="#d7ecfa" font-size="12">LAN: 192.168.1.1</text>
@@ -427,28 +487,38 @@
           </g>
 
           <!-- Internet -->
-          <use href="#cloud" x="640" y="130"></use>
-          <text x="700" y="80" text-anchor="middle" fill="#1f1f1f" font-weight="600">Internet</text>
+          <use href="#cloud" x="650" y="120"></use>
+          <text x="720" y="70" text-anchor="middle" fill="#1f1f1f" font-weight="600">Internet</text>
 
-          <!-- Webserver -->
-          <g transform="translate(700,240)">
+          <!-- Webservere -->
+          <g transform="translate(720,220)">
             <use href="#server"></use>
             <text x="0" y="48" text-anchor="middle" fill="#c65d0a" font-weight="600">Webserver</text>
             <text x="0" y="64" text-anchor="middle" fill="#c65d0a" font-size="12">93.184.216.34</text>
             <text x="0" y="80" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 80</text>
           </g>
+          <g transform="translate(720,360)">
+            <use href="#server"></use>
+            <text x="0" y="48" text-anchor="middle" fill="#c65d0a" font-weight="600">Webapp (Edge)</text>
+            <text x="0" y="64" text-anchor="middle" fill="#c65d0a" font-size="12">93.182.211.56</text>
+            <text x="0" y="80" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 80</text>
+          </g>
 
           <!-- Forbindelseslinjer -->
-          <path id="line-out" class="line" stroke="#005f99" d="M 210 230 C 290 210 350 220 390 220"></path>
-          <path id="line-to-internet" class="line" stroke="#c65d0a" d="M 450 220 C 540 205 610 220 690 240"></path>
-          <path id="line-back" class="line" stroke="#c65d0a" d="M 690 280 C 610 290 540 265 470 240"></path>
-          <path id="line-to-lan" class="line" stroke="#005f99" d="M 390 250 C 320 255 260 245 200 240"></path>
+          <path id="line-chrome-internal" class="line" stroke="#005f99" d="M 130 180 C 150 188 165 198 175 208"></path>
+          <path id="line-edge-internal" class="line" stroke="#005f99" d="M 130 260 C 150 268 170 278 182 288"></path>
+          <path id="line-client-switch" class="line" stroke="#005f99" d="M 170 220 C 210 218 240 218 270 218"></path>
+          <path id="line-switch-router" class="line" stroke="#005f99" d="M 330 218 C 360 216 380 216 405 216"></path>
+          <path id="line-router-server1" class="line" stroke="#c65d0a" d="M 480 216 C 560 200 630 210 700 220"></path>
+          <path id="line-server1-router" class="line" stroke="#c65d0a" d="M 700 260 C 630 270 560 250 500 230"></path>
+          <path id="line-router-switch" class="line" stroke="#005f99" d="M 405 240 C 370 242 340 242 310 238"></path>
+          <path id="line-switch-chrome" class="line" stroke="#005f99" d="M 270 236 C 230 236 200 232 170 222"></path>
+          <path id="line-router-server2" class="line" stroke="#c65d0a" d="M 480 240 C 560 270 640 310 700 340"></path>
+          <path id="line-server2-router" class="line" stroke="#c65d0a" d="M 700 380 C 640 360 560 320 500 260"></path>
+          <path id="line-switch-edge" class="line" stroke="#005f99" d="M 270 248 C 220 256 190 268 170 284"></path>
 
-          <!-- Etiketter for linjer -->
-          <text id="label-out" x="300" y="205" text-anchor="middle" fill="#005f99" font-size="13" opacity="0"></text>
-          <text id="label-internet" x="580" y="205" text-anchor="middle" fill="#c65d0a" font-size="13" opacity="0"></text>
-          <text id="label-back" x="600" y="285" text-anchor="middle" fill="#c65d0a" font-size="13" opacity="0"></text>
-          <text id="label-lan" x="310" y="265" text-anchor="middle" fill="#005f99" font-size="13" opacity="0"></text>
+          <!-- Etiket for aktiv linje -->
+          <text id="line-label" x="300" y="190" text-anchor="middle" fill="#005f99" font-size="13" opacity="0"></text>
         </svg>
         <div class="note" id="note-box" aria-live="polite"></div>
         <div class="info-text">
@@ -466,84 +536,142 @@
       <button id="nextBtn" aria-label="Næste trin" tabindex="0">Næste</button>
       <button id="autoBtn" aria-pressed="false" aria-label="Auto-afspil" tabindex="0">Auto-afspil</button>
     </div>
-    <div class="progress" id="progress">Trin 1 / 4</div>
+    <div class="progress" id="progress">Trin 1 / 14</div>
   </footer>
 
   <script>
     // Konfigurerbare trin (ændr IP'er, porte og tekster her hvis du vil tilpasse øvelsen)
+    const chromeRow = {
+      private: '192.168.1.10:51512 (Chrome)',
+      public: '203.0.113.5:40001',
+      dest: '93.184.216.34:80',
+      state: 'ESTABLISHED'
+    };
+
+    const edgeRow = {
+      private: '192.168.1.10:51516 (Edge)',
+      public: '203.0.113.5:40011',
+      dest: '93.182.211.56:80',
+      state: 'ESTABLISHED'
+    };
+
     const steps = [
       {
         id: 1,
         hash: '#trin-1',
-        labelOut: '192.168.1.10:51512 → 93.184.216.34:80',
-        labelInternet: '',
-        labelBack: '',
-        labelLan: '',
-        note: 'Privat IP er ikke routbar på internettet. Pakken skal NAT\'es for at komme videre.',
+        line: { id: 'line-chrome-internal', direction: 'forward' },
+        label: { text: 'Chrome 51512 forbereder pakke', x: 200, y: 170, color: '#005f99' },
+        note: 'Chrome genererer en HTTP-forespørgsel til 93.184.216.34:80 og bruger den lokale kildeport 51512.',
         natRows: []
       },
       {
         id: 2,
         hash: '#trin-2',
-        labelOut: '192.168.1.10:51512 → Router',
-        labelInternet: '203.0.113.5:40001 → 93.184.216.34:80',
-        labelBack: '',
-        labelLan: '',
-        note: 'Routeren laver SNAT/PAT: kilden bliver 203.0.113.5:40001 og tilføjes i NAT-tabellen.',
-        natRows: [
-          {
-            private: '192.168.1.10:51512',
-            public: '203.0.113.5:40001',
-            dest: '93.184.216.34:80',
-            state: 'ESTABLISHED'
-          }
-        ]
+        line: { id: 'line-client-switch', direction: 'forward' },
+        label: { text: '192.168.1.10 → LAN-switch', x: 220, y: 200, color: '#005f99' },
+        note: 'Klient A sender pakken ud på LAN\'et. Adressen er stadig privat, så internettet kan ikke se den endnu.',
+        natRows: []
       },
       {
         id: 3,
         hash: '#trin-3',
-        labelOut: '',
-        labelInternet: '203.0.113.5:40001 → 93.184.216.34:80',
-        labelBack: '',
-        labelLan: '',
-        note: 'Internettet ser kun routerens offentlige IP og port. Flere klienter kan dele den samme IP med forskellige porte.',
-        natRows: [
-          {
-            private: '192.168.1.10:51512',
-            public: '203.0.113.5:40001',
-            dest: '93.184.216.34:80',
-            state: 'ESTABLISHED'
-          }
-        ]
+        line: { id: 'line-switch-router', direction: 'forward' },
+        label: { text: 'Switch → Router (192.168.1.1)', x: 360, y: 200, color: '#005f99' },
+        note: 'Switchen videresender rammen til routerens LAN-interface. NAT er stadig ikke aktiveret.',
+        natRows: []
       },
       {
         id: 4,
         hash: '#trin-4',
-        labelOut: '',
-        labelInternet: '',
-        labelBack: '93.184.216.34:80 → 203.0.113.5:40001',
-        labelLan: 'Router → 192.168.1.10:51512 (webbrowser)',
-        note: 'Stateful NAT sikrer, at svaret sendes tilbage til den rigtige interne klient. Mappingen slettes efter timeout.',
-        natRows: [
-          {
-            private: '192.168.1.10:51512',
-            public: '203.0.113.5:40001',
-            dest: '93.184.216.34:80',
-            state: 'ESTABLISHED'
-          }
-        ]
+        line: { id: 'line-router-server1', direction: 'forward' },
+        label: { text: '203.0.113.5:40001 → 93.184.216.34:80', x: 540, y: 200, color: '#c65d0a' },
+        note: 'Routeren laver PAT: kilde bliver 203.0.113.5:40001. Chrome\'s mapning skrives i NAT-tabellen.',
+        natRows: [chromeRow]
+      },
+      {
+        id: 5,
+        hash: '#trin-5',
+        line: { id: 'line-server1-router', direction: 'forward' },
+        label: { text: '93.184.216.34:80 → 203.0.113.5:40001', x: 560, y: 250, color: '#c65d0a' },
+        note: 'Webserveren svarer til routerens offentlige IP og port. Kun derfor ved routeren, at svaret hører til Chrome.',
+        natRows: [chromeRow]
+      },
+      {
+        id: 6,
+        hash: '#trin-6',
+        line: { id: 'line-router-switch', direction: 'forward' },
+        label: { text: 'Router → Switch med Chrome-mapping', x: 360, y: 240, color: '#005f99' },
+        note: 'Routeren finder den statefulde entry og omskriver tilbage til 192.168.1.10:51512 før pakken sendes mod LAN.',
+        natRows: [chromeRow]
+      },
+      {
+        id: 7,
+        hash: '#trin-7',
+        line: { id: 'line-switch-chrome', direction: 'forward' },
+        label: { text: 'Switch → Chrome (51512)', x: 220, y: 230, color: '#005f99' },
+        note: 'Switchen afleverer svaret direkte til Chrome-appen. Den korrekte port sikrer, at den rigtige app modtager data.',
+        natRows: [chromeRow]
+      },
+      {
+        id: 8,
+        hash: '#trin-8',
+        line: { id: 'line-edge-internal', direction: 'forward' },
+        label: { text: 'Edge 51516 forbereder pakke', x: 210, y: 250, color: '#005f99' },
+        note: 'Edge vil til 93.182.211.56:80 og bruger sin egen lokale kildeport 51516. Flere apps kan dele samme klient.',
+        natRows: [chromeRow]
+      },
+      {
+        id: 9,
+        hash: '#trin-9',
+        line: { id: 'line-client-switch', direction: 'forward' },
+        label: { text: '192.168.1.10 (Edge) → Switch', x: 220, y: 210, color: '#005f99' },
+        note: 'Edge-pakken forlader også Klient A. Indtil routeren oversætter, er pakken stadig privat.',
+        natRows: [chromeRow]
+      },
+      {
+        id: 10,
+        hash: '#trin-10',
+        line: { id: 'line-switch-router', direction: 'forward' },
+        label: { text: 'Switch → Router (Edge)', x: 360, y: 210, color: '#005f99' },
+        note: 'Switchen håndterer flere flows samtidigt. Routeren er klar til at lave endnu en PAT-mapping.',
+        natRows: [chromeRow]
+      },
+      {
+        id: 11,
+        hash: '#trin-11',
+        line: { id: 'line-router-server2', direction: 'forward' },
+        label: { text: '203.0.113.5:40011 → 93.182.211.56:80', x: 550, y: 280, color: '#c65d0a' },
+        note: 'Routeren laver endnu en PAT-entry: 203.0.113.5:40011 peger nu på Edge-appen. Begge apps deler IP men ikke port.',
+        natRows: [chromeRow, edgeRow]
+      },
+      {
+        id: 12,
+        hash: '#trin-12',
+        line: { id: 'line-server2-router', direction: 'forward' },
+        label: { text: '93.182.211.56:80 → 203.0.113.5:40011', x: 560, y: 320, color: '#c65d0a' },
+        note: 'Den anden webserver svarer og bruger den port routeren har oprettet. NAT-tabellen fortæller hvem der skal have svaret.',
+        natRows: [chromeRow, edgeRow]
+      },
+      {
+        id: 13,
+        hash: '#trin-13',
+        line: { id: 'line-router-switch', direction: 'forward' },
+        label: { text: 'Router → Switch (Edge)', x: 360, y: 250, color: '#005f99' },
+        note: 'Routeren oversætter tilbage til 192.168.1.10:51516. Den statefulde tabel holder styr på hvilken app der ejer porten.',
+        natRows: [chromeRow, edgeRow]
+      },
+      {
+        id: 14,
+        hash: '#trin-14',
+        line: { id: 'line-switch-edge', direction: 'forward' },
+        label: { text: 'Switch → Edge (51516)', x: 230, y: 270, color: '#005f99' },
+        note: 'Switchen afleverer svaret til Edge-appen. Begge forbindelser forbliver aktive indtil timeouts rydder tabellen.',
+        natRows: [chromeRow, edgeRow]
       }
     ];
 
-    const lineOut = document.getElementById('line-out');
-    const lineInternet = document.getElementById('line-to-internet');
-    const lineBack = document.getElementById('line-back');
-    const lineLan = document.getElementById('line-to-lan');
-
-    const labelOut = document.getElementById('label-out');
-    const labelInternet = document.getElementById('label-internet');
-    const labelBack = document.getElementById('label-back');
-    const labelLan = document.getElementById('label-lan');
+    const allLines = Array.from(document.querySelectorAll('.line'));
+    const lineLabel = document.getElementById('line-label');
 
     const noteBox = document.getElementById('note-box');
     const natBody = document.getElementById('nat-body');
@@ -582,51 +710,30 @@
       }
     }
 
-    function updateLabels(stepData) {
-      const showLabel = (element, text) => {
-        element.textContent = text;
-        element.setAttribute('opacity', text ? '1' : '0');
-      };
-      showLabel(labelOut, stepData.labelOut);
-      showLabel(labelInternet, stepData.labelInternet);
-      showLabel(labelBack, stepData.labelBack);
-      showLabel(labelLan, stepData.labelLan);
-    }
-
-    function updateLines(step) {
-      const activate = (element, animateClass) => {
-        if (!element) return;
-        element.classList.remove('active', 'animate-forward', 'animate-back');
-        if (animateClass) {
-          element.classList.add('active', animateClass);
+    function updateLines(stepData) {
+      allLines.forEach(line => line.classList.remove('active', 'animate-forward', 'animate-back'));
+      if (stepData.line) {
+        const lineElement = document.getElementById(stepData.line.id);
+        if (lineElement) {
+          lineElement.classList.add('active');
+          if (stepData.line.direction === 'back') {
+            lineElement.classList.add('animate-back');
+          } else if (stepData.line.direction === 'none') {
+            // ingen animation
+          } else {
+            lineElement.classList.add('animate-forward');
+          }
         }
-      };
+      }
 
-      switch (step) {
-        case 1:
-          activate(lineOut, null);
-          activate(lineInternet, null);
-          activate(lineBack, null);
-          activate(lineLan, null);
-          break;
-        case 2:
-          activate(lineOut, 'animate-forward');
-          activate(lineInternet, 'animate-forward');
-          activate(lineBack, null);
-          activate(lineLan, null);
-          break;
-        case 3:
-          activate(lineOut, null);
-          activate(lineInternet, 'animate-forward');
-          activate(lineBack, null);
-          activate(lineLan, null);
-          break;
-        case 4:
-          activate(lineOut, null);
-          activate(lineInternet, null);
-          activate(lineBack, 'animate-forward');
-          activate(lineLan, 'animate-forward');
-          break;
+      if (stepData.label && stepData.label.text) {
+        lineLabel.textContent = stepData.label.text;
+        lineLabel.setAttribute('x', stepData.label.x);
+        lineLabel.setAttribute('y', stepData.label.y);
+        lineLabel.setAttribute('fill', stepData.label.color || '#005f99');
+        lineLabel.setAttribute('opacity', '1');
+      } else {
+        lineLabel.setAttribute('opacity', '0');
       }
     }
 
@@ -659,8 +766,7 @@
       const stepData = steps[step - 1];
       currentStep = step;
       updateHash(step);
-      updateLabels(stepData);
-      updateLines(step);
+      updateLines(stepData);
       noteBox.textContent = stepData.note;
       renderNatTable(stepData.natRows, toggleAdvanced.checked);
       progress.textContent = `Trin ${step} / ${steps.length}`;
