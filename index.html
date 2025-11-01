@@ -112,8 +112,8 @@
     svg {
       width: 100%;
       height: 60vh;
-      max-height: 540px;
-      max-width: 680px;
+      max-height: 760px;
+      max-width: 1100px;
       margin: 0 auto;
       display: block;
     }
@@ -226,7 +226,7 @@
     }
 
     .nat-box {
-      max-width: 240px;
+      max-width: 280px;
       margin: 0.4rem auto 0;
     }
 
@@ -381,7 +381,7 @@
         </article>
       </section>
       <section class="visual" aria-label="Visualisering af NAT/PAT" role="presentation">
-        <svg viewBox="0 0 840 520" role="img" aria-labelledby="nat-diagram-title">
+        <svg viewBox="0 0 1200 640" role="img" aria-labelledby="nat-diagram-title">
           <title id="nat-diagram-title">Diagram over NAT og PAT flow</title>
           <defs>
             <!-- Ikoner kan tilpasses ved at ændre farver her -->
@@ -413,11 +413,11 @@
           </defs>
 
           <!-- LAN sky -->
-          <use href="#cloud" x="60" y="120"></use>
-          <text x="130" y="70" text-anchor="middle" fill="#1f1f1f" font-weight="600">LAN</text>
+          <use href="#cloud" x="80" y="120"></use>
+          <text x="160" y="70" text-anchor="middle" fill="#1f1f1f" font-weight="600">LAN</text>
 
           <!-- Klienter -->
-          <g transform="translate(130,200)">
+          <g transform="translate(220,240)">
             <use href="#client"></use>
             <text x="0" y="40" text-anchor="middle" fill="#005f99" font-weight="600">Klient A</text>
             <text x="0" y="58" text-anchor="middle" fill="#005f99" font-size="12">192.168.1.10</text>
@@ -432,14 +432,14 @@
               <text x="0" y="12" text-anchor="middle" fill="#3c3c3c" font-size="11">Port 51516</text>
             </g>
           </g>
-          <g transform="translate(40,320)">
+          <g transform="translate(90,430)">
             <use href="#client"></use>
             <text x="0" y="40" text-anchor="middle" fill="#005f99" font-weight="600">Klient B</text>
             <text x="0" y="58" text-anchor="middle" fill="#005f99" font-size="12">192.168.1.11</text>
             <text x="0" y="74" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 51513</text>
             <text x="0" y="90" text-anchor="middle" fill="#3c3c3c" font-size="11">App: Videomøde</text>
           </g>
-          <g transform="translate(250,320)">
+          <g transform="translate(360,430)">
             <use href="#client"></use>
             <text x="0" y="40" text-anchor="middle" fill="#005f99" font-weight="600">Klient C</text>
             <text x="0" y="58" text-anchor="middle" fill="#005f99" font-size="12">192.168.1.12</text>
@@ -448,19 +448,19 @@
           </g>
 
           <!-- Switch -->
-          <g transform="translate(300,220)">
+          <g transform="translate(520,260)">
             <use href="#switch"></use>
             <text x="0" y="-28" text-anchor="middle" fill="#4d6a82" font-weight="600">LAN-switch</text>
           </g>
 
           <!-- Router -->
-          <g transform="translate(440,220)">
+          <g transform="translate(760,260)">
             <use href="#router"></use>
             <text x="0" y="-50" text-anchor="middle" fill="#ffffff" font-weight="600">Router</text>
             <text x="0" y="-35" text-anchor="middle" fill="#d7ecfa" font-size="12">LAN: 192.168.1.1</text>
-            <text x="0" y="55" text-anchor="middle" fill="#ffd9b3" font-size="12">WAN: 203.0.113.5</text>
+            <text x="0" y="65" text-anchor="middle" fill="#ffd9b3" font-size="12">WAN: 203.0.113.5</text>
 
-            <foreignObject x="-120" y="120" width="240" height="140">
+            <foreignObject x="-150" y="200" width="300" height="160">
               <div xmlns="http://www.w3.org/1999/xhtml" class="nat-box">
                 <table class="nat-table" role="table" aria-label="NAT tabel over forbindelser">
                   <caption>NAT-tabel</caption>
@@ -487,17 +487,17 @@
           </g>
 
           <!-- Internet -->
-          <use href="#cloud" x="650" y="120"></use>
-          <text x="720" y="70" text-anchor="middle" fill="#1f1f1f" font-weight="600">Internet</text>
+          <use href="#cloud" x="980" y="120"></use>
+          <text x="1060" y="70" text-anchor="middle" fill="#1f1f1f" font-weight="600">Internet</text>
 
           <!-- Webservere -->
-          <g transform="translate(720,220)">
+          <g transform="translate(1020,260)">
             <use href="#server"></use>
             <text x="0" y="48" text-anchor="middle" fill="#c65d0a" font-weight="600">Webserver</text>
             <text x="0" y="64" text-anchor="middle" fill="#c65d0a" font-size="12">93.184.216.34</text>
             <text x="0" y="80" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 80</text>
           </g>
-          <g transform="translate(720,360)">
+          <g transform="translate(1020,420)">
             <use href="#server"></use>
             <text x="0" y="48" text-anchor="middle" fill="#c65d0a" font-weight="600">Webapp (Edge)</text>
             <text x="0" y="64" text-anchor="middle" fill="#c65d0a" font-size="12">93.182.211.56</text>
@@ -505,20 +505,20 @@
           </g>
 
           <!-- Forbindelseslinjer -->
-          <path id="line-chrome-internal" class="line" stroke="#005f99" d="M 130 180 C 150 188 165 198 175 208"></path>
-          <path id="line-edge-internal" class="line" stroke="#005f99" d="M 130 260 C 150 268 170 278 182 288"></path>
-          <path id="line-client-switch" class="line" stroke="#005f99" d="M 170 220 C 210 218 240 218 270 218"></path>
-          <path id="line-switch-router" class="line" stroke="#005f99" d="M 330 218 C 360 216 380 216 405 216"></path>
-          <path id="line-router-server1" class="line" stroke="#c65d0a" d="M 480 216 C 560 200 630 210 700 220"></path>
-          <path id="line-server1-router" class="line" stroke="#c65d0a" d="M 700 260 C 630 270 560 250 500 230"></path>
-          <path id="line-router-switch" class="line" stroke="#005f99" d="M 405 240 C 370 242 340 242 310 238"></path>
-          <path id="line-switch-chrome" class="line" stroke="#005f99" d="M 270 236 C 230 236 200 232 170 222"></path>
-          <path id="line-router-server2" class="line" stroke="#c65d0a" d="M 480 240 C 560 270 640 310 700 340"></path>
-          <path id="line-server2-router" class="line" stroke="#c65d0a" d="M 700 380 C 640 360 560 320 500 260"></path>
-          <path id="line-switch-edge" class="line" stroke="#005f99" d="M 270 248 C 220 256 190 268 170 284"></path>
+          <path id="line-chrome-internal" class="line" stroke="#005f99" d="M 220 220 C 240 230 260 240 280 250"></path>
+          <path id="line-edge-internal" class="line" stroke="#005f99" d="M 220 300 C 240 310 260 320 280 330"></path>
+          <path id="line-client-switch" class="line" stroke="#005f99" d="M 280 260 C 360 255 420 255 480 255"></path>
+          <path id="line-switch-router" class="line" stroke="#005f99" d="M 560 255 C 600 255 640 255 680 255"></path>
+          <path id="line-router-server1" class="line" stroke="#c65d0a" d="M 820 255 C 900 220 960 230 1020 240"></path>
+          <path id="line-server1-router" class="line" stroke="#c65d0a" d="M 1020 280 C 960 290 900 270 840 260"></path>
+          <path id="line-router-switch" class="line" stroke="#005f99" d="M 680 280 C 640 280 600 280 560 270"></path>
+          <path id="line-switch-chrome" class="line" stroke="#005f99" d="M 480 270 C 420 270 360 265 300 250"></path>
+          <path id="line-router-server2" class="line" stroke="#c65d0a" d="M 820 280 C 900 320 960 360 1020 380"></path>
+          <path id="line-server2-router" class="line" stroke="#c65d0a" d="M 1020 420 C 960 400 900 360 840 300"></path>
+          <path id="line-switch-edge" class="line" stroke="#005f99" d="M 480 285 C 420 300 360 320 300 330"></path>
 
           <!-- Etiket for aktiv linje -->
-          <text id="line-label" x="300" y="190" text-anchor="middle" fill="#005f99" font-size="13" opacity="0"></text>
+          <text id="line-label" x="360" y="200" text-anchor="middle" fill="#005f99" font-size="13" opacity="0"></text>
         </svg>
         <div class="note" id="note-box" aria-live="polite"></div>
         <div class="info-text">
@@ -560,7 +560,7 @@
         id: 1,
         hash: '#trin-1',
         line: { id: 'line-chrome-internal', direction: 'forward' },
-        label: { text: 'Chrome 51512 forbereder pakke', x: 200, y: 170, color: '#005f99' },
+        label: { text: 'Chrome 51512 forbereder pakke', x: 260, y: 200, color: '#005f99' },
         note: 'Chrome genererer en HTTP-forespørgsel til 93.184.216.34:80 og bruger den lokale kildeport 51512.',
         natRows: []
       },
@@ -568,7 +568,7 @@
         id: 2,
         hash: '#trin-2',
         line: { id: 'line-client-switch', direction: 'forward' },
-        label: { text: '192.168.1.10 → LAN-switch', x: 220, y: 200, color: '#005f99' },
+        label: { text: '192.168.1.10 → LAN-switch', x: 360, y: 240, color: '#005f99' },
         note: 'Klient A sender pakken ud på LAN\'et. Adressen er stadig privat, så internettet kan ikke se den endnu.',
         natRows: []
       },
@@ -576,7 +576,7 @@
         id: 3,
         hash: '#trin-3',
         line: { id: 'line-switch-router', direction: 'forward' },
-        label: { text: 'Switch → Router (192.168.1.1)', x: 360, y: 200, color: '#005f99' },
+        label: { text: 'Switch → Router (192.168.1.1)', x: 580, y: 240, color: '#005f99' },
         note: 'Switchen videresender rammen til routerens LAN-interface. NAT er stadig ikke aktiveret.',
         natRows: []
       },
@@ -584,7 +584,7 @@
         id: 4,
         hash: '#trin-4',
         line: { id: 'line-router-server1', direction: 'forward' },
-        label: { text: '203.0.113.5:40001 → 93.184.216.34:80', x: 540, y: 200, color: '#c65d0a' },
+        label: { text: '203.0.113.5:40001 → 93.184.216.34:80', x: 910, y: 220, color: '#c65d0a' },
         note: 'Routeren laver PAT: kilde bliver 203.0.113.5:40001. Chrome\'s mapning skrives i NAT-tabellen.',
         natRows: [chromeRow]
       },
@@ -592,7 +592,7 @@
         id: 5,
         hash: '#trin-5',
         line: { id: 'line-server1-router', direction: 'forward' },
-        label: { text: '93.184.216.34:80 → 203.0.113.5:40001', x: 560, y: 250, color: '#c65d0a' },
+        label: { text: '93.184.216.34:80 → 203.0.113.5:40001', x: 900, y: 300, color: '#c65d0a' },
         note: 'Webserveren svarer til routerens offentlige IP og port. Kun derfor ved routeren, at svaret hører til Chrome.',
         natRows: [chromeRow]
       },
@@ -600,7 +600,7 @@
         id: 6,
         hash: '#trin-6',
         line: { id: 'line-router-switch', direction: 'forward' },
-        label: { text: 'Router → Switch med Chrome-mapping', x: 360, y: 240, color: '#005f99' },
+        label: { text: 'Router → Switch med Chrome-mapping', x: 620, y: 300, color: '#005f99' },
         note: 'Routeren finder den statefulde entry og omskriver tilbage til 192.168.1.10:51512 før pakken sendes mod LAN.',
         natRows: [chromeRow]
       },
@@ -608,7 +608,7 @@
         id: 7,
         hash: '#trin-7',
         line: { id: 'line-switch-chrome', direction: 'forward' },
-        label: { text: 'Switch → Chrome (51512)', x: 220, y: 230, color: '#005f99' },
+        label: { text: 'Switch → Chrome (51512)', x: 380, y: 280, color: '#005f99' },
         note: 'Switchen afleverer svaret direkte til Chrome-appen. Den korrekte port sikrer, at den rigtige app modtager data.',
         natRows: [chromeRow]
       },
@@ -616,7 +616,7 @@
         id: 8,
         hash: '#trin-8',
         line: { id: 'line-edge-internal', direction: 'forward' },
-        label: { text: 'Edge 51516 forbereder pakke', x: 210, y: 250, color: '#005f99' },
+        label: { text: 'Edge 51516 forbereder pakke', x: 260, y: 300, color: '#005f99' },
         note: 'Edge vil til 93.182.211.56:80 og bruger sin egen lokale kildeport 51516. Flere apps kan dele samme klient.',
         natRows: [chromeRow]
       },
@@ -624,7 +624,7 @@
         id: 9,
         hash: '#trin-9',
         line: { id: 'line-client-switch', direction: 'forward' },
-        label: { text: '192.168.1.10 (Edge) → Switch', x: 220, y: 210, color: '#005f99' },
+        label: { text: '192.168.1.10 (Edge) → Switch', x: 360, y: 260, color: '#005f99' },
         note: 'Edge-pakken forlader også Klient A. Indtil routeren oversætter, er pakken stadig privat.',
         natRows: [chromeRow]
       },
@@ -632,7 +632,7 @@
         id: 10,
         hash: '#trin-10',
         line: { id: 'line-switch-router', direction: 'forward' },
-        label: { text: 'Switch → Router (Edge)', x: 360, y: 210, color: '#005f99' },
+        label: { text: 'Switch → Router (Edge)', x: 580, y: 260, color: '#005f99' },
         note: 'Switchen håndterer flere flows samtidigt. Routeren er klar til at lave endnu en PAT-mapping.',
         natRows: [chromeRow]
       },
@@ -640,7 +640,7 @@
         id: 11,
         hash: '#trin-11',
         line: { id: 'line-router-server2', direction: 'forward' },
-        label: { text: '203.0.113.5:40011 → 93.182.211.56:80', x: 550, y: 280, color: '#c65d0a' },
+        label: { text: '203.0.113.5:40011 → 93.182.211.56:80', x: 920, y: 320, color: '#c65d0a' },
         note: 'Routeren laver endnu en PAT-entry: 203.0.113.5:40011 peger nu på Edge-appen. Begge apps deler IP men ikke port.',
         natRows: [chromeRow, edgeRow]
       },
@@ -648,7 +648,7 @@
         id: 12,
         hash: '#trin-12',
         line: { id: 'line-server2-router', direction: 'forward' },
-        label: { text: '93.182.211.56:80 → 203.0.113.5:40011', x: 560, y: 320, color: '#c65d0a' },
+        label: { text: '93.182.211.56:80 → 203.0.113.5:40011', x: 920, y: 360, color: '#c65d0a' },
         note: 'Den anden webserver svarer og bruger den port routeren har oprettet. NAT-tabellen fortæller hvem der skal have svaret.',
         natRows: [chromeRow, edgeRow]
       },
@@ -656,7 +656,7 @@
         id: 13,
         hash: '#trin-13',
         line: { id: 'line-router-switch', direction: 'forward' },
-        label: { text: 'Router → Switch (Edge)', x: 360, y: 250, color: '#005f99' },
+        label: { text: 'Router → Switch (Edge)', x: 620, y: 320, color: '#005f99' },
         note: 'Routeren oversætter tilbage til 192.168.1.10:51516. Den statefulde tabel holder styr på hvilken app der ejer porten.',
         natRows: [chromeRow, edgeRow]
       },
@@ -664,7 +664,7 @@
         id: 14,
         hash: '#trin-14',
         line: { id: 'line-switch-edge', direction: 'forward' },
-        label: { text: 'Switch → Edge (51516)', x: 230, y: 270, color: '#005f99' },
+        label: { text: 'Switch → Edge (51516)', x: 380, y: 320, color: '#005f99' },
         note: 'Switchen afleverer svaret til Edge-appen. Begge forbindelser forbliver aktive indtil timeouts rydder tabellen.',
         natRows: [chromeRow, edgeRow]
       }
