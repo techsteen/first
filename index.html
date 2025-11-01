@@ -111,8 +111,9 @@
 
     svg {
       width: 100%;
-      height: auto;
-      max-width: 620px;
+      height: 60vh;
+      max-height: 540px;
+      max-width: 680px;
       margin: 0 auto;
       display: block;
     }
@@ -225,8 +226,8 @@
     }
 
     .nat-box {
-      max-width: 210px;
-      margin: 0 auto;
+      max-width: 240px;
+      margin: 0.4rem auto 0;
     }
 
     .nat-table tbody tr.inactive {
@@ -340,7 +341,7 @@
         </article>
       </section>
       <section class="visual" aria-label="Visualisering af NAT/PAT" role="presentation">
-        <svg viewBox="0 0 720 360" role="img" aria-labelledby="nat-diagram-title">
+        <svg viewBox="0 0 820 480" role="img" aria-labelledby="nat-diagram-title">
           <title id="nat-diagram-title">Diagram over NAT og PAT flow</title>
           <defs>
             <!-- Ikoner kan tilpasses ved at ændre farver her -->
@@ -366,25 +367,25 @@
           </defs>
 
           <!-- LAN sky -->
-          <use href="#cloud" x="110" y="110"></use>
-          <text x="110" y="60" text-anchor="middle" fill="#1f1f1f" font-weight="600">LAN</text>
+          <use href="#cloud" x="70" y="130"></use>
+          <text x="140" y="80" text-anchor="middle" fill="#1f1f1f" font-weight="600">LAN</text>
 
           <!-- Klienter -->
-          <g transform="translate(70,170)">
+          <g transform="translate(120,210)">
             <use href="#client"></use>
             <text x="0" y="40" text-anchor="middle" fill="#005f99" font-weight="600">Klient A</text>
             <text x="0" y="58" text-anchor="middle" fill="#005f99" font-size="12">192.168.1.10</text>
             <text x="0" y="74" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 51512</text>
             <text x="0" y="90" text-anchor="middle" fill="#3c3c3c" font-size="11">App: Webbrowser</text>
           </g>
-          <g transform="translate(20,250)">
+          <g transform="translate(40,300)">
             <use href="#client"></use>
             <text x="0" y="40" text-anchor="middle" fill="#005f99" font-weight="600">Klient B</text>
             <text x="0" y="58" text-anchor="middle" fill="#005f99" font-size="12">192.168.1.11</text>
             <text x="0" y="74" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 51513</text>
             <text x="0" y="90" text-anchor="middle" fill="#3c3c3c" font-size="11">App: Videomøde</text>
           </g>
-          <g transform="translate(120,240)">
+          <g transform="translate(240,300)">
             <use href="#client"></use>
             <text x="0" y="40" text-anchor="middle" fill="#005f99" font-weight="600">Klient C</text>
             <text x="0" y="58" text-anchor="middle" fill="#005f99" font-size="12">192.168.1.12</text>
@@ -393,13 +394,13 @@
           </g>
 
           <!-- Router -->
-          <g transform="translate(350,180)">
+          <g transform="translate(420,220)">
             <use href="#router"></use>
             <text x="0" y="-50" text-anchor="middle" fill="#ffffff" font-weight="600">Router</text>
             <text x="0" y="-35" text-anchor="middle" fill="#d7ecfa" font-size="12">LAN: 192.168.1.1</text>
             <text x="0" y="55" text-anchor="middle" fill="#ffd9b3" font-size="12">WAN: 203.0.113.5</text>
 
-            <foreignObject x="-110" y="60" width="220" height="130">
+            <foreignObject x="-120" y="120" width="240" height="140">
               <div xmlns="http://www.w3.org/1999/xhtml" class="nat-box">
                 <table class="nat-table" role="table" aria-label="NAT tabel over forbindelser">
                   <caption>NAT-tabel</caption>
@@ -426,11 +427,11 @@
           </g>
 
           <!-- Internet -->
-          <use href="#cloud" x="570" y="110"></use>
-          <text x="570" y="60" text-anchor="middle" fill="#1f1f1f" font-weight="600">Internet</text>
+          <use href="#cloud" x="640" y="130"></use>
+          <text x="700" y="80" text-anchor="middle" fill="#1f1f1f" font-weight="600">Internet</text>
 
           <!-- Webserver -->
-          <g transform="translate(570,190)">
+          <g transform="translate(700,240)">
             <use href="#server"></use>
             <text x="0" y="48" text-anchor="middle" fill="#c65d0a" font-weight="600">Webserver</text>
             <text x="0" y="64" text-anchor="middle" fill="#c65d0a" font-size="12">93.184.216.34</text>
@@ -438,16 +439,16 @@
           </g>
 
           <!-- Forbindelseslinjer -->
-          <path id="line-out" class="line" stroke="#005f99" d="M 150 190 C 220 175 290 185 320 180"></path>
-          <path id="line-to-internet" class="line" stroke="#c65d0a" d="M 380 180 C 450 170 500 180 530 190"></path>
-          <path id="line-back" class="line" stroke="#c65d0a" d="M 530 220 C 480 230 430 225 380 210"></path>
-          <path id="line-to-lan" class="line" stroke="#005f99" d="M 320 210 C 260 215 210 205 160 200"></path>
+          <path id="line-out" class="line" stroke="#005f99" d="M 210 230 C 290 210 350 220 390 220"></path>
+          <path id="line-to-internet" class="line" stroke="#c65d0a" d="M 450 220 C 540 205 610 220 690 240"></path>
+          <path id="line-back" class="line" stroke="#c65d0a" d="M 690 280 C 610 290 540 265 470 240"></path>
+          <path id="line-to-lan" class="line" stroke="#005f99" d="M 390 250 C 320 255 260 245 200 240"></path>
 
           <!-- Etiketter for linjer -->
-          <text id="label-out" x="240" y="165" text-anchor="middle" fill="#005f99" font-size="13" opacity="0"></text>
-          <text id="label-internet" x="470" y="165" text-anchor="middle" fill="#c65d0a" font-size="13" opacity="0"></text>
-          <text id="label-back" x="470" y="240" text-anchor="middle" fill="#c65d0a" font-size="13" opacity="0"></text>
-          <text id="label-lan" x="240" y="235" text-anchor="middle" fill="#005f99" font-size="13" opacity="0"></text>
+          <text id="label-out" x="300" y="205" text-anchor="middle" fill="#005f99" font-size="13" opacity="0"></text>
+          <text id="label-internet" x="580" y="205" text-anchor="middle" fill="#c65d0a" font-size="13" opacity="0"></text>
+          <text id="label-back" x="600" y="285" text-anchor="middle" fill="#c65d0a" font-size="13" opacity="0"></text>
+          <text id="label-lan" x="310" y="265" text-anchor="middle" fill="#005f99" font-size="13" opacity="0"></text>
         </svg>
         <div class="note" id="note-box" aria-live="polite"></div>
         <div class="info-text">
