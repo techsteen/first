@@ -112,6 +112,9 @@
     svg {
       width: 100%;
       height: auto;
+      max-width: 620px;
+      margin: 0 auto;
+      display: block;
     }
 
     .note {
@@ -199,11 +202,12 @@
     .nat-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 0.6rem;
-      font-size: 0.9rem;
+      margin-top: 0.4rem;
+      font-size: 0.8rem;
       background: rgba(255,255,255,0.9);
       border-radius: 8px;
       overflow: hidden;
+      table-layout: fixed;
     }
 
     .nat-table caption {
@@ -215,8 +219,14 @@
 
     .nat-table th, .nat-table td {
       border: 1px solid var(--color-border);
-      padding: 0.35rem 0.5rem;
+      padding: 0.3rem 0.4rem;
       text-align: left;
+      word-break: break-word;
+    }
+
+    .nat-box {
+      max-width: 210px;
+      margin: 0 auto;
     }
 
     .nat-table tbody tr.inactive {
@@ -230,7 +240,7 @@
       align-items: center;
       gap: 0.4rem;
       cursor: pointer;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: var(--color-accent);
       margin-top: 0.4rem;
     }
@@ -330,7 +340,7 @@
         </article>
       </section>
       <section class="visual" aria-label="Visualisering af NAT/PAT" role="presentation">
-        <svg viewBox="0 0 800 420" role="img" aria-labelledby="nat-diagram-title">
+        <svg viewBox="0 0 720 360" role="img" aria-labelledby="nat-diagram-title">
           <title id="nat-diagram-title">Diagram over NAT og PAT flow</title>
           <defs>
             <!-- Ikoner kan tilpasses ved at ændre farver her -->
@@ -356,8 +366,8 @@
           </defs>
 
           <!-- LAN sky -->
-          <use href="#cloud" x="120" y="120"></use>
-          <text x="120" y="70" text-anchor="middle" fill="#1f1f1f" font-weight="600">LAN</text>
+          <use href="#cloud" x="110" y="110"></use>
+          <text x="110" y="60" text-anchor="middle" fill="#1f1f1f" font-weight="600">LAN</text>
 
           <!-- Klienter -->
           <g transform="translate(70,170)">
@@ -365,28 +375,31 @@
             <text x="0" y="40" text-anchor="middle" fill="#005f99" font-weight="600">Klient A</text>
             <text x="0" y="58" text-anchor="middle" fill="#005f99" font-size="12">192.168.1.10</text>
             <text x="0" y="74" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 51512</text>
+            <text x="0" y="90" text-anchor="middle" fill="#3c3c3c" font-size="11">App: Webbrowser</text>
           </g>
-          <g transform="translate(30,240)">
+          <g transform="translate(20,250)">
             <use href="#client"></use>
             <text x="0" y="40" text-anchor="middle" fill="#005f99" font-weight="600">Klient B</text>
             <text x="0" y="58" text-anchor="middle" fill="#005f99" font-size="12">192.168.1.11</text>
             <text x="0" y="74" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 51513</text>
+            <text x="0" y="90" text-anchor="middle" fill="#3c3c3c" font-size="11">App: Videomøde</text>
           </g>
-          <g transform="translate(110,240)">
+          <g transform="translate(120,240)">
             <use href="#client"></use>
             <text x="0" y="40" text-anchor="middle" fill="#005f99" font-weight="600">Klient C</text>
             <text x="0" y="58" text-anchor="middle" fill="#005f99" font-size="12">192.168.1.12</text>
             <text x="0" y="74" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 51514</text>
+            <text x="0" y="90" text-anchor="middle" fill="#3c3c3c" font-size="11">App: Fildeling</text>
           </g>
 
           <!-- Router -->
-          <g transform="translate(380,190)">
+          <g transform="translate(350,180)">
             <use href="#router"></use>
             <text x="0" y="-50" text-anchor="middle" fill="#ffffff" font-weight="600">Router</text>
             <text x="0" y="-35" text-anchor="middle" fill="#d7ecfa" font-size="12">LAN: 192.168.1.1</text>
             <text x="0" y="55" text-anchor="middle" fill="#ffd9b3" font-size="12">WAN: 203.0.113.5</text>
 
-            <foreignObject x="-120" y="70" width="240" height="140">
+            <foreignObject x="-110" y="60" width="220" height="130">
               <div xmlns="http://www.w3.org/1999/xhtml" class="nat-box">
                 <table class="nat-table" role="table" aria-label="NAT tabel over forbindelser">
                   <caption>NAT-tabel</caption>
@@ -413,28 +426,28 @@
           </g>
 
           <!-- Internet -->
-          <use href="#cloud" x="620" y="120"></use>
-          <text x="620" y="70" text-anchor="middle" fill="#1f1f1f" font-weight="600">Internet</text>
+          <use href="#cloud" x="570" y="110"></use>
+          <text x="570" y="60" text-anchor="middle" fill="#1f1f1f" font-weight="600">Internet</text>
 
           <!-- Webserver -->
-          <g transform="translate(620,200)">
+          <g transform="translate(570,190)">
             <use href="#server"></use>
-            <text x="0" y="50" text-anchor="middle" fill="#c65d0a" font-weight="600">Webserver</text>
-            <text x="0" y="66" text-anchor="middle" fill="#c65d0a" font-size="12">93.184.216.34</text>
-            <text x="0" y="82" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 80</text>
+            <text x="0" y="48" text-anchor="middle" fill="#c65d0a" font-weight="600">Webserver</text>
+            <text x="0" y="64" text-anchor="middle" fill="#c65d0a" font-size="12">93.184.216.34</text>
+            <text x="0" y="80" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 80</text>
           </g>
 
           <!-- Forbindelseslinjer -->
-          <path id="line-out" class="line" stroke="#005f99" d="M 140 190 C 240 180 320 190 360 190"></path>
-          <path id="line-to-internet" class="line" stroke="#c65d0a" d="M 420 190 C 520 180 560 190 600 200"></path>
-          <path id="line-back" class="line" stroke="#c65d0a" d="M 600 230 C 540 240 520 240 420 230"></path>
-          <path id="line-to-lan" class="line" stroke="#005f99" d="M 360 230 C 300 240 220 230 140 210"></path>
+          <path id="line-out" class="line" stroke="#005f99" d="M 150 190 C 220 175 290 185 320 180"></path>
+          <path id="line-to-internet" class="line" stroke="#c65d0a" d="M 380 180 C 450 170 500 180 530 190"></path>
+          <path id="line-back" class="line" stroke="#c65d0a" d="M 530 220 C 480 230 430 225 380 210"></path>
+          <path id="line-to-lan" class="line" stroke="#005f99" d="M 320 210 C 260 215 210 205 160 200"></path>
 
           <!-- Etiketter for linjer -->
-          <text id="label-out" x="260" y="170" text-anchor="middle" fill="#005f99" font-size="13" opacity="0"></text>
-          <text id="label-internet" x="520" y="170" text-anchor="middle" fill="#c65d0a" font-size="13" opacity="0"></text>
-          <text id="label-back" x="520" y="250" text-anchor="middle" fill="#c65d0a" font-size="13" opacity="0"></text>
-          <text id="label-lan" x="260" y="250" text-anchor="middle" fill="#005f99" font-size="13" opacity="0"></text>
+          <text id="label-out" x="240" y="165" text-anchor="middle" fill="#005f99" font-size="13" opacity="0"></text>
+          <text id="label-internet" x="470" y="165" text-anchor="middle" fill="#c65d0a" font-size="13" opacity="0"></text>
+          <text id="label-back" x="470" y="240" text-anchor="middle" fill="#c65d0a" font-size="13" opacity="0"></text>
+          <text id="label-lan" x="240" y="235" text-anchor="middle" fill="#005f99" font-size="13" opacity="0"></text>
         </svg>
         <div class="note" id="note-box" aria-live="polite"></div>
         <div class="info-text">
@@ -508,7 +521,7 @@
         labelOut: '',
         labelInternet: '',
         labelBack: '93.184.216.34:80 → 203.0.113.5:40001',
-        labelLan: 'Router → 192.168.1.10:51512',
+        labelLan: 'Router → 192.168.1.10:51512 (webbrowser)',
         note: 'Stateful NAT sikrer, at svaret sendes tilbage til den rigtige interne klient. Mappingen slettes efter timeout.',
         natRows: [
           {
