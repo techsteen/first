@@ -239,6 +239,20 @@
       background: #f2f2f2;
     }
 
+    .nat-table tbody tr.highlight {
+      background: #ffe8c7;
+      font-weight: 600;
+      position: relative;
+    }
+
+    .nat-table tbody tr.highlight::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-left: 4px solid var(--color-accent-public);
+      pointer-events: none;
+    }
+
     .toggle-advanced {
       align-self: flex-start;
       display: inline-flex;
@@ -461,10 +475,10 @@
           <g transform="translate(760,260)">
             <use href="#router"></use>
             <text x="0" y="-50" text-anchor="middle" fill="#ffffff" font-weight="600">Router</text>
-            <text x="0" y="-35" text-anchor="middle" fill="#d7ecfa" font-size="12">LAN: 192.168.1.1</text>
-            <text x="0" y="65" text-anchor="middle" fill="#ffd9b3" font-size="12">WAN: 203.0.113.5</text>
+            <text x="-110" y="-35" text-anchor="end" fill="#1f1f1f" font-size="12">LAN: 192.168.1.1</text>
+            <text x="110" y="65" text-anchor="start" fill="rgb(198, 93, 10)" font-size="12">WAN: 203.0.113.5</text>
 
-            <foreignObject x="-150" y="50" width="340" height="340">
+            <foreignObject x="-170" y="50" width="340" height="340">
               <div xmlns="http://www.w3.org/1999/xhtml" class="nat-box">
                 <table class="nat-table" role="table" aria-label="NAT tabel over forbindelser">
                   <caption>NAT-tabel</caption>
@@ -566,7 +580,8 @@
         line: { id: 'line-chrome-internal', direction: 'forward' },
         label: { text: 'Chrome 51512 forbereder pakke', x: 260, y: 200, color: '#005f99' },
         note: 'Chrome genererer en HTTP-forespørgsel til 93.184.216.34:80 og bruger den lokale kildeport 51512.',
-        natRows: []
+        natRows: [],
+        highlightPrivates: []
       },
       {
         id: 2,
@@ -574,7 +589,8 @@
         line: { id: 'line-client-switch', direction: 'forward' },
         label: { text: '192.168.1.10 → LAN-switch', x: 360, y: 240, color: '#005f99' },
         note: 'Klient A sender pakken ud på LAN\'et. Adressen er stadig privat, så internettet kan ikke se den endnu.',
-        natRows: []
+        natRows: [],
+        highlightPrivates: []
       },
       {
         id: 3,
@@ -582,7 +598,8 @@
         line: { id: 'line-switch-router', direction: 'forward' },
         label: { text: 'Switch → Router (192.168.1.1)', x: 580, y: 240, color: '#005f99' },
         note: 'Switchen videresender rammen til routerens LAN-interface. NAT er stadig ikke aktiveret.',
-        natRows: []
+        natRows: [],
+        highlightPrivates: []
       },
       {
         id: 4,
@@ -590,7 +607,8 @@
         line: { id: 'line-router-server1', direction: 'forward' },
         label: { text: '203.0.113.5:40001 → 93.184.216.34:80', x: 910, y: 220, color: '#c65d0a' },
         note: 'Routeren laver PAT: kilde bliver 203.0.113.5:40001. Chrome\'s mapning skrives i NAT-tabellen.',
-        natRows: [chromeRow]
+        natRows: [chromeRow],
+        highlightPrivates: []
       },
       {
         id: 5,
@@ -598,7 +616,8 @@
         line: { id: 'line-server1-router', direction: 'forward' },
         label: { text: '93.184.216.34:80 → 203.0.113.5:40001', x: 900, y: 300, color: '#c65d0a' },
         note: 'Webserveren svarer til routerens offentlige IP og port. Kun derfor ved routeren, at svaret hører til Chrome.',
-        natRows: [chromeRow]
+        natRows: [chromeRow],
+        highlightPrivates: [chromeRow.private]
       },
       {
         id: 6,
@@ -606,7 +625,8 @@
         line: { id: 'line-router-switch', direction: 'forward' },
         label: { text: 'Router → Switch med Chrome-mapping', x: 620, y: 300, color: '#005f99' },
         note: 'Routeren finder den statefulde entry og omskriver tilbage til 192.168.1.10:51512 før pakken sendes mod LAN.',
-        natRows: [chromeRow]
+        natRows: [chromeRow],
+        highlightPrivates: [chromeRow.private]
       },
       {
         id: 7,
@@ -614,7 +634,8 @@
         line: { id: 'line-switch-chrome', direction: 'forward' },
         label: { text: 'Switch → Chrome (51512)', x: 380, y: 280, color: '#005f99' },
         note: 'Switchen afleverer svaret direkte til Chrome-appen. Den korrekte port sikrer, at den rigtige app modtager data.',
-        natRows: [chromeRow]
+        natRows: [chromeRow],
+        highlightPrivates: []
       },
       {
         id: 8,
@@ -622,7 +643,8 @@
         line: { id: 'line-edge-internal', direction: 'forward' },
         label: { text: 'Edge 51516 forbereder pakke', x: 260, y: 300, color: '#005f99' },
         note: 'Edge vil til 93.182.211.56:80 og bruger sin egen lokale kildeport 51516. Flere apps kan dele samme klient.',
-        natRows: [chromeRow]
+        natRows: [chromeRow],
+        highlightPrivates: []
       },
       {
         id: 9,
@@ -630,7 +652,8 @@
         line: { id: 'line-client-switch', direction: 'forward' },
         label: { text: '192.168.1.10 (Edge) → Switch', x: 360, y: 260, color: '#005f99' },
         note: 'Edge-pakken forlader også Klient A. Indtil routeren oversætter, er pakken stadig privat.',
-        natRows: [chromeRow]
+        natRows: [chromeRow],
+        highlightPrivates: []
       },
       {
         id: 10,
@@ -638,7 +661,8 @@
         line: { id: 'line-switch-router', direction: 'forward' },
         label: { text: 'Switch → Router (Edge)', x: 580, y: 260, color: '#005f99' },
         note: 'Switchen håndterer flere flows samtidigt. Routeren er klar til at lave endnu en PAT-mapping.',
-        natRows: [chromeRow]
+        natRows: [chromeRow],
+        highlightPrivates: []
       },
       {
         id: 11,
@@ -646,7 +670,8 @@
         line: { id: 'line-router-server2', direction: 'forward' },
         label: { text: '203.0.113.5:40011 → 93.182.211.56:80', x: 920, y: 320, color: '#c65d0a' },
         note: 'Routeren laver endnu en PAT-entry: 203.0.113.5:40011 peger nu på Edge-appen. Begge apps deler IP men ikke port.',
-        natRows: [chromeRow, edgeRow]
+        natRows: [chromeRow, edgeRow],
+        highlightPrivates: []
       },
       {
         id: 12,
@@ -654,7 +679,8 @@
         line: { id: 'line-server2-router', direction: 'forward' },
         label: { text: '93.182.211.56:80 → 203.0.113.5:40011', x: 920, y: 360, color: '#c65d0a' },
         note: 'Den anden webserver svarer og bruger den port routeren har oprettet. NAT-tabellen fortæller hvem der skal have svaret.',
-        natRows: [chromeRow, edgeRow]
+        natRows: [chromeRow, edgeRow],
+        highlightPrivates: [edgeRow.private]
       },
       {
         id: 13,
@@ -662,7 +688,8 @@
         line: { id: 'line-router-switch', direction: 'forward' },
         label: { text: 'Router → Switch (Edge)', x: 620, y: 320, color: '#005f99' },
         note: 'Routeren oversætter tilbage til 192.168.1.10:51516. Den statefulde tabel holder styr på hvilken app der ejer porten.',
-        natRows: [chromeRow, edgeRow]
+        natRows: [chromeRow, edgeRow],
+        highlightPrivates: [edgeRow.private]
       },
       {
         id: 14,
@@ -670,7 +697,8 @@
         line: { id: 'line-switch-edge', direction: 'forward' },
         label: { text: 'Switch → Edge (51516)', x: 380, y: 320, color: '#005f99' },
         note: 'Switchen afleverer svaret til Edge-appen. Begge forbindelser forbliver aktive indtil timeouts rydder tabellen.',
-        natRows: [chromeRow, edgeRow]
+        natRows: [chromeRow, edgeRow],
+        highlightPrivates: []
       }
     ];
 
@@ -741,7 +769,8 @@
       }
     }
 
-    function renderNatTable(rows, showAdvanced) {
+    function renderNatTable(rows, showAdvanced, highlightPrivates = []) {
+      const highlightSet = new Set(highlightPrivates);
       natBody.innerHTML = '';
       if (!rows.length) {
         const tr = document.createElement('tr');
@@ -762,6 +791,9 @@
           <td role="cell">${row.dest}</td>
           <td role="cell">${row.state}</td>
         `;
+        if (highlightSet.has(row.private)) {
+          tr.classList.add('highlight');
+        }
         natBody.appendChild(tr);
       });
     }
@@ -772,7 +804,7 @@
       updateHash(step);
       updateLines(stepData);
       noteBox.textContent = stepData.note;
-      renderNatTable(stepData.natRows, toggleAdvanced.checked);
+      renderNatTable(stepData.natRows, toggleAdvanced.checked, stepData.highlightPrivates || []);
       progress.textContent = `Trin ${step} / ${steps.length}`;
 
       stepElements.forEach((el, index) => {
@@ -835,7 +867,7 @@
 
     toggleAdvanced.addEventListener('change', () => {
       const stepData = steps[currentStep - 1];
-      renderNatTable(stepData.natRows, toggleAdvanced.checked);
+      renderNatTable(stepData.natRows, toggleAdvanced.checked, stepData.highlightPrivates || []);
     });
 
     document.addEventListener('keydown', (event) => {
