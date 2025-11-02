@@ -74,18 +74,19 @@
       display: flex;
       flex-direction: column;
       gap: 0.8rem;
+      min-height: 220px;
     }
 
     .step {
-      border-left: 4px solid transparent;
-      padding-left: 0.8rem;
+      border-left: 4px solid var(--color-accent);
+      padding: 0.8rem;
+      border-radius: 6px;
+      background: rgba(0, 95, 153, 0.08);
+      display: none;
     }
 
     .step.active {
-      border-color: var(--color-accent);
-      background: rgba(0, 95, 153, 0.08);
-      border-radius: 6px;
-      padding: 0.6rem 0.8rem;
+      display: block;
     }
 
     .step h2 {
@@ -227,13 +228,6 @@
       word-break: break-word;
     }
 
-    .nat-box {
-      max-width: 340px;
-      margin: 0.4rem auto 0;
-      padding-bottom: 0.4rem;
-      min-height: 300px;
-    }
-
     .nat-table tbody tr.inactive {
       color: #999;
       background: #f2f2f2;
@@ -242,15 +236,79 @@
     .nat-table tbody tr.highlight {
       background: #ffe8c7;
       font-weight: 600;
-      position: relative;
+      box-shadow: inset 4px 0 0 var(--color-accent-public);
     }
 
-    .nat-table tbody tr.highlight::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-left: 4px solid var(--color-accent-public);
-      pointer-events: none;
+    .table-panel {
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      padding: 0.4rem 0.6rem 0.6rem;
+      width: 100%;
+    }
+
+    .table-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .table-panel-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .table-panel-body.hidden {
+      display: none;
+    }
+
+    .panel-toggle {
+      background: none;
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+      border-radius: 6px;
+      padding: 0.2rem 0.5rem;
+      min-width: 2.2rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .panel-toggle:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 1px;
+    }
+
+    .table-panel tbody tr.highlight {
+      background: #e6f4ff;
+      box-shadow: inset 4px 0 0 var(--color-accent);
+    }
+
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      font-size: 0.85rem;
+      color: var(--color-text);
+      align-items: center;
+    }
+
+    .options label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: pointer;
+      background: rgba(0, 95, 153, 0.08);
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+    }
+
+    .options input[type="checkbox"] {
+      width: 1rem;
+      height: 1rem;
     }
 
     .toggle-advanced {
@@ -341,61 +399,9 @@
   <main>
     <div class="content">
       <section class="steps" aria-live="polite">
-        <article class="step" id="step-1">
-          <h2>Trin 1 – Chrome-app starter</h2>
-          <p>Chrome på Klient A bruger intern port <span class="badge">51512</span> og vil kontakte <span class="badge" style="background:var(--color-accent-public);">93.184.216.34:80</span>.</p>
-        </article>
-        <article class="step" id="step-2">
-          <h2>Trin 2 – Klient A sender til switch</h2>
-          <p>Pakken forlader Klient A <span class="badge">192.168.1.10</span> og går mod LAN-switchen.</p>
-        </article>
-        <article class="step" id="step-3">
-          <h2>Trin 3 – Switch videresender</h2>
-          <p>Switchen sender videre mod routerens LAN-interface <span class="badge">192.168.1.1</span>. Endnu ingen NAT.</p>
-        </article>
-        <article class="step" id="step-4">
-          <h2>Trin 4 – Router laver PAT (Chrome)</h2>
-          <p>Routeren oversætter kilden til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40001</span> og sender mod internettet.</p>
-        </article>
-        <article class="step" id="step-5">
-          <h2>Trin 5 – Webserver svarer Chrome</h2>
-          <p><span class="badge" style="background:var(--color-accent-public);">93.184.216.34:80</span> sender svaret tilbage til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40001</span>.</p>
-        </article>
-        <article class="step" id="step-6">
-          <h2>Trin 6 – Router slår NAT-op</h2>
-          <p>Routeren finder NAT-tabellens mapning og sender svaret mod LAN-switchen.</p>
-        </article>
-        <article class="step" id="step-7">
-          <h2>Trin 7 – Switch leverer til Chrome</h2>
-          <p>Switchen afleverer svaret til Chrome-appen på port <span class="badge">51512</span>.</p>
-        </article>
-        <article class="step" id="step-8">
-          <h2>Trin 8 – Edge-app starter</h2>
-          <p>Edge på Klient A bruger intern port <span class="badge">51516</span> og vil kontakte <span class="badge" style="background:var(--color-accent-public);">93.182.211.56:80</span>.</p>
-        </article>
-        <article class="step" id="step-9">
-          <h2>Trin 9 – Edge-pakke til switch</h2>
-          <p>Pakken forlader Klient A og går mod switchen ligesom Chrome-trafikken.</p>
-        </article>
-        <article class="step" id="step-10">
-          <h2>Trin 10 – Switch videresender Edge</h2>
-          <p>Switchen sender Edge-pakken mod routeren. Routeren kender endnu ikke forbindelsen.</p>
-        </article>
-        <article class="step" id="step-11">
-          <h2>Trin 11 – Router laver PAT (Edge)</h2>
-          <p>Routeren oversætter til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40011</span> og sender mod <span class="badge" style="background:var(--color-accent-public);">93.182.211.56:80</span>.</p>
-        </article>
-        <article class="step" id="step-12">
-          <h2>Trin 12 – Anden webserver svarer</h2>
-          <p><span class="badge" style="background:var(--color-accent-public);">93.182.211.56:80</span> sender svarpakke til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40011</span>.</p>
-        </article>
-        <article class="step" id="step-13">
-          <h2>Trin 13 – Router matcher Edge</h2>
-          <p>NAT-tabellen slår forbindelsen op og sender svaret tilbage mod LAN'et.</p>
-        </article>
-        <article class="step" id="step-14">
-          <h2>Trin 14 – Switch leverer til Edge</h2>
-          <p>Switchen afleverer svaret til Edge-appen på port <span class="badge">51516</span>. Begge apps har nu modtaget korrekt svar.</p>
+        <article class="step active" id="step-display">
+          <h2 id="step-title">Trin 1</h2>
+          <p id="step-description"></p>
         </article>
       </section>
       <section class="visual" aria-label="Visualisering af NAT/PAT" role="presentation">
@@ -465,11 +471,87 @@
             <text x="0" y="90" text-anchor="middle" fill="#3c3c3c" font-size="11">App: Fildeling</text>
           </g>
 
+          <foreignObject x="20" y="120" width="240" height="220" class="hidden" id="clientArpFo">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="table-panel" data-panel="client-arp">
+              <div class="table-panel-header">
+                <span>Klient A – ARP-cache</span>
+                <button type="button" class="panel-toggle" data-target="clientArpBody" aria-controls="clientArpBody" aria-expanded="true">-</button>
+              </div>
+              <div class="table-panel-body" id="clientArpBody">
+                <table class="nat-table" role="table" aria-label="Klient A ARP tabel">
+                  <caption class="hidden">ARP-cache for Klient A</caption>
+                  <thead>
+                    <tr role="row">
+                      <th role="columnheader">IP</th>
+                      <th role="columnheader">MAC</th>
+                      <th role="columnheader">Kommentar</th>
+                    </tr>
+                  </thead>
+                  <tbody id="clientArpRows">
+                    <tr data-entry="router" role="row">
+                      <td role="cell">192.168.1.1</td>
+                      <td role="cell">00:11:22:33:44:55</td>
+                      <td role="cell">Default gateway</td>
+                    </tr>
+                    <tr data-entry="web" role="row">
+                      <td role="cell">93.184.216.34</td>
+                      <td role="cell">—</td>
+                      <td role="cell">ARP løser kun lokale IP'er</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </foreignObject>
+
           <!-- Switch -->
           <g transform="translate(520,260)">
             <use href="#switch"></use>
             <text x="0" y="-28" text-anchor="middle" fill="#4d6a82" font-weight="600">LAN-switch</text>
           </g>
+
+          <foreignObject x="460" y="120" width="260" height="220" class="hidden" id="switchPortFo">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="table-panel" id="switchPortPanel">
+              <div class="table-panel-header">
+                <span>Switch – porttabel</span>
+                <button type="button" class="panel-toggle" data-target="switchPortBody" aria-controls="switchPortBody" aria-expanded="true">-</button>
+              </div>
+              <div class="table-panel-body" id="switchPortBody">
+                <table class="nat-table" role="table" aria-label="Switch porttabel">
+                  <caption class="hidden">Porttabel på switchen</caption>
+                  <thead>
+                    <tr role="row">
+                      <th role="columnheader">Port</th>
+                      <th role="columnheader">MAC</th>
+                      <th role="columnheader">Enhed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr role="row">
+                      <td role="cell">1</td>
+                      <td role="cell">00:AA:BB:CC:DD:10</td>
+                      <td role="cell">Klient A</td>
+                    </tr>
+                    <tr role="row">
+                      <td role="cell">2</td>
+                      <td role="cell">00:AA:BB:CC:DD:11</td>
+                      <td role="cell">Klient B</td>
+                    </tr>
+                    <tr role="row">
+                      <td role="cell">3</td>
+                      <td role="cell">00:AA:BB:CC:DD:12</td>
+                      <td role="cell">Klient C</td>
+                    </tr>
+                    <tr role="row">
+                      <td role="cell">Uplink</td>
+                      <td role="cell">00:11:22:33:44:55</td>
+                      <td role="cell">Router LAN</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </foreignObject>
 
           <!-- Router -->
           <g transform="translate(760,260)">
@@ -477,29 +559,71 @@
             <text x="0" y="-50" text-anchor="middle" fill="#ffffff" font-weight="600">Router</text>
             <text x="-110" y="-35" text-anchor="end" fill="#1f1f1f" font-size="12">LAN: 192.168.1.1</text>
             <text x="110" y="65" text-anchor="start" fill="rgb(198, 93, 10)" font-size="12">WAN: 203.0.113.5</text>
-
-            <foreignObject x="-170" y="50" width="340" height="340">
-              <div xmlns="http://www.w3.org/1999/xhtml" class="nat-box">
-                <table class="nat-table" role="table" aria-label="NAT tabel over forbindelser">
-                  <caption>NAT-tabel</caption>
-                  <thead>
-                    <tr role="row">
-                      <th role="columnheader">Privat (src)</th>
-                      <th role="columnheader">Offentlig (src)</th>
-                      <th role="columnheader">Dest (dst)</th>
-                      <th role="columnheader">State/Timeout</th>
-                    </tr>
-                  </thead>
-                  <tbody id="nat-body">
-                    <tr class="inactive" role="row">
-                      <td role="cell" colspan="4">Ingen aktive mapperinger endnu</td>
-                    </tr>
-                  </tbody>
-                </table>
-                <label class="toggle-advanced">
-                  <input type="checkbox" id="toggleAdvanced" aria-controls="advancedRows"> Vis avanceret
-                </label>
-                <div id="advancedRows" class="hidden" aria-hidden="true"></div>
+            <foreignObject x="-250" y="-150" width="240" height="220" class="hidden" id="routerArpFo">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="table-panel" data-panel="router-arp">
+                <div class="table-panel-header">
+                  <span>Router – ARP-cache</span>
+                  <button type="button" class="panel-toggle" data-target="routerArpBody" aria-controls="routerArpBody" aria-expanded="true">-</button>
+                </div>
+                <div class="table-panel-body" id="routerArpBody">
+                  <table class="nat-table" role="table" aria-label="Router ARP tabel">
+                    <caption class="hidden">ARP-cache på routeren</caption>
+                    <thead>
+                      <tr role="row">
+                        <th role="columnheader">IP</th>
+                        <th role="columnheader">MAC</th>
+                        <th role="columnheader">Kommentar</th>
+                      </tr>
+                    </thead>
+                    <tbody id="routerArpRows">
+                      <tr data-entry="client-a" role="row">
+                        <td role="cell">192.168.1.10</td>
+                        <td role="cell">00:AA:BB:CC:DD:10</td>
+                        <td role="cell">Klient A</td>
+                      </tr>
+                      <tr data-entry="client-b" role="row">
+                        <td role="cell">192.168.1.11</td>
+                        <td role="cell">00:AA:BB:CC:DD:11</td>
+                        <td role="cell">Klient B</td>
+                      </tr>
+                      <tr data-entry="client-c" role="row">
+                        <td role="cell">192.168.1.12</td>
+                        <td role="cell">00:AA:BB:CC:DD:12</td>
+                        <td role="cell">Klient C</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </foreignObject>
+            <foreignObject x="-190" y="50" width="360" height="360">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="table-panel" id="natPanel">
+                <div class="table-panel-header">
+                  <span>NAT-tabel</span>
+                  <button type="button" class="panel-toggle" data-target="natPanelBody" aria-controls="natPanelBody" aria-expanded="true">-</button>
+                </div>
+                <div class="table-panel-body" id="natPanelBody">
+                  <table class="nat-table" role="table" aria-label="NAT tabel over forbindelser">
+                    <caption class="hidden">NAT-tabel</caption>
+                    <thead>
+                      <tr role="row">
+                        <th role="columnheader">Privat (src)</th>
+                        <th role="columnheader">Offentlig (src)</th>
+                        <th role="columnheader">Dest (dst)</th>
+                        <th role="columnheader">State/Timeout</th>
+                      </tr>
+                    </thead>
+                    <tbody id="nat-body">
+                      <tr class="inactive" role="row">
+                        <td role="cell" colspan="4">Ingen aktive mapperinger endnu</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <label class="toggle-advanced">
+                    <input type="checkbox" id="toggleAdvanced" aria-controls="advancedRows"> Vis avanceret
+                  </label>
+                  <div id="advancedRows" class="hidden" aria-hidden="true"></div>
+                </div>
               </div>
             </foreignObject>
           </g>
@@ -538,6 +662,14 @@
           <!-- Etiket for aktiv linje -->
           <text id="line-label" x="360" y="200" text-anchor="middle" fill="#005f99" font-size="13" opacity="0"></text>
         </svg>
+        <div class="options" role="group" aria-label="Visningsvalg">
+          <label for="toggleArp">
+            <input type="checkbox" id="toggleArp" aria-controls="clientArpFo routerArpFo"> Inkludér ARP-flow fra start
+          </label>
+          <label for="togglePorts">
+            <input type="checkbox" id="togglePorts" aria-controls="switchPortPanel"> Vis switchens porttabel
+          </label>
+        </div>
         <div class="note" id="note-box" aria-live="polite"></div>
         <div class="control-bar" role="group" aria-label="Kontrolpanel for trin">
           <div class="controls">
@@ -557,354 +689,510 @@
     </div>
   </main>
 
-  <script>
-    // Konfigurerbare trin (ændr IP'er, porte og tekster her hvis du vil tilpasse øvelsen)
-    const chromeRow = {
-      private: '192.168.1.10:51512 (Chrome)',
-      public: '203.0.113.5:40001',
+  
+<script>
+  const chromeRow = {
+    private: '192.168.1.10:51512 (Chrome)',
+    public: '203.0.113.5:40001',
+    dest: '93.184.216.34:80',
+    state: 'ESTABLISHED'
+  };
+
+  const edgeRow = {
+    private: '192.168.1.10:51516 (Edge)',
+    public: '203.0.113.5:40011',
+    dest: '93.182.211.56:80',
+    state: 'ESTABLISHED'
+  };
+
+  const advancedRows = [
+    {
+      private: '192.168.1.11:51513',
+      public: '203.0.113.5:40002',
       dest: '93.184.216.34:80',
       state: 'ESTABLISHED'
-    };
-
-    const edgeRow = {
-      private: '192.168.1.10:51516 (Edge)',
-      public: '203.0.113.5:40011',
-      dest: '93.182.211.56:80',
+    },
+    {
+      private: '192.168.1.12:51514',
+      public: '203.0.113.5:40003',
+      dest: '93.184.216.34:80',
       state: 'ESTABLISHED'
-    };
-
-    const steps = [
-      {
-        id: 1,
-        hash: '#trin-1',
-        line: { id: 'line-chrome-internal', direction: 'forward' },
-        label: { text: 'Chrome 51512 forbereder pakke', x: 260, y: 200, color: '#005f99' },
-        note: 'Chrome genererer en HTTP-forespørgsel til 93.184.216.34:80 og bruger den lokale kildeport 51512.',
-        natRows: [],
-        highlightPrivates: []
-      },
-      {
-        id: 2,
-        hash: '#trin-2',
-        line: { id: 'line-client-switch', direction: 'forward' },
-        label: { text: '192.168.1.10 → LAN-switch', x: 360, y: 240, color: '#005f99' },
-        note: 'Klient A sender pakken ud på LAN\'et. Adressen er stadig privat, så internettet kan ikke se den endnu.',
-        natRows: [],
-        highlightPrivates: []
-      },
-      {
-        id: 3,
-        hash: '#trin-3',
-        line: { id: 'line-switch-router', direction: 'forward' },
-        label: { text: 'Switch → Router (192.168.1.1)', x: 580, y: 240, color: '#005f99' },
-        note: 'Switchen videresender rammen til routerens LAN-interface. NAT er stadig ikke aktiveret.',
-        natRows: [],
-        highlightPrivates: []
-      },
-      {
-        id: 4,
-        hash: '#trin-4',
-        line: { id: 'line-router-server1', direction: 'forward' },
-        label: { text: '203.0.113.5:40001 → 93.184.216.34:80', x: 910, y: 220, color: '#c65d0a' },
-        note: 'Routeren laver PAT: kilde bliver 203.0.113.5:40001. Chrome\'s mapning skrives i NAT-tabellen.',
-        natRows: [chromeRow],
-        highlightPrivates: []
-      },
-      {
-        id: 5,
-        hash: '#trin-5',
-        line: { id: 'line-server1-router', direction: 'forward' },
-        label: { text: '93.184.216.34:80 → 203.0.113.5:40001', x: 900, y: 300, color: '#c65d0a' },
-        note: 'Webserveren svarer til routerens offentlige IP og port. Kun derfor ved routeren, at svaret hører til Chrome.',
-        natRows: [chromeRow],
-        highlightPrivates: [chromeRow.private]
-      },
-      {
-        id: 6,
-        hash: '#trin-6',
-        line: { id: 'line-router-switch', direction: 'forward' },
-        label: { text: 'Router → Switch med Chrome-mapping', x: 620, y: 300, color: '#005f99' },
-        note: 'Routeren finder den statefulde entry og omskriver tilbage til 192.168.1.10:51512 før pakken sendes mod LAN.',
-        natRows: [chromeRow],
-        highlightPrivates: [chromeRow.private]
-      },
-      {
-        id: 7,
-        hash: '#trin-7',
-        line: { id: 'line-switch-chrome', direction: 'forward' },
-        label: { text: 'Switch → Chrome (51512)', x: 380, y: 280, color: '#005f99' },
-        note: 'Switchen afleverer svaret direkte til Chrome-appen. Den korrekte port sikrer, at den rigtige app modtager data.',
-        natRows: [chromeRow],
-        highlightPrivates: []
-      },
-      {
-        id: 8,
-        hash: '#trin-8',
-        line: { id: 'line-edge-internal', direction: 'forward' },
-        label: { text: 'Edge 51516 forbereder pakke', x: 260, y: 300, color: '#005f99' },
-        note: 'Edge vil til 93.182.211.56:80 og bruger sin egen lokale kildeport 51516. Flere apps kan dele samme klient.',
-        natRows: [chromeRow],
-        highlightPrivates: []
-      },
-      {
-        id: 9,
-        hash: '#trin-9',
-        line: { id: 'line-client-switch', direction: 'forward' },
-        label: { text: '192.168.1.10 (Edge) → Switch', x: 360, y: 260, color: '#005f99' },
-        note: 'Edge-pakken forlader også Klient A. Indtil routeren oversætter, er pakken stadig privat.',
-        natRows: [chromeRow],
-        highlightPrivates: []
-      },
-      {
-        id: 10,
-        hash: '#trin-10',
-        line: { id: 'line-switch-router', direction: 'forward' },
-        label: { text: 'Switch → Router (Edge)', x: 580, y: 260, color: '#005f99' },
-        note: 'Switchen håndterer flere flows samtidigt. Routeren er klar til at lave endnu en PAT-mapping.',
-        natRows: [chromeRow],
-        highlightPrivates: []
-      },
-      {
-        id: 11,
-        hash: '#trin-11',
-        line: { id: 'line-router-server2', direction: 'forward' },
-        label: { text: '203.0.113.5:40011 → 93.182.211.56:80', x: 920, y: 320, color: '#c65d0a' },
-        note: 'Routeren laver endnu en PAT-entry: 203.0.113.5:40011 peger nu på Edge-appen. Begge apps deler IP men ikke port.',
-        natRows: [chromeRow, edgeRow],
-        highlightPrivates: []
-      },
-      {
-        id: 12,
-        hash: '#trin-12',
-        line: { id: 'line-server2-router', direction: 'forward' },
-        label: { text: '93.182.211.56:80 → 203.0.113.5:40011', x: 920, y: 360, color: '#c65d0a' },
-        note: 'Den anden webserver svarer og bruger den port routeren har oprettet. NAT-tabellen fortæller hvem der skal have svaret.',
-        natRows: [chromeRow, edgeRow],
-        highlightPrivates: [edgeRow.private]
-      },
-      {
-        id: 13,
-        hash: '#trin-13',
-        line: { id: 'line-router-switch', direction: 'forward' },
-        label: { text: 'Router → Switch (Edge)', x: 620, y: 320, color: '#005f99' },
-        note: 'Routeren oversætter tilbage til 192.168.1.10:51516. Den statefulde tabel holder styr på hvilken app der ejer porten.',
-        natRows: [chromeRow, edgeRow],
-        highlightPrivates: [edgeRow.private]
-      },
-      {
-        id: 14,
-        hash: '#trin-14',
-        line: { id: 'line-switch-edge', direction: 'forward' },
-        label: { text: 'Switch → Edge (51516)', x: 380, y: 320, color: '#005f99' },
-        note: 'Switchen afleverer svaret til Edge-appen. Begge forbindelser forbliver aktive indtil timeouts rydder tabellen.',
-        natRows: [chromeRow, edgeRow],
-        highlightPrivates: []
-      }
-    ];
-
-    const allLines = Array.from(document.querySelectorAll('.line'));
-    const lineLabel = document.getElementById('line-label');
-
-    const noteBox = document.getElementById('note-box');
-    const natBody = document.getElementById('nat-body');
-    const progress = document.getElementById('progress');
-    const stepElements = Array.from(document.querySelectorAll('.step'));
-
-    const startBtn = document.getElementById('startBtn');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const autoBtn = document.getElementById('autoBtn');
-    const toggleAdvanced = document.getElementById('toggleAdvanced');
-
-    let currentStep = 1;
-    let autoPlayInterval = null;
-
-    const advancedRows = [
-      {
-        private: '192.168.1.11:51513',
-        public: '203.0.113.5:40002',
-        dest: '93.184.216.34:80',
-        state: 'ESTABLISHED'
-      },
-      {
-        private: '192.168.1.12:51514',
-        public: '203.0.113.5:40003',
-        dest: '93.184.216.34:80',
-        state: 'ESTABLISHED'
-      }
-    ];
-
-    function updateHash(step) {
-      if (history.replaceState) {
-        history.replaceState(null, '', steps[step - 1].hash);
-      } else {
-        location.hash = steps[step - 1].hash;
-      }
     }
+  ];
 
-    function updateLines(stepData) {
-      allLines.forEach(line => line.classList.remove('active', 'animate-forward', 'animate-back'));
-      if (stepData.line) {
-        const lineElement = document.getElementById(stepData.line.id);
-        if (lineElement) {
-          lineElement.classList.add('active');
-          if (stepData.line.direction === 'back') {
-            lineElement.classList.add('animate-back');
-          } else if (stepData.line.direction === 'none') {
-            // ingen animation
-          } else {
-            lineElement.classList.add('animate-forward');
-          }
+  const baseStepTemplates = [
+    {
+      key: 'chrome-start',
+      title: 'Chrome-app starter',
+      description: `Chrome på Klient A bruger intern port <span class="badge">51512</span> og vil kontakte <span class="badge" style="background:var(--color-accent-public);">93.184.216.34:80</span>.`,
+      line: { id: 'line-chrome-internal', direction: 'forward' },
+      label: { text: 'Chrome 51512 forbereder pakke', x: 260, y: 200, color: '#005f99' },
+      note: 'Chrome genererer en HTTP-forespørgsel til 93.184.216.34:80 og bruger den lokale kildeport 51512.',
+      natRows: [],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'client-to-switch',
+      title: 'Klient A sender til switch',
+      description: `Pakken forlader Klient A <span class="badge">192.168.1.10</span> og går mod LAN-switchen.`,
+      line: { id: 'line-client-switch', direction: 'forward' },
+      label: { text: '192.168.1.10 → LAN-switch', x: 360, y: 240, color: '#005f99' },
+      note: 'Klient A sender pakken ud på LAN\'et. Adressen er stadig privat, så internettet kan ikke se den endnu.',
+      natRows: [],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'switch-to-router-chrome',
+      title: 'Switch videresender',
+      description: `Switchen sender videre mod routerens LAN-interface <span class="badge">192.168.1.1</span>. Endnu ingen NAT.`,
+      line: { id: 'line-switch-router', direction: 'forward' },
+      label: { text: 'Switch → Router (192.168.1.1)', x: 580, y: 240, color: '#005f99' },
+      note: 'Switchen videresender rammen til routerens LAN-interface. NAT er stadig ikke aktiveret.',
+      natRows: [],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'router-pat-chrome',
+      title: 'Router laver PAT (Chrome)',
+      description: `Routeren oversætter kilden til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40001</span> og sender mod internettet.`,
+      line: { id: 'line-router-server1', direction: 'forward' },
+      label: { text: '203.0.113.5:40001 → 93.184.216.34:80', x: 910, y: 220, color: '#c65d0a' },
+      note: 'Routeren laver PAT: kilde bliver 203.0.113.5:40001. Chrome\'s mapning skrives i NAT-tabellen.',
+      natRows: [chromeRow],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'server-response-chrome',
+      title: 'Webserver svarer Chrome',
+      description: `<span class="badge" style="background:var(--color-accent-public);">93.184.216.34:80</span> sender svaret tilbage til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40001</span>.`,
+      line: { id: 'line-server1-router', direction: 'forward' },
+      label: { text: '93.184.216.34:80 → 203.0.113.5:40001', x: 900, y: 300, color: '#c65d0a' },
+      note: 'Webserveren svarer til routerens offentlige IP og port. Kun derfor ved routeren, at svaret hører til Chrome.',
+      natRows: [chromeRow],
+      highlightPrivates: [chromeRow.private],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'router-nat-lookup-chrome',
+      title: 'Router slår NAT-op',
+      description: 'Routeren finder NAT-tabellens mapning og sender svaret mod LAN-switchen.',
+      line: { id: 'line-router-switch', direction: 'forward' },
+      label: { text: 'Router → Switch med Chrome-mapping', x: 620, y: 300, color: '#005f99' },
+      note: 'Routeren finder den statefulde entry og omskriver tilbage til 192.168.1.10:51512 før pakken sendes mod LAN.',
+      natRows: [chromeRow],
+      highlightPrivates: [chromeRow.private],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'switch-deliver-chrome',
+      title: 'Switch leverer til Chrome',
+      description: `Switchen afleverer svaret til Chrome-appen på port <span class="badge">51512</span>.`,
+      line: { id: 'line-switch-chrome', direction: 'forward' },
+      label: { text: 'Switch → Chrome (51512)', x: 380, y: 280, color: '#005f99' },
+      note: 'Switchen afleverer svaret direkte til Chrome-appen. Den korrekte port sikrer, at den rigtige app modtager data.',
+      natRows: [chromeRow],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'edge-start',
+      title: 'Edge-app starter',
+      description: `Edge på Klient A bruger intern port <span class="badge">51516</span> og vil kontakte <span class="badge" style="background:var(--color-accent-public);">93.182.211.56:80</span>.`,
+      line: { id: 'line-edge-internal', direction: 'forward' },
+      label: { text: 'Edge 51516 forbereder pakke', x: 260, y: 300, color: '#005f99' },
+      note: 'Edge vil til 93.182.211.56:80 og bruger sin egen lokale kildeport 51516. Flere apps kan dele samme klient.',
+      natRows: [chromeRow],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'edge-to-switch',
+      title: 'Edge-pakke til switch',
+      description: 'Pakken forlader Klient A og går mod switchen ligesom Chrome-trafikken.',
+      line: { id: 'line-client-switch', direction: 'forward' },
+      label: { text: '192.168.1.10 (Edge) → Switch', x: 360, y: 260, color: '#005f99' },
+      note: 'Edge-pakken forlader også Klient A. Indtil routeren oversætter, er pakken stadig privat.',
+      natRows: [chromeRow],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'switch-to-router-edge',
+      title: 'Switch videresender Edge',
+      description: 'Switchen sender Edge-pakken mod routeren. Routeren kender endnu ikke forbindelsen.',
+      line: { id: 'line-switch-router', direction: 'forward' },
+      label: { text: 'Switch → Router (Edge)', x: 580, y: 260, color: '#005f99' },
+      note: 'Switchen håndterer flere flows samtidigt. Routeren er klar til at lave endnu en PAT-mapping.',
+      natRows: [chromeRow],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'router-pat-edge',
+      title: 'Router laver PAT (Edge)',
+      description: `Routeren oversætter til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40011</span> og sender mod <span class="badge" style="background:var(--color-accent-public);">93.182.211.56:80</span>.`,
+      line: { id: 'line-router-server2', direction: 'forward' },
+      label: { text: '203.0.113.5:40011 → 93.182.211.56:80', x: 920, y: 320, color: '#c65d0a' },
+      note: 'Routeren laver endnu en PAT-entry: 203.0.113.5:40011 peger nu på Edge-appen. Begge apps deler IP men ikke port.',
+      natRows: [chromeRow, edgeRow],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'server-response-edge',
+      title: 'Anden webserver svarer',
+      description: `<span class="badge" style="background:var(--color-accent-public);">93.182.211.56:80</span> sender svarpakke til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40011</span>.`,
+      line: { id: 'line-server2-router', direction: 'forward' },
+      label: { text: '93.182.211.56:80 → 203.0.113.5:40011', x: 920, y: 360, color: '#c65d0a' },
+      note: 'Den anden webserver svarer og bruger den port routeren har oprettet. NAT-tabellen fortæller hvem der skal have svaret.',
+      natRows: [chromeRow, edgeRow],
+      highlightPrivates: [edgeRow.private],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'router-match-edge',
+      title: 'Router matcher Edge',
+      description: 'NAT-tabellen slår forbindelsen op og sender svaret tilbage mod LAN\'et.',
+      line: { id: 'line-router-switch', direction: 'forward' },
+      label: { text: 'Router → Switch (Edge)', x: 620, y: 320, color: '#005f99' },
+      note: 'Routeren oversætter tilbage til 192.168.1.10:51516. Den statefulde tabel holder styr på hvilken app der ejer porten.',
+      natRows: [chromeRow, edgeRow],
+      highlightPrivates: [edgeRow.private],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'switch-deliver-edge',
+      title: 'Switch leverer til Edge',
+      description: `Switchen afleverer svaret til Edge-appen på port <span class="badge">51516</span>. Begge apps har nu modtaget korrekt svar.`,
+      line: { id: 'line-switch-edge', direction: 'forward' },
+      label: { text: 'Switch → Edge (51516)', x: 380, y: 320, color: '#005f99' },
+      note: 'Switchen afleverer svaret til Edge-appen. Begge forbindelser forbliver aktive indtil timeouts rydder tabellen.',
+      natRows: [chromeRow, edgeRow],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    }
+  ];
+
+  const arpStepTemplates = [
+    {
+      key: 'arp-request',
+      title: 'ARP-forespørgsel fra Klient A',
+      description: `Klient A udsender en ARP-broadcast for at finde <span class="badge">192.168.1.1</span> (routerens MAC).`,
+      line: { id: 'line-client-switch', direction: 'forward' },
+      label: { text: 'ARP: Hvem har 192.168.1.1?', x: 360, y: 230, color: '#005f99' },
+      note: 'Chrome kontrollerer ARP-cache og sender en broadcast for at lære routerens MAC-adresse.',
+      natRows: [],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'arp-reply-router',
+      title: 'Routeren svarer på ARP',
+      description: `Routeren svarer med MAC <span class="badge">00:11:22:33:44:55</span> og registrerer Klient A i sin ARP-cache.`,
+      line: { id: 'line-router-switch', direction: 'forward' },
+      label: { text: 'ARP-svar fra routeren', x: 620, y: 220, color: '#005f99' },
+      note: 'Routeren sender et unicast ARP-svar tilbage via switchen og gemmer Klient A → MAC 00:AA:BB:CC:DD:10.',
+      natRows: [],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: ['client-a'] }
+    },
+    {
+      key: 'arp-complete',
+      title: 'Klient A gemmer ARP-svar',
+      description: `Switchen leverer svaret til Klient A, der nu har gatewayens MAC <span class="badge">00:11:22:33:44:55</span> i cachen.`,
+      line: { id: 'line-switch-chrome', direction: 'forward' },
+      label: { text: 'ARP-svar → Klient A', x: 320, y: 250, color: '#005f99' },
+      note: 'Klient A opdaterer sin ARP-cache og er klar til at sende IP-pakken med korrekt destinations-MAC.',
+      natRows: [],
+      highlightPrivates: [],
+      arpHighlight: { client: ['router'], router: ['client-a'] }
+    }
+  ];
+
+  let steps = [];
+  let currentStepIndex = 0;
+  let autoPlayInterval = null;
+  let arpEnabled = false;
+
+  const allLines = Array.from(document.querySelectorAll('.line'));
+  const lineLabel = document.getElementById('line-label');
+  const noteBox = document.getElementById('note-box');
+  const natBody = document.getElementById('nat-body');
+  const progress = document.getElementById('progress');
+  const stepTitleEl = document.getElementById('step-title');
+  const stepDescriptionEl = document.getElementById('step-description');
+
+  const startBtn = document.getElementById('startBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const autoBtn = document.getElementById('autoBtn');
+  const toggleAdvanced = document.getElementById('toggleAdvanced');
+  const toggleArp = document.getElementById('toggleArp');
+  const togglePorts = document.getElementById('togglePorts');
+
+  const clientArpFo = document.getElementById('clientArpFo');
+  const routerArpFo = document.getElementById('routerArpFo');
+  const switchPortFo = document.getElementById('switchPortFo');
+  const clientArpRows = Array.from(document.querySelectorAll('#clientArpRows tr'));
+  const routerArpRows = Array.from(document.querySelectorAll('#routerArpRows tr'));
+  const panelToggles = Array.from(document.querySelectorAll('.panel-toggle'));
+
+  function buildSteps() {
+    const combined = [...(arpEnabled ? arpStepTemplates : []), ...baseStepTemplates];
+    return combined.map((step, index) => ({
+      ...step,
+      id: index + 1,
+      hash: `#trin-${index + 1}`
+    }));
+  }
+
+  function updateHashFromStep(index) {
+    const step = steps[index];
+    if (!step) return;
+    if (history.replaceState) {
+      history.replaceState(null, '', step.hash);
+    } else {
+      location.hash = step.hash;
+    }
+  }
+
+  function updateLines(stepData) {
+    allLines.forEach(line => line.classList.remove('active', 'animate-forward', 'animate-back'));
+    if (stepData.line) {
+      const lineElement = document.getElementById(stepData.line.id);
+      if (lineElement) {
+        lineElement.classList.add('active');
+        if (stepData.line.direction === 'back') {
+          lineElement.classList.add('animate-back');
+        } else if (stepData.line.direction === 'none') {
+          // ingen animation
+        } else {
+          lineElement.classList.add('animate-forward');
         }
       }
-
-      if (stepData.label && stepData.label.text) {
-        lineLabel.textContent = stepData.label.text;
-        lineLabel.setAttribute('x', stepData.label.x);
-        lineLabel.setAttribute('y', stepData.label.y);
-        lineLabel.setAttribute('fill', stepData.label.color || '#005f99');
-        lineLabel.setAttribute('opacity', '1');
-      } else {
-        lineLabel.setAttribute('opacity', '0');
-      }
     }
 
-    function renderNatTable(rows, showAdvanced, highlightPrivates = []) {
-      const highlightSet = new Set(highlightPrivates);
-      natBody.innerHTML = '';
-      if (!rows.length) {
-        const tr = document.createElement('tr');
-        tr.className = 'inactive';
-        const td = document.createElement('td');
-        td.colSpan = 4;
-        td.textContent = 'Ingen aktive mapperinger endnu';
-        tr.appendChild(td);
-        natBody.appendChild(tr);
+    if (stepData.label && stepData.label.text) {
+      lineLabel.textContent = stepData.label.text;
+      lineLabel.setAttribute('x', stepData.label.x);
+      lineLabel.setAttribute('y', stepData.label.y);
+      lineLabel.setAttribute('fill', stepData.label.color || '#005f99');
+      lineLabel.setAttribute('opacity', '1');
+    } else {
+      lineLabel.setAttribute('opacity', '0');
+    }
+  }
+
+  function renderNatTable(rows, showAdvanced, highlightPrivates = []) {
+    const highlightSet = new Set(highlightPrivates);
+    natBody.innerHTML = '';
+    const combined = [...rows];
+    if (showAdvanced) {
+      combined.push(...advancedRows);
+    }
+
+    if (!combined.length) {
+      const tr = document.createElement('tr');
+      tr.className = 'inactive';
+      const td = document.createElement('td');
+      td.colSpan = 4;
+      td.textContent = 'Ingen aktive mapperinger endnu';
+      tr.appendChild(td);
+      natBody.appendChild(tr);
+      return;
+    }
+
+    combined.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td role="cell">${row.private}</td>
+        <td role="cell">${row.public}</td>
+        <td role="cell">${row.dest}</td>
+        <td role="cell">${row.state}</td>
+      `;
+      if (highlightSet.has(row.private)) {
+        tr.classList.add('highlight');
+      }
+      natBody.appendChild(tr);
+    });
+  }
+
+  function updateArpHighlight(arpHighlight = {}) {
+    const clientTargets = new Set(arpHighlight.client || []);
+    clientArpRows.forEach(row => {
+      row.classList.toggle('highlight', clientTargets.has(row.dataset.entry));
+    });
+    const routerTargets = new Set(arpHighlight.router || []);
+    routerArpRows.forEach(row => {
+      row.classList.toggle('highlight', routerTargets.has(row.dataset.entry));
+    });
+  }
+
+  function renderStep(stepNumber) {
+    if (!steps.length) return;
+    const clamped = Math.max(1, Math.min(stepNumber, steps.length));
+    const stepData = steps[clamped - 1];
+    currentStepIndex = clamped - 1;
+
+    updateHashFromStep(currentStepIndex);
+    updateLines(stepData);
+    stepTitleEl.textContent = `Trin ${clamped} – ${stepData.title}`;
+    stepDescriptionEl.innerHTML = stepData.description;
+    noteBox.textContent = stepData.note;
+    renderNatTable(stepData.natRows, toggleAdvanced.checked, stepData.highlightPrivates || []);
+    updateArpHighlight(stepData.arpHighlight || { client: [], router: [] });
+    progress.textContent = `Trin ${clamped} / ${steps.length}`;
+
+    prevBtn.disabled = clamped === 1;
+    nextBtn.disabled = clamped === steps.length;
+  }
+
+  function goToStep(stepNumber) {
+    const clamped = Math.max(1, Math.min(stepNumber, steps.length));
+    renderStep(clamped);
+  }
+
+  function startAutoPlay() {
+    stopAutoPlay();
+    autoBtn.textContent = 'Stop auto';
+    autoBtn.setAttribute('aria-pressed', 'true');
+    autoPlayInterval = setInterval(() => {
+      if (currentStepIndex >= steps.length - 1) {
+        stopAutoPlay();
         return;
       }
+      renderStep(currentStepIndex + 2);
+    }, 2000);
+  }
 
-      [...rows, ...(showAdvanced ? advancedRows : [])].forEach(row => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td role="cell">${row.private}</td>
-          <td role="cell">${row.public}</td>
-          <td role="cell">${row.dest}</td>
-          <td role="cell">${row.state}</td>
-        `;
-        if (highlightSet.has(row.private)) {
-          tr.classList.add('highlight');
-        }
-        natBody.appendChild(tr);
-      });
+  function stopAutoPlay() {
+    if (autoPlayInterval) {
+      clearInterval(autoPlayInterval);
+      autoPlayInterval = null;
     }
+    autoBtn.textContent = 'Auto-afspil';
+    autoBtn.setAttribute('aria-pressed', 'false');
+  }
 
-    function renderStep(step) {
-      const stepData = steps[step - 1];
-      currentStep = step;
-      updateHash(step);
-      updateLines(stepData);
-      noteBox.textContent = stepData.note;
+  function updateArpTablesVisibility() {
+    const hidden = !arpEnabled;
+    [clientArpFo, routerArpFo].forEach(panel => {
+      if (!panel) return;
+      panel.classList.toggle('hidden', hidden);
+      panel.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+    });
+    if (hidden) {
+      updateArpHighlight({ client: [], router: [] });
+    }
+  }
+
+  function updateSwitchPortVisibility() {
+    const show = togglePorts.checked;
+    if (switchPortFo) {
+      switchPortFo.classList.toggle('hidden', !show);
+      switchPortFo.setAttribute('aria-hidden', show ? 'false' : 'true');
+    }
+  }
+
+  function rebuildSteps({ fromHash = false } = {}) {
+    steps = buildSteps();
+    const hash = window.location.hash;
+    let targetStep = 1;
+    if (fromHash) {
+      const foundIndex = steps.findIndex(step => step.hash === hash);
+      if (foundIndex !== -1) {
+        targetStep = foundIndex + 1;
+      }
+    }
+    renderStep(targetStep);
+  }
+
+  panelToggles.forEach(button => {
+    button.addEventListener('click', () => {
+      const targetId = button.getAttribute('data-target');
+      const body = document.getElementById(targetId);
+      if (!body) return;
+      const willCollapse = !body.classList.contains('hidden');
+      body.classList.toggle('hidden', willCollapse);
+      button.textContent = willCollapse ? '[]' : '-';
+      button.setAttribute('aria-expanded', willCollapse ? 'false' : 'true');
+    });
+  });
+
+  startBtn.addEventListener('click', () => {
+    stopAutoPlay();
+    goToStep(1);
+  });
+
+  prevBtn.addEventListener('click', () => {
+    stopAutoPlay();
+    goToStep(currentStepIndex);
+  });
+
+  nextBtn.addEventListener('click', () => {
+    stopAutoPlay();
+    goToStep(currentStepIndex + 2);
+  });
+
+  autoBtn.addEventListener('click', () => {
+    if (autoPlayInterval) {
+      stopAutoPlay();
+    } else {
+      startAutoPlay();
+    }
+  });
+
+  toggleAdvanced.addEventListener('change', () => {
+    const stepData = steps[currentStepIndex];
+    if (stepData) {
       renderNatTable(stepData.natRows, toggleAdvanced.checked, stepData.highlightPrivates || []);
-      progress.textContent = `Trin ${step} / ${steps.length}`;
-
-      stepElements.forEach((el, index) => {
-        el.classList.toggle('active', index === step - 1);
-      });
-
-      prevBtn.disabled = step === 1;
-      nextBtn.disabled = step === steps.length;
     }
+  });
 
-    function goToStep(step) {
-      const clamped = Math.max(1, Math.min(step, steps.length));
-      renderStep(clamped);
-    }
+  toggleArp.addEventListener('change', () => {
+    arpEnabled = toggleArp.checked;
+    stopAutoPlay();
+    updateArpTablesVisibility();
+    rebuildSteps();
+  });
 
-    function startAutoPlay() {
+  togglePorts.addEventListener('change', () => {
+    updateSwitchPortVisibility();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
       stopAutoPlay();
-      autoBtn.textContent = 'Stop auto';
-      autoBtn.setAttribute('aria-pressed', 'true');
-      autoPlayInterval = setInterval(() => {
-        if (currentStep >= steps.length) {
-          stopAutoPlay();
-          return;
-        }
-        goToStep(currentStep + 1);
-      }, 2000);
+      goToStep(currentStepIndex + 2);
     }
-
-    function stopAutoPlay() {
-      if (autoPlayInterval) {
-        clearInterval(autoPlayInterval);
-        autoPlayInterval = null;
-      }
-      autoBtn.textContent = 'Auto-afspil';
-      autoBtn.setAttribute('aria-pressed', 'false');
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      stopAutoPlay();
+      goToStep(currentStepIndex);
     }
-
-    startBtn.addEventListener('click', () => {
-      stopAutoPlay();
-      goToStep(1);
-    });
-
-    prevBtn.addEventListener('click', () => {
-      stopAutoPlay();
-      goToStep(currentStep - 1);
-    });
-
-    nextBtn.addEventListener('click', () => {
-      stopAutoPlay();
-      goToStep(currentStep + 1);
-    });
-
-    autoBtn.addEventListener('click', () => {
-      if (autoPlayInterval) {
-        stopAutoPlay();
-      } else {
-        startAutoPlay();
-      }
-    });
-
-    toggleAdvanced.addEventListener('change', () => {
-      const stepData = steps[currentStep - 1];
-      renderNatTable(stepData.natRows, toggleAdvanced.checked, stepData.highlightPrivates || []);
-    });
-
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        stopAutoPlay();
-        goToStep(currentStep + 1);
-      }
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        stopAutoPlay();
-        goToStep(currentStep - 1);
-      }
-      if ((event.key === ' ' || event.key === 'Enter') && document.activeElement instanceof HTMLButtonElement) {
-        document.activeElement.click();
-      }
-    });
-
-    function initFromHash() {
-      const hash = window.location.hash;
-      const found = steps.find(step => step.hash === hash);
-      if (found) {
-        renderStep(found.id);
-      } else {
-        renderStep(1);
-      }
+    if ((event.key === ' ' || event.key === 'Enter') && document.activeElement instanceof HTMLButtonElement) {
+      document.activeElement.click();
     }
+  });
 
-    window.addEventListener('hashchange', () => {
-      const hash = window.location.hash;
-      const found = steps.find(step => step.hash === hash);
-      if (found && found.id !== currentStep) {
-        renderStep(found.id);
-      }
-    });
+  window.addEventListener('hashchange', () => {
+    const hash = window.location.hash;
+    const foundIndex = steps.findIndex(step => step.hash === hash);
+    if (foundIndex !== -1 && foundIndex !== currentStepIndex) {
+      stopAutoPlay();
+      renderStep(foundIndex + 1);
+    }
+  });
 
-    initFromHash();
-  </script>
+  updateArpTablesVisibility();
+  updateSwitchPortVisibility();
+  rebuildSteps({ fromHash: true });
+</script>
+
 </body>
 </html>
