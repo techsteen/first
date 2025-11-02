@@ -18,6 +18,7 @@
       --color-surface: #ffffff;
       --shadow: 0 4px 12px rgba(0,0,0,0.08);
       --spacing: 1.2rem;
+      --steps-width: clamp(260px, 24vw, 320px);
       font-size: 16px;
     }
 
@@ -49,20 +50,35 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: var(--spacing);
+      padding: var(--spacing) clamp(0.6rem, 2vw, 1.6rem);
       gap: var(--spacing);
+      overflow-x: hidden;
     }
 
     .content {
-      display: grid;
-      grid-template-columns: minmax(240px, 360px) 1fr;
+      position: relative;
+      display: flex;
+      flex-direction: column;
       gap: var(--spacing);
       flex: 1;
+      width: 100%;
     }
 
     @media (max-width: 900px) {
       .content {
-        grid-template-columns: 1fr;
+        padding-left: 0;
+      }
+      .steps {
+        position: relative;
+        width: 100%;
+        height: auto;
+        overflow: visible;
+        margin-bottom: var(--spacing);
+      }
+      .visual {
+        margin-left: 0;
+        padding-left: var(--spacing);
+        width: 100%;
       }
     }
 
@@ -75,6 +91,12 @@
       flex-direction: column;
       gap: 0.8rem;
       min-height: 220px;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: var(--steps-width);
+      height: 100%;
+      overflow: auto;
     }
 
     .step {
@@ -108,14 +130,16 @@
       display: flex;
       flex-direction: column;
       gap: 1rem;
+      margin-left: calc(-1 * (var(--steps-width) + var(--spacing)));
+      padding-left: calc(var(--steps-width) + 2 * var(--spacing));
+      width: calc(100% + var(--steps-width) + var(--spacing));
     }
 
     svg {
       width: 100%;
       height: 60vh;
       max-height: 760px;
-      max-width: 1100px;
-      margin: 0 auto;
+      margin: 0;
       display: block;
     }
 
@@ -266,6 +290,7 @@
       gap: 0.4rem;
       flex: 1;
       overflow: auto;
+      max-height: 320px;
     }
 
     .table-panel-body.hidden {
@@ -296,6 +321,17 @@
 
     .draggable-fo.dragging .table-panel-header {
       cursor: grabbing;
+    }
+
+    .table-panel table {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: collapse;
+    }
+
+    .table-panel td,
+    .table-panel th {
+      white-space: nowrap;
     }
 
     .table-panel tbody tr.highlight {
@@ -396,7 +432,21 @@
         box-shadow: none;
       }
       .content {
+        display: grid;
         grid-template-columns: 1fr 1fr;
+        padding-left: 0;
+        gap: var(--spacing);
+      }
+      .steps {
+        position: relative;
+        width: 100%;
+        height: auto;
+        overflow: visible;
+      }
+      .visual {
+        width: 100%;
+        margin-left: 0;
+        padding-left: var(--spacing);
       }
       button, .toggle-advanced, .control-bar {
         display: none !important;
