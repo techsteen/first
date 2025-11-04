@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NAT/PAT – trin for trin</title>
+  <style>
+    :root {
+      --color-bg: #f7f7f3;
+      --color-text: #1f1f1f;
+      --color-accent: #005f99; /* privat IP farve */
+      --color-accent-public: #c65d0a; /* offentlig IP farve */
+      --color-port: #3c3c3c;
+      --color-muted: #666;
+      --color-border: #cfcfcf;
+      --color-note: #fff6d9;
+      --color-router: #4c5b5c;
+      --color-surface: #ffffff;
+      --shadow: 0 4px 12px rgba(0,0,0,0.08);
+      --spacing: 1.2rem;
+      --steps-width: clamp(260px, 24vw, 320px);
+      font-size: 16px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #1a3a4f;
+      color: #fff;
+      padding: 1rem 2rem;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: var(--spacing) clamp(0.6rem, 2vw, 1.6rem);
+      gap: var(--spacing);
+      overflow-x: hidden;
+    }
+
+    .content {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing);
+      flex: 1;
+      width: 100%;
+    }
+
+    @media (max-width: 900px) {
+      .content {
+        padding-left: 0;
+      }
+      .steps {
+        position: relative;
+        width: 100%;
+        height: auto;
+        overflow: visible;
+        margin-bottom: var(--spacing);
+      }
+      .visual {
+        margin-left: 0;
+        padding-left: var(--spacing);
+        width: 100%;
+      }
+    }
+
+    .steps {
+      background: var(--color-surface);
+      border-radius: 12px;
+      padding: var(--spacing);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      min-height: 220px;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: var(--steps-width);
+      height: 100%;
+      overflow: auto;
+    }
+
+    .step {
+      border-left: 4px solid var(--color-accent);
+      padding: 0.8rem;
+      border-radius: 6px;
+      background: rgba(0, 95, 153, 0.08);
+      display: none;
+    }
+
+    .step.active {
+      display: block;
+    }
+
+    .step h2 {
+      margin: 0 0 0.3rem;
+      font-size: 1.1rem;
+    }
+
+    .step p {
+      margin: 0;
+      color: var(--color-muted);
+    }
+
+    .visual {
+      background: var(--color-surface);
+      border-radius: 12px;
+      padding: var(--spacing);
+      box-shadow: var(--shadow);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-left: calc(-1 * (var(--steps-width) + var(--spacing)));
+      padding-left: calc(var(--steps-width) + 2 * var(--spacing));
+      width: calc(100% + var(--steps-width) + var(--spacing));
+    }
+
+    svg {
+      width: 100%;
+      height: 60vh;
+      max-height: 760px;
+      margin: 0;
+      display: block;
+    }
+
+    .note {
+      background: var(--color-note);
+      border-left: 4px solid var(--color-accent-public);
+      padding: 0.6rem 0.8rem;
+      border-radius: 8px;
+      color: #5a4b00;
+      font-size: 0.95rem;
+    }
+
+    .legend {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      font-size: 0.9rem;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.1rem 0.4rem;
+      background: var(--color-port);
+      color: #fff;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .control-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.6rem 0.8rem;
+      border-radius: 10px;
+      background: #e8edf2;
+      border: 1px solid var(--color-border);
+      margin-top: 0.6rem;
+    }
+
+    .controls {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 8px;
+      background: #1a3a4f;
+      color: #fff;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    button:focus-visible {
+      outline: 3px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+
+    button[disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button:hover:not([disabled]), button:focus-visible:not([disabled]) {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    }
+
+    .progress {
+      font-weight: 600;
+      color: var(--color-muted);
+    }
+
+    .nat-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.4rem;
+      font-size: 0.8rem;
+      background: rgba(255,255,255,0.9);
+      border-radius: 8px;
+      overflow: hidden;
+      table-layout: fixed;
+    }
+
+    .nat-table caption {
+      text-align: left;
+      padding: 0.4rem 0.6rem;
+      font-weight: 600;
+      background: rgba(0,0,0,0.05);
+    }
+
+    .nat-table th, .nat-table td {
+      border: 1px solid var(--color-border);
+      padding: 0.3rem 0.4rem;
+      text-align: left;
+      word-break: break-word;
+    }
+
+    .nat-table tbody tr.inactive {
+      color: #999;
+      background: #f2f2f2;
+    }
+
+    .nat-table tbody tr.highlight {
+      background: #ffe8c7;
+      font-weight: 600;
+      box-shadow: inset 4px 0 0 var(--color-accent-public);
+    }
+
+    .table-panel {
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      padding: 0.4rem 0.6rem 0.6rem;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      min-height: 150px;
+    }
+
+    .table-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .table-panel-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      flex: 1;
+      overflow: auto;
+      max-height: 320px;
+    }
+
+    .table-panel-body.hidden {
+      display: none;
+    }
+
+    .panel-toggle {
+      background: none;
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+      border-radius: 6px;
+      padding: 0.2rem 0.5rem;
+      min-width: 2.2rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .panel-toggle:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 1px;
+    }
+
+    .draggable-fo .table-panel-header {
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .draggable-fo.dragging .table-panel-header {
+      cursor: grabbing;
+    }
+
+    .table-panel table {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: collapse;
+    }
+
+    .table-panel td,
+    .table-panel th {
+      white-space: nowrap;
+    }
+
+    .table-panel tbody tr.highlight {
+      background: #e6f4ff;
+      box-shadow: inset 4px 0 0 var(--color-accent);
+    }
+
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      font-size: 0.85rem;
+      color: var(--color-text);
+      align-items: center;
+    }
+
+    .options label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: pointer;
+      background: rgba(0, 95, 153, 0.08);
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+    }
+
+    .options input[type="checkbox"] {
+      width: 1rem;
+      height: 1rem;
+    }
+
+    .toggle-advanced {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: var(--color-accent);
+      margin-top: 0.4rem;
+    }
+
+    .toggle-advanced input {
+      width: 1.2rem;
+      height: 1.2rem;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .line {
+      stroke-dasharray: 6 6;
+      stroke-width: 3;
+      fill: none;
+      opacity: 0.12;
+      transition: opacity 0.4s ease;
+    }
+
+    .line.active {
+      opacity: 1;
+    }
+
+    .animate-forward {
+      animation: dash 1.6s linear infinite;
+    }
+
+    .animate-back {
+      animation: dash 1.6s linear infinite reverse;
+    }
+
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -60;
+      }
+    }
+
+    .info-text {
+      font-size: 0.9rem;
+      color: var(--color-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .info-text strong {
+      color: var(--color-text);
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        color: #000;
+      }
+      header {
+        background: none;
+        color: #000;
+        box-shadow: none;
+      }
+      .content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding-left: 0;
+        gap: var(--spacing);
+      }
+      .steps {
+        position: relative;
+        width: 100%;
+        height: auto;
+        overflow: visible;
+      }
+      .visual {
+        width: 100%;
+        margin-left: 0;
+        padding-left: var(--spacing);
+      }
+      button, .toggle-advanced, .control-bar {
+        display: none !important;
+      }
+      .step {
+        border: 1px solid #000;
+      }
+      .visual, .steps {
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>NAT/PAT – trin for trin</header>
+  <main>
+    <div class="content">
+      <section class="steps" aria-live="polite">
+        <article class="step active" id="step-display">
+          <h2 id="step-title">Trin 1</h2>
+          <p id="step-description"></p>
+        </article>
+      </section>
+      <section class="visual" aria-label="Visualisering af NAT/PAT" role="presentation">
+        <svg viewBox="0 0 1200 640" role="img" aria-labelledby="nat-diagram-title">
+          <title id="nat-diagram-title">Diagram over NAT og PAT flow</title>
+          <defs>
+            <!-- Ikoner kan tilpasses ved at ændre farver her -->
+            <g id="client">
+              <rect x="-35" y="-25" width="70" height="50" rx="8" ry="8" fill="#d7ecfa" stroke="#005f99" stroke-width="2"></rect>
+              <rect x="-25" y="10" width="50" height="15" rx="4" fill="#005f99"></rect>
+            </g>
+            <g id="router">
+              <rect x="-45" y="-30" width="90" height="60" rx="10" fill="#4c5b5c" stroke="#2f3d40" stroke-width="2"></rect>
+              <rect x="-30" y="-18" width="60" height="12" rx="2" fill="#94b0b3"></rect>
+              <circle cx="-15" cy="10" r="6" fill="#94b0b3"></circle>
+              <circle cx="0" cy="10" r="6" fill="#94b0b3"></circle>
+              <circle cx="15" cy="10" r="6" fill="#94b0b3"></circle>
+            </g>
+            <g id="cloud">
+              <path d="M-60 10 C-70 -30 -20 -40 -5 -10 C0 -40 60 -30 55 10 C80 25 60 60 20 45 C-10 70 -80 45 -60 10" fill="#dde6f5" stroke="#5b6f8e" stroke-width="2"></path>
+            </g>
+            <g id="server">
+              <rect x="-35" y="-30" width="70" height="60" rx="8" fill="#ffe4cc" stroke="#c65d0a" stroke-width="2"></rect>
+              <rect x="-25" y="-16" width="50" height="12" rx="2" fill="#c65d0a"></rect>
+              <rect x="-25" y="4" width="50" height="12" rx="2" fill="#c65d0a"></rect>
+            </g>
+            <g id="switch">
+              <rect x="-40" y="-18" width="80" height="36" rx="6" fill="#d9e4ef" stroke="#4d6a82" stroke-width="2"></rect>
+              <circle cx="-20" cy="0" r="4" fill="#4d6a82"></circle>
+              <circle cx="0" cy="0" r="4" fill="#4d6a82"></circle>
+              <circle cx="20" cy="0" r="4" fill="#4d6a82"></circle>
+            </g>
+          </defs>
+
+          <!-- LAN sky -->
+          <use href="#cloud" x="80" y="120"></use>
+          <text x="160" y="70" text-anchor="middle" fill="#1f1f1f" font-weight="600">LAN</text>
+
+          <!-- Klienter -->
+          <g transform="translate(220,240)">
+            <use href="#client"></use>
+            <text x="0" y="40" text-anchor="middle" fill="#005f99" font-weight="600">Klient A</text>
+            <text x="0" y="58" text-anchor="middle" fill="#005f99" font-size="12">192.168.1.10</text>
+            <g transform="translate(0,82)">
+              <rect x="-48" y="-22" width="96" height="40" rx="6" fill="#fbe4dc" stroke="#c65d0a" stroke-width="1.5"></rect>
+              <text x="0" y="-4" text-anchor="middle" fill="#c65d0a" font-size="12" font-weight="600">Chrome</text>
+              <text x="0" y="12" text-anchor="middle" fill="#3c3c3c" font-size="11">Port 51512</text>
+            </g>
+            <g transform="translate(0,132)">
+              <rect x="-48" y="-22" width="96" height="40" rx="6" fill="#e3ecfb" stroke="#2a5cb3" stroke-width="1.5"></rect>
+              <text x="0" y="-4" text-anchor="middle" fill="#2a5cb3" font-size="12" font-weight="600">Edge</text>
+              <text x="0" y="12" text-anchor="middle" fill="#3c3c3c" font-size="11">Port 51516</text>
+            </g>
+          </g>
+          <g transform="translate(90,430)">
+            <use href="#client"></use>
+            <text x="0" y="40" text-anchor="middle" fill="#005f99" font-weight="600">Klient B</text>
+            <text x="0" y="58" text-anchor="middle" fill="#005f99" font-size="12">192.168.1.11</text>
+            <text x="0" y="74" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 51513</text>
+            <text x="0" y="90" text-anchor="middle" fill="#3c3c3c" font-size="11">App: Videomøde</text>
+          </g>
+          <g transform="translate(360,430)">
+            <use href="#client"></use>
+            <text x="0" y="40" text-anchor="middle" fill="#005f99" font-weight="600">Klient C</text>
+            <text x="0" y="58" text-anchor="middle" fill="#005f99" font-size="12">192.168.1.12</text>
+            <text x="0" y="74" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 51514</text>
+            <text x="0" y="90" text-anchor="middle" fill="#3c3c3c" font-size="11">App: Fildeling</text>
+          </g>
+
+          <foreignObject x="20" y="120" width="240" height="220" class="hidden draggable-fo" id="clientArpFo">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="table-panel" data-panel="client-arp">
+              <div class="table-panel-header">
+                <span>Klient A – ARP-cache</span>
+                <button type="button" class="panel-toggle" data-target="clientArpBody" aria-controls="clientArpBody" aria-expanded="true">-</button>
+              </div>
+              <div class="table-panel-body" id="clientArpBody">
+                <table class="nat-table" role="table" aria-label="Klient A ARP tabel">
+                  <caption class="hidden">ARP-cache for Klient A</caption>
+                  <thead>
+                    <tr role="row">
+                      <th role="columnheader">IP</th>
+                      <th role="columnheader">MAC</th>
+                      <th role="columnheader">Kommentar</th>
+                    </tr>
+                  </thead>
+                  <tbody id="clientArpRows">
+                    <tr data-entry="router" role="row">
+                      <td role="cell">192.168.1.1</td>
+                      <td role="cell">00:11:22:33:44:55</td>
+                      <td role="cell">Default gateway</td>
+                    </tr>
+                    <tr data-entry="web" role="row">
+                      <td role="cell">93.184.216.34</td>
+                      <td role="cell">—</td>
+                      <td role="cell">ARP løser kun lokale IP'er</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </foreignObject>
+
+          <!-- Switch -->
+          <g transform="translate(520,260)">
+            <use href="#switch"></use>
+            <text x="0" y="-28" text-anchor="middle" fill="#4d6a82" font-weight="600">LAN-switch</text>
+          </g>
+
+          <foreignObject x="460" y="120" width="260" height="220" class="hidden draggable-fo" id="switchPortFo">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="table-panel" id="switchPortPanel">
+              <div class="table-panel-header">
+                <span>Switch – porttabel</span>
+                <button type="button" class="panel-toggle" data-target="switchPortBody" aria-controls="switchPortBody" aria-expanded="true">-</button>
+              </div>
+              <div class="table-panel-body" id="switchPortBody">
+                <table class="nat-table" role="table" aria-label="Switch porttabel">
+                  <caption class="hidden">Porttabel på switchen</caption>
+                  <thead>
+                    <tr role="row">
+                      <th role="columnheader">Port</th>
+                      <th role="columnheader">MAC</th>
+                      <th role="columnheader">Enhed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr role="row">
+                      <td role="cell">1</td>
+                      <td role="cell">00:AA:BB:CC:DD:10</td>
+                      <td role="cell">Klient A</td>
+                    </tr>
+                    <tr role="row">
+                      <td role="cell">2</td>
+                      <td role="cell">00:AA:BB:CC:DD:11</td>
+                      <td role="cell">Klient B</td>
+                    </tr>
+                    <tr role="row">
+                      <td role="cell">3</td>
+                      <td role="cell">00:AA:BB:CC:DD:12</td>
+                      <td role="cell">Klient C</td>
+                    </tr>
+                    <tr role="row">
+                      <td role="cell">Uplink</td>
+                      <td role="cell">00:11:22:33:44:55</td>
+                      <td role="cell">Router LAN</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </foreignObject>
+
+          <!-- Router -->
+          <g transform="translate(760,260)">
+            <use href="#router"></use>
+            <text x="0" y="-50" text-anchor="middle" fill="#ffffff" font-weight="600">Router</text>
+            <text x="-110" y="-35" text-anchor="end" fill="#1f1f1f" font-size="12">LAN: 192.168.1.1</text>
+            <text x="110" y="65" text-anchor="start" fill="rgb(198, 93, 10)" font-size="12">WAN: 203.0.113.5</text>
+            <foreignObject x="-250" y="-150" width="240" height="220" class="hidden draggable-fo" id="routerArpFo">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="table-panel" data-panel="router-arp">
+                <div class="table-panel-header">
+                  <span>Router – ARP-cache</span>
+                  <button type="button" class="panel-toggle" data-target="routerArpBody" aria-controls="routerArpBody" aria-expanded="true">-</button>
+                </div>
+                <div class="table-panel-body" id="routerArpBody">
+                  <table class="nat-table" role="table" aria-label="Router ARP tabel">
+                    <caption class="hidden">ARP-cache på routeren</caption>
+                    <thead>
+                      <tr role="row">
+                        <th role="columnheader">IP</th>
+                        <th role="columnheader">MAC</th>
+                        <th role="columnheader">Kommentar</th>
+                      </tr>
+                    </thead>
+                    <tbody id="routerArpRows">
+                      <tr data-entry="client-a" role="row">
+                        <td role="cell">192.168.1.10</td>
+                        <td role="cell">00:AA:BB:CC:DD:10</td>
+                        <td role="cell">Klient A</td>
+                      </tr>
+                      <tr data-entry="client-b" role="row">
+                        <td role="cell">192.168.1.11</td>
+                        <td role="cell">00:AA:BB:CC:DD:11</td>
+                        <td role="cell">Klient B</td>
+                      </tr>
+                      <tr data-entry="client-c" role="row">
+                        <td role="cell">192.168.1.12</td>
+                        <td role="cell">00:AA:BB:CC:DD:12</td>
+                        <td role="cell">Klient C</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </foreignObject>
+            <foreignObject x="-220" y="40" width="360" height="360" class="draggable-fo">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="table-panel" id="natPanel">
+                <div class="table-panel-header">
+                  <span>NAT-tabel</span>
+                  <button type="button" class="panel-toggle" data-target="natPanelBody" aria-controls="natPanelBody" aria-expanded="true">-</button>
+                </div>
+                <div class="table-panel-body" id="natPanelBody">
+                  <table class="nat-table" role="table" aria-label="NAT tabel over forbindelser">
+                    <caption class="hidden">NAT-tabel</caption>
+                    <thead>
+                      <tr role="row">
+                        <th role="columnheader">Privat (src)</th>
+                        <th role="columnheader">Offentlig (src)</th>
+                        <th role="columnheader">Dest (dst)</th>
+                        <th role="columnheader">State/Timeout</th>
+                      </tr>
+                    </thead>
+                    <tbody id="nat-body">
+                      <tr class="inactive" role="row">
+                        <td role="cell" colspan="4">Ingen aktive mapperinger endnu</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <label class="toggle-advanced">
+                    <input type="checkbox" id="toggleAdvanced" aria-controls="advancedRows"> Vis avanceret
+                  </label>
+                  <div id="advancedRows" class="hidden" aria-hidden="true"></div>
+                </div>
+              </div>
+            </foreignObject>
+          </g>
+
+          <!-- Internet -->
+          <use href="#cloud" x="980" y="120"></use>
+          <text x="1060" y="70" text-anchor="middle" fill="#1f1f1f" font-weight="600">Internet</text>
+
+          <!-- Webservere -->
+          <g transform="translate(1020,260)">
+            <use href="#server"></use>
+            <text x="0" y="48" text-anchor="middle" fill="#c65d0a" font-weight="600">Webserver</text>
+            <text x="0" y="64" text-anchor="middle" fill="#c65d0a" font-size="12">93.184.216.34</text>
+            <text x="0" y="80" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 80</text>
+          </g>
+          <g transform="translate(1020,420)">
+            <use href="#server"></use>
+            <text x="0" y="48" text-anchor="middle" fill="#c65d0a" font-weight="600">Webapp (Edge)</text>
+            <text x="0" y="64" text-anchor="middle" fill="#c65d0a" font-size="12">93.182.211.56</text>
+            <text x="0" y="80" text-anchor="middle" fill="#3c3c3c" font-size="12">Port 80</text>
+          </g>
+
+          <!-- Forbindelseslinjer -->
+          <path id="line-chrome-internal" class="line" stroke="#005f99" d="M 220 220 C 240 230 260 240 280 250"></path>
+          <path id="line-edge-internal" class="line" stroke="#005f99" d="M 220 300 C 240 310 260 320 280 330"></path>
+          <path id="line-client-switch" class="line" stroke="#005f99" d="M 280 260 C 360 255 420 255 480 255"></path>
+          <path id="line-switch-router" class="line" stroke="#005f99" d="M 560 255 C 600 255 640 255 680 255"></path>
+          <path id="line-router-server1" class="line" stroke="#c65d0a" d="M 820 255 C 900 220 960 230 1020 240"></path>
+          <path id="line-server1-router" class="line" stroke="#c65d0a" d="M 1020 280 C 960 290 900 270 840 260"></path>
+          <path id="line-router-switch" class="line" stroke="#005f99" d="M 680 280 C 640 280 600 280 560 270"></path>
+          <path id="line-switch-chrome" class="line" stroke="#005f99" d="M 480 270 C 420 270 360 265 300 250"></path>
+          <path id="line-router-server2" class="line" stroke="#c65d0a" d="M 820 280 C 900 320 960 360 1020 380"></path>
+          <path id="line-server2-router" class="line" stroke="#c65d0a" d="M 1020 420 C 960 400 900 360 840 300"></path>
+          <path id="line-switch-edge" class="line" stroke="#005f99" d="M 480 285 C 420 300 360 320 300 330"></path>
+
+          <!-- Etiket for aktiv linje -->
+          <text id="line-label" x="360" y="200" text-anchor="middle" fill="#005f99" font-size="13" opacity="0"></text>
+        </svg>
+        <div class="options" role="group" aria-label="Visningsvalg">
+          <label for="toggleArp">
+            <input type="checkbox" id="toggleArp" aria-controls="clientArpFo routerArpFo" checked> Inkludér ARP-flow fra start
+          </label>
+          <label for="togglePorts">
+            <input type="checkbox" id="togglePorts" aria-controls="switchPortPanel" checked> Vis switchens porttabel
+          </label>
+        </div>
+        <div class="note" id="note-box" aria-live="polite"></div>
+        <div class="control-bar" role="group" aria-label="Kontrolpanel for trin">
+          <div class="controls">
+            <button id="startBtn" aria-label="Gå til første trin" tabindex="0">Start</button>
+            <button id="prevBtn" aria-label="Forrige trin" tabindex="0">Forrige</button>
+            <button id="nextBtn" aria-label="Næste trin" tabindex="0">Næste</button>
+            <button id="autoBtn" aria-pressed="false" aria-label="Auto-afspil" tabindex="0">Auto-afspil</button>
+          </div>
+          <div class="progress" id="progress">Trin 1 / 14</div>
+        </div>
+        <div class="info-text">
+          <div><strong>SNAT/PAT (udgående):</strong> Kilde-IP oversættes til routerens offentlige IP + unik kildeport.</div>
+          <div><strong>DNAT/Portforwarding:</strong> Indgående trafik fra internet til specifik intern host (ikke vist her).</div>
+          <div><small>Privat adressering (RFC1918): 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16.</small></div>
+          <div><small>Tip: Træk i tabeloverskrifterne for at flytte dem og skabe plads til at se alle detaljer.</small></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  
+<script>
+  const chromeRow = {
+    private: '192.168.1.10:51512 (Chrome)',
+    public: '203.0.113.5:40001',
+    dest: '93.184.216.34:80',
+    state: 'ESTABLISHED'
+  };
+
+  const edgeRow = {
+    private: '192.168.1.10:51516 (Edge)',
+    public: '203.0.113.5:40011',
+    dest: '93.182.211.56:80',
+    state: 'ESTABLISHED'
+  };
+
+  const advancedRows = [
+    {
+      private: '192.168.1.11:51513',
+      public: '203.0.113.5:40002',
+      dest: '93.184.216.34:80',
+      state: 'ESTABLISHED'
+    },
+    {
+      private: '192.168.1.12:51514',
+      public: '203.0.113.5:40003',
+      dest: '93.184.216.34:80',
+      state: 'ESTABLISHED'
+    }
+  ];
+
+  const baseStepTemplates = [
+    {
+      key: 'chrome-start',
+      title: 'Chrome-app starter',
+      description: `Chrome på Klient A bruger intern port <span class="badge">51512</span> og vil kontakte <span class="badge" style="background:var(--color-accent-public);">93.184.216.34:80</span>.`,
+      line: { id: 'line-chrome-internal', direction: 'forward' },
+      label: { text: 'Chrome 51512 forbereder pakke', x: 260, y: 200, color: '#005f99' },
+      note: 'Chrome genererer en HTTP-forespørgsel til 93.184.216.34:80 og bruger den lokale kildeport 51512.',
+      natRows: [],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'client-to-switch',
+      title: 'Klient A sender til switch',
+      description: `Pakken forlader Klient A <span class="badge">192.168.1.10</span> og går mod LAN-switchen.`,
+      line: { id: 'line-client-switch', direction: 'forward' },
+      label: { text: '192.168.1.10 → LAN-switch', x: 360, y: 240, color: '#005f99' },
+      note: 'Klient A sender pakken ud på LAN\'et. Adressen er stadig privat, så internettet kan ikke se den endnu.',
+      natRows: [],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'switch-to-router-chrome',
+      title: 'Switch videresender',
+      description: `Switchen sender videre mod routerens LAN-interface <span class="badge">192.168.1.1</span>. Endnu ingen NAT.`,
+      line: { id: 'line-switch-router', direction: 'forward' },
+      label: { text: 'Switch → Router (192.168.1.1)', x: 580, y: 240, color: '#005f99' },
+      note: 'Switchen videresender rammen til routerens LAN-interface. NAT er stadig ikke aktiveret.',
+      natRows: [],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'router-pat-chrome',
+      title: 'Router laver PAT (Chrome)',
+      description: `Routeren oversætter kilden til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40001</span> og sender mod internettet.`,
+      line: { id: 'line-router-server1', direction: 'forward' },
+      label: { text: '203.0.113.5:40001 → 93.184.216.34:80', x: 910, y: 220, color: '#c65d0a' },
+      note: 'Routeren laver PAT: kilde bliver 203.0.113.5:40001. Chrome\'s mapning skrives i NAT-tabellen.',
+      natRows: [chromeRow],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'server-response-chrome',
+      title: 'Webserver svarer Chrome',
+      description: `<span class="badge" style="background:var(--color-accent-public);">93.184.216.34:80</span> sender svaret tilbage til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40001</span>.`,
+      line: { id: 'line-server1-router', direction: 'forward' },
+      label: { text: '93.184.216.34:80 → 203.0.113.5:40001', x: 900, y: 300, color: '#c65d0a' },
+      note: 'Webserveren svarer til routerens offentlige IP og port. Kun derfor ved routeren, at svaret hører til Chrome.',
+      natRows: [chromeRow],
+      highlightPrivates: [chromeRow.private],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'router-nat-lookup-chrome',
+      title: 'Router slår NAT-op',
+      description: 'Routeren finder NAT-tabellens mapning og sender svaret mod LAN-switchen.',
+      line: { id: 'line-router-switch', direction: 'forward' },
+      label: { text: 'Router → Switch med Chrome-mapping', x: 620, y: 300, color: '#005f99' },
+      note: 'Routeren finder den statefulde entry og omskriver tilbage til 192.168.1.10:51512 før pakken sendes mod LAN.',
+      natRows: [chromeRow],
+      highlightPrivates: [chromeRow.private],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'switch-deliver-chrome',
+      title: 'Switch leverer til Chrome',
+      description: `Switchen afleverer svaret til Chrome-appen på port <span class="badge">51512</span>.`,
+      line: { id: 'line-switch-chrome', direction: 'forward' },
+      label: { text: 'Switch → Chrome (51512)', x: 380, y: 280, color: '#005f99' },
+      note: 'Switchen afleverer svaret direkte til Chrome-appen. Den korrekte port sikrer, at den rigtige app modtager data.',
+      natRows: [chromeRow],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'edge-start',
+      title: 'Edge-app starter',
+      description: `Edge på Klient A bruger intern port <span class="badge">51516</span> og vil kontakte <span class="badge" style="background:var(--color-accent-public);">93.182.211.56:80</span>.`,
+      line: { id: 'line-edge-internal', direction: 'forward' },
+      label: { text: 'Edge 51516 forbereder pakke', x: 260, y: 300, color: '#005f99' },
+      note: 'Edge vil til 93.182.211.56:80 og bruger sin egen lokale kildeport 51516. Flere apps kan dele samme klient.',
+      natRows: [chromeRow],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'edge-to-switch',
+      title: 'Edge-pakke til switch',
+      description: 'Pakken forlader Klient A og går mod switchen ligesom Chrome-trafikken.',
+      line: { id: 'line-client-switch', direction: 'forward' },
+      label: { text: '192.168.1.10 (Edge) → Switch', x: 360, y: 260, color: '#005f99' },
+      note: 'Edge-pakken forlader også Klient A. Indtil routeren oversætter, er pakken stadig privat.',
+      natRows: [chromeRow],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'switch-to-router-edge',
+      title: 'Switch videresender Edge',
+      description: 'Switchen sender Edge-pakken mod routeren. Routeren kender endnu ikke forbindelsen.',
+      line: { id: 'line-switch-router', direction: 'forward' },
+      label: { text: 'Switch → Router (Edge)', x: 580, y: 260, color: '#005f99' },
+      note: 'Switchen håndterer flere flows samtidigt. Routeren er klar til at lave endnu en PAT-mapping.',
+      natRows: [chromeRow],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'router-pat-edge',
+      title: 'Router laver PAT (Edge)',
+      description: `Routeren oversætter til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40011</span> og sender mod <span class="badge" style="background:var(--color-accent-public);">93.182.211.56:80</span>.`,
+      line: { id: 'line-router-server2', direction: 'forward' },
+      label: { text: '203.0.113.5:40011 → 93.182.211.56:80', x: 920, y: 320, color: '#c65d0a' },
+      note: 'Routeren laver endnu en PAT-entry: 203.0.113.5:40011 peger nu på Edge-appen. Begge apps deler IP men ikke port.',
+      natRows: [chromeRow, edgeRow],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'server-response-edge',
+      title: 'Anden webserver svarer',
+      description: `<span class="badge" style="background:var(--color-accent-public);">93.182.211.56:80</span> sender svarpakke til <span class="badge" style="background:var(--color-accent-public);">203.0.113.5:40011</span>.`,
+      line: { id: 'line-server2-router', direction: 'forward' },
+      label: { text: '93.182.211.56:80 → 203.0.113.5:40011', x: 920, y: 360, color: '#c65d0a' },
+      note: 'Den anden webserver svarer og bruger den port routeren har oprettet. NAT-tabellen fortæller hvem der skal have svaret.',
+      natRows: [chromeRow, edgeRow],
+      highlightPrivates: [edgeRow.private],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'router-match-edge',
+      title: 'Router matcher Edge',
+      description: 'NAT-tabellen slår forbindelsen op og sender svaret tilbage mod LAN\'et.',
+      line: { id: 'line-router-switch', direction: 'forward' },
+      label: { text: 'Router → Switch (Edge)', x: 620, y: 320, color: '#005f99' },
+      note: 'Routeren oversætter tilbage til 192.168.1.10:51516. Den statefulde tabel holder styr på hvilken app der ejer porten.',
+      natRows: [chromeRow, edgeRow],
+      highlightPrivates: [edgeRow.private],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'switch-deliver-edge',
+      title: 'Switch leverer til Edge',
+      description: `Switchen afleverer svaret til Edge-appen på port <span class="badge">51516</span>. Begge apps har nu modtaget korrekt svar.`,
+      line: { id: 'line-switch-edge', direction: 'forward' },
+      label: { text: 'Switch → Edge (51516)', x: 380, y: 320, color: '#005f99' },
+      note: 'Switchen afleverer svaret til Edge-appen. Begge forbindelser forbliver aktive indtil timeouts rydder tabellen.',
+      natRows: [chromeRow, edgeRow],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    }
+  ];
+
+  const arpStepTemplates = [
+    {
+      key: 'arp-request',
+      title: 'ARP-forespørgsel fra Klient A',
+      description: `Klient A udsender en ARP-broadcast for at finde <span class="badge">192.168.1.1</span> (routerens MAC).`,
+      line: { id: 'line-client-switch', direction: 'forward' },
+      label: { text: 'ARP: Hvem har 192.168.1.1?', x: 360, y: 230, color: '#005f99' },
+      note: 'Chrome kontrollerer ARP-cache og sender en broadcast for at lære routerens MAC-adresse.',
+      natRows: [],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: [] }
+    },
+    {
+      key: 'arp-reply-router',
+      title: 'Routeren svarer på ARP',
+      description: `Routeren svarer med MAC <span class="badge">00:11:22:33:44:55</span> og registrerer Klient A i sin ARP-cache.`,
+      line: { id: 'line-router-switch', direction: 'forward' },
+      label: { text: 'ARP-svar fra routeren', x: 620, y: 220, color: '#005f99' },
+      note: 'Routeren sender et unicast ARP-svar tilbage via switchen og gemmer Klient A → MAC 00:AA:BB:CC:DD:10.',
+      natRows: [],
+      highlightPrivates: [],
+      arpHighlight: { client: [], router: ['client-a'] }
+    },
+    {
+      key: 'arp-complete',
+      title: 'Klient A gemmer ARP-svar',
+      description: `Switchen leverer svaret til Klient A, der nu har gatewayens MAC <span class="badge">00:11:22:33:44:55</span> i cachen.`,
+      line: { id: 'line-switch-chrome', direction: 'forward' },
+      label: { text: 'ARP-svar → Klient A', x: 320, y: 250, color: '#005f99' },
+      note: 'Klient A opdaterer sin ARP-cache og er klar til at sende IP-pakken med korrekt destinations-MAC.',
+      natRows: [],
+      highlightPrivates: [],
+      arpHighlight: { client: ['router'], router: ['client-a'] }
+    }
+  ];
+
+  let steps = [];
+  let currentStepIndex = 0;
+  let autoPlayInterval = null;
+  let arpEnabled = false;
+
+  const allLines = Array.from(document.querySelectorAll('.line'));
+  const lineLabel = document.getElementById('line-label');
+  const noteBox = document.getElementById('note-box');
+  const natBody = document.getElementById('nat-body');
+  const progress = document.getElementById('progress');
+  const stepTitleEl = document.getElementById('step-title');
+  const stepDescriptionEl = document.getElementById('step-description');
+
+  const startBtn = document.getElementById('startBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const autoBtn = document.getElementById('autoBtn');
+  const toggleAdvanced = document.getElementById('toggleAdvanced');
+  const toggleArp = document.getElementById('toggleArp');
+  const togglePorts = document.getElementById('togglePorts');
+
+  const clientArpFo = document.getElementById('clientArpFo');
+  const routerArpFo = document.getElementById('routerArpFo');
+  const switchPortFo = document.getElementById('switchPortFo');
+  const svgRoot = document.querySelector('svg');
+  const clientArpRows = Array.from(document.querySelectorAll('#clientArpRows tr'));
+  const routerArpRows = Array.from(document.querySelectorAll('#routerArpRows tr'));
+  const panelToggles = Array.from(document.querySelectorAll('.panel-toggle'));
+
+  arpEnabled = toggleArp ? toggleArp.checked : false;
+
+  function buildSteps() {
+    const combined = [...(arpEnabled ? arpStepTemplates : []), ...baseStepTemplates];
+    return combined.map((step, index) => ({
+      ...step,
+      id: index + 1,
+      hash: `#trin-${index + 1}`
+    }));
+  }
+
+  function updateHashFromStep(index) {
+    const step = steps[index];
+    if (!step) return;
+    if (history.replaceState) {
+      history.replaceState(null, '', step.hash);
+    } else {
+      location.hash = step.hash;
+    }
+  }
+
+  function updateLines(stepData) {
+    allLines.forEach(line => line.classList.remove('active', 'animate-forward', 'animate-back'));
+    if (stepData.line) {
+      const lineElement = document.getElementById(stepData.line.id);
+      if (lineElement) {
+        lineElement.classList.add('active');
+        if (stepData.line.direction === 'back') {
+          lineElement.classList.add('animate-back');
+        } else if (stepData.line.direction === 'none') {
+          // ingen animation
+        } else {
+          lineElement.classList.add('animate-forward');
+        }
+      }
+    }
+
+    if (stepData.label && stepData.label.text) {
+      lineLabel.textContent = stepData.label.text;
+      lineLabel.setAttribute('x', stepData.label.x);
+      lineLabel.setAttribute('y', stepData.label.y);
+      lineLabel.setAttribute('fill', stepData.label.color || '#005f99');
+      lineLabel.setAttribute('opacity', '1');
+    } else {
+      lineLabel.setAttribute('opacity', '0');
+    }
+  }
+
+  function renderNatTable(rows, showAdvanced, highlightPrivates = []) {
+    const highlightSet = new Set(highlightPrivates);
+    natBody.innerHTML = '';
+    const combined = [...rows];
+    if (showAdvanced) {
+      combined.push(...advancedRows);
+    }
+
+    if (!combined.length) {
+      const tr = document.createElement('tr');
+      tr.className = 'inactive';
+      const td = document.createElement('td');
+      td.colSpan = 4;
+      td.textContent = 'Ingen aktive mapperinger endnu';
+      tr.appendChild(td);
+      natBody.appendChild(tr);
+      return;
+    }
+
+    combined.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td role="cell">${row.private}</td>
+        <td role="cell">${row.public}</td>
+        <td role="cell">${row.dest}</td>
+        <td role="cell">${row.state}</td>
+      `;
+      if (highlightSet.has(row.private)) {
+        tr.classList.add('highlight');
+      }
+      natBody.appendChild(tr);
+    });
+  }
+
+  function updateArpHighlight(arpHighlight = {}) {
+    const clientTargets = new Set(arpHighlight.client || []);
+    clientArpRows.forEach(row => {
+      row.classList.toggle('highlight', clientTargets.has(row.dataset.entry));
+    });
+    const routerTargets = new Set(arpHighlight.router || []);
+    routerArpRows.forEach(row => {
+      row.classList.toggle('highlight', routerTargets.has(row.dataset.entry));
+    });
+  }
+
+  function renderStep(stepNumber) {
+    if (!steps.length) return;
+    const clamped = Math.max(1, Math.min(stepNumber, steps.length));
+    const stepData = steps[clamped - 1];
+    currentStepIndex = clamped - 1;
+
+    updateHashFromStep(currentStepIndex);
+    updateLines(stepData);
+    stepTitleEl.textContent = `Trin ${clamped} – ${stepData.title}`;
+    stepDescriptionEl.innerHTML = stepData.description;
+    noteBox.textContent = stepData.note;
+    renderNatTable(stepData.natRows, toggleAdvanced.checked, stepData.highlightPrivates || []);
+    updateArpHighlight(stepData.arpHighlight || { client: [], router: [] });
+    progress.textContent = `Trin ${clamped} / ${steps.length}`;
+
+    prevBtn.disabled = clamped === 1;
+    nextBtn.disabled = clamped === steps.length;
+  }
+
+  function goToStep(stepNumber) {
+    const clamped = Math.max(1, Math.min(stepNumber, steps.length));
+    renderStep(clamped);
+  }
+
+  function startAutoPlay() {
+    stopAutoPlay();
+    autoBtn.textContent = 'Stop auto';
+    autoBtn.setAttribute('aria-pressed', 'true');
+    autoPlayInterval = setInterval(() => {
+      if (currentStepIndex >= steps.length - 1) {
+        stopAutoPlay();
+        return;
+      }
+      renderStep(currentStepIndex + 2);
+    }, 2000);
+  }
+
+  function stopAutoPlay() {
+    if (autoPlayInterval) {
+      clearInterval(autoPlayInterval);
+      autoPlayInterval = null;
+    }
+    autoBtn.textContent = 'Auto-afspil';
+    autoBtn.setAttribute('aria-pressed', 'false');
+  }
+
+  function updateArpTablesVisibility() {
+    const hidden = !arpEnabled;
+    [clientArpFo, routerArpFo].forEach(panel => {
+      if (!panel) return;
+      panel.classList.toggle('hidden', hidden);
+      panel.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+    });
+    if (hidden) {
+      updateArpHighlight({ client: [], router: [] });
+    }
+  }
+
+  function updateSwitchPortVisibility() {
+    const show = togglePorts.checked;
+    if (switchPortFo) {
+      switchPortFo.classList.toggle('hidden', !show);
+      switchPortFo.setAttribute('aria-hidden', show ? 'false' : 'true');
+    }
+  }
+
+  function setupPanelDragging() {
+    if (!svgRoot) return;
+    const viewBox = svgRoot.viewBox.baseVal;
+    const draggablePanels = Array.from(document.querySelectorAll('foreignObject.draggable-fo'));
+
+    draggablePanels.forEach(panel => {
+      const handle = panel.querySelector('.table-panel-header');
+      if (!handle) return;
+
+      const initialX = parseFloat(panel.getAttribute('x')) || 0;
+      const initialY = parseFloat(panel.getAttribute('y')) || 0;
+      panel.dataset.x = initialX;
+      panel.dataset.y = initialY;
+
+      handle.addEventListener('pointerdown', (event) => {
+        if (event.target.closest('button') || event.target.closest('input') || event.button === 2) {
+          return;
+        }
+        event.preventDefault();
+
+        const svgRect = svgRoot.getBoundingClientRect();
+        const scaleX = viewBox.width / svgRect.width;
+        const scaleY = viewBox.height / svgRect.height;
+        const startX = parseFloat(panel.dataset.x || panel.getAttribute('x') || 0);
+        const startY = parseFloat(panel.dataset.y || panel.getAttribute('y') || 0);
+        const startClientX = event.clientX;
+        const startClientY = event.clientY;
+        const pointerId = event.pointerId;
+
+        panel.classList.add('dragging');
+        handle.setPointerCapture(pointerId);
+
+        const onPointerMove = (moveEvent) => {
+          if (moveEvent.pointerId !== pointerId) return;
+          const deltaX = (moveEvent.clientX - startClientX) * scaleX;
+          const deltaY = (moveEvent.clientY - startClientY) * scaleY;
+          const newX = Math.round((startX + deltaX) * 10) / 10;
+          const newY = Math.round((startY + deltaY) * 10) / 10;
+          panel.setAttribute('x', newX);
+          panel.setAttribute('y', newY);
+          panel.dataset.x = newX;
+          panel.dataset.y = newY;
+        };
+
+        const endDrag = (endEvent) => {
+          if (endEvent.pointerId !== pointerId) return;
+          if (typeof handle.hasPointerCapture === 'function' && handle.hasPointerCapture(pointerId)) {
+            handle.releasePointerCapture(pointerId);
+          }
+          panel.classList.remove('dragging');
+          handle.removeEventListener('pointermove', onPointerMove);
+          handle.removeEventListener('pointerup', endDrag);
+          handle.removeEventListener('pointercancel', endDrag);
+        };
+
+        handle.addEventListener('pointermove', onPointerMove);
+        handle.addEventListener('pointerup', endDrag);
+        handle.addEventListener('pointercancel', endDrag);
+      });
+    });
+  }
+
+  function rebuildSteps({ fromHash = false } = {}) {
+    steps = buildSteps();
+    const hash = window.location.hash;
+    let targetStep = 1;
+    if (fromHash) {
+      const foundIndex = steps.findIndex(step => step.hash === hash);
+      if (foundIndex !== -1) {
+        targetStep = foundIndex + 1;
+      }
+    }
+    renderStep(targetStep);
+  }
+
+  panelToggles.forEach(button => {
+    button.addEventListener('click', () => {
+      const targetId = button.getAttribute('data-target');
+      const body = document.getElementById(targetId);
+      if (!body) return;
+      const willCollapse = !body.classList.contains('hidden');
+      body.classList.toggle('hidden', willCollapse);
+      button.textContent = willCollapse ? '[]' : '-';
+      button.setAttribute('aria-expanded', willCollapse ? 'false' : 'true');
+    });
+  });
+
+  startBtn.addEventListener('click', () => {
+    stopAutoPlay();
+    goToStep(1);
+  });
+
+  prevBtn.addEventListener('click', () => {
+    stopAutoPlay();
+    goToStep(currentStepIndex);
+  });
+
+  nextBtn.addEventListener('click', () => {
+    stopAutoPlay();
+    goToStep(currentStepIndex + 2);
+  });
+
+  autoBtn.addEventListener('click', () => {
+    if (autoPlayInterval) {
+      stopAutoPlay();
+    } else {
+      startAutoPlay();
+    }
+  });
+
+  toggleAdvanced.addEventListener('change', () => {
+    const stepData = steps[currentStepIndex];
+    if (stepData) {
+      renderNatTable(stepData.natRows, toggleAdvanced.checked, stepData.highlightPrivates || []);
+    }
+  });
+
+  toggleArp.addEventListener('change', () => {
+    arpEnabled = toggleArp.checked;
+    stopAutoPlay();
+    updateArpTablesVisibility();
+    rebuildSteps();
+  });
+
+  togglePorts.addEventListener('change', () => {
+    updateSwitchPortVisibility();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      stopAutoPlay();
+      goToStep(currentStepIndex + 2);
+    }
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      stopAutoPlay();
+      goToStep(currentStepIndex);
+    }
+    if ((event.key === ' ' || event.key === 'Enter') && document.activeElement instanceof HTMLButtonElement) {
+      document.activeElement.click();
+    }
+  });
+
+  window.addEventListener('hashchange', () => {
+    const hash = window.location.hash;
+    const foundIndex = steps.findIndex(step => step.hash === hash);
+    if (foundIndex !== -1 && foundIndex !== currentStepIndex) {
+      stopAutoPlay();
+      renderStep(foundIndex + 1);
+    }
+  });
+
+  setupPanelDragging();
+  updateArpTablesVisibility();
+  updateSwitchPortVisibility();
+  rebuildSteps({ fromHash: true });
+</script>
+
+</body>
+</html>
