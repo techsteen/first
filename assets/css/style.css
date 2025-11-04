@@ -1,0 +1,332 @@
+:root {
+    --bg: #0f172a;
+    --bg-alt: #1e293b;
+    --accent: #38bdf8;
+    --accent-strong: #0ea5e9;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --card: rgba(15, 23, 42, 0.85);
+    --shadow: 0 30px 60px -20px rgba(2, 6, 23, 0.6);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: radial-gradient(circle at top, #1e3a8a 0%, #0f172a 60%);
+    color: var(--text);
+    line-height: 1.6;
+}
+
+h1, h2, h3 {
+    font-family: 'Fira Code', monospace;
+    margin-top: 0;
+    color: #f8fafc;
+}
+
+a {
+    color: inherit;
+}
+
+.hero {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    align-items: center;
+    gap: 3rem;
+    padding: 6rem min(10vw, 6rem);
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.9), rgba(30, 64, 175, 0.55));
+    position: relative;
+    overflow: hidden;
+}
+
+.hero__content h1 {
+    font-size: clamp(3rem, 8vw, 4.5rem);
+}
+
+.hero__content p {
+    font-size: 1.2rem;
+    max-width: 40ch;
+}
+
+.cta {
+    display: inline-block;
+    margin-top: 1.5rem;
+    padding: 0.9rem 2rem;
+    background: var(--accent);
+    color: #0f172a;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cta:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 30px -15px rgba(14, 165, 233, 0.7);
+}
+
+.hero__visual {
+    justify-self: center;
+}
+
+.matrix {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+    padding: 2rem;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 1.5rem;
+    box-shadow: var(--shadow);
+    font-family: 'Fira Code', monospace;
+    text-align: center;
+    letter-spacing: 0.1em;
+}
+
+main {
+    padding: 4rem min(10vw, 6rem);
+    display: grid;
+    gap: 4rem;
+}
+
+section {
+    background: rgba(15, 23, 42, 0.55);
+    padding: 2.5rem;
+    border-radius: 1.8rem;
+    box-shadow: var(--shadow);
+}
+
+section > p {
+    color: var(--muted);
+    max-width: 65ch;
+}
+
+.why__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+}
+
+.why__grid article {
+    background: var(--card);
+    border-radius: 1.2rem;
+    padding: 1.8rem;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.section-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.language-switch {
+    display: inline-flex;
+    background: var(--bg);
+    border-radius: 999px;
+    padding: 0.4rem;
+}
+
+.language-switch__btn {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Fira Code', monospace;
+    padding: 0.5rem 1.3rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.language-switch__btn.is-active {
+    background: var(--accent);
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.type-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.type-card {
+    background: var(--card);
+    border-radius: 1.2rem;
+    padding: 1.8rem;
+    border: 1px solid rgba(56, 189, 248, 0.15);
+    display: grid;
+    gap: 0.75rem;
+}
+
+.type-card code {
+    font-family: 'Fira Code', monospace;
+    background: rgba(15, 23, 42, 0.7);
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.6rem;
+    color: var(--accent);
+}
+
+.type-card[hidden] {
+    display: none;
+}
+
+.timeline {
+    display: grid;
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.timeline__item {
+    padding: 1.5rem;
+    border-radius: 1.3rem;
+    background: var(--bg-alt);
+    border-left: 4px solid var(--accent);
+}
+
+textarea#notes {
+    width: 100%;
+    min-height: 160px;
+    border-radius: 1.2rem;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    padding: 1.2rem;
+    background: rgba(15, 23, 42, 0.75);
+    color: var(--text);
+    font-family: 'Fira Code', monospace;
+    resize: vertical;
+}
+
+.simulator__form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.2rem;
+    margin-top: 2rem;
+}
+
+.simulator__form label {
+    display: grid;
+    gap: 0.6rem;
+    font-weight: 600;
+}
+
+.simulator__form select,
+.simulator__form input {
+    padding: 0.8rem;
+    border-radius: 0.8rem;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: var(--bg-alt);
+    color: var(--text);
+    font-family: 'Fira Code', monospace;
+}
+
+.simulator__form button {
+    grid-column: 1 / -1;
+    padding: 0.9rem 1.4rem;
+    border-radius: 0.9rem;
+    border: none;
+    background: var(--accent-strong);
+    color: #0f172a;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.simulator__form button:hover {
+    transform: translateY(-3px);
+}
+
+.simulator__output {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    border-radius: 1.2rem;
+    background: var(--bg-alt);
+    border: 1px solid rgba(14, 165, 233, 0.2);
+    min-height: 80px;
+    display: grid;
+    gap: 0.8rem;
+}
+
+.simulator__output code {
+    background: rgba(15, 23, 42, 0.8);
+    padding: 0.6rem 0.9rem;
+    border-radius: 0.8rem;
+    font-family: 'Fira Code', monospace;
+    color: #facc15;
+}
+
+.simulator__output--error {
+    border-color: rgba(248, 113, 113, 0.6);
+    color: #fecdd3;
+}
+
+.assignments__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+}
+
+.assignment {
+    background: var(--card);
+    padding: 1.8rem;
+    border-radius: 1.2rem;
+    border: 1px solid rgba(56, 189, 248, 0.12);
+}
+
+.quiz__container {
+    display: grid;
+    gap: 1.2rem;
+    margin: 2rem 0;
+}
+
+.quiz__question {
+    background: var(--card);
+    padding: 1.5rem;
+    border-radius: 1.2rem;
+    border: 1px solid rgba(56, 189, 248, 0.1);
+}
+
+.quiz__options {
+    display: grid;
+    gap: 0.6rem;
+    margin-top: 1rem;
+}
+
+.quiz__options label {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: var(--bg-alt);
+    padding: 0.6rem 0.9rem;
+    border-radius: 0.8rem;
+}
+
+.quiz__result {
+    font-weight: 700;
+    color: var(--accent);
+}
+
+footer.footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--muted);
+    background: rgba(15, 23, 42, 0.8);
+}
+
+@media (max-width: 720px) {
+    main {
+        padding: 3rem 1.5rem;
+    }
+
+    section {
+        padding: 2rem;
+    }
+
+    .hero {
+        padding: 4rem 1.5rem;
+    }
+}
