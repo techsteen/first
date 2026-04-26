@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Network Simulation Game</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="hud">
+      <div class="hud-title">Network Lab HUD</div>
+      <div id="hudMetrics"></div>
+      <div class="hud-controls">
+        <button id="sandboxBtn">Sandbox Mode</button>
+        <button id="missionBtn">Mission Mode</button>
+        <button id="firewallBtn">Toggle Firewall Policy</button>
+      </div>
+      <div id="missionPanel"></div>
+    </div>
+
+    <div id="toolbar">
+      <div class="toolbar-title">Deploy Device</div>
+      <div class="toolbar-grid" id="deviceButtons"></div>
+    </div>
+
+    <div id="tooltip"></div>
+
+    <div id="help">
+      <h3>Controls</h3>
+      <ul>
+        <li>Left click empty slot/desk: place selected device</li>
+        <li>Click two devices to connect cable</li>
+        <li>Right click device: toggle admin up/down</li>
+        <li>Drag: orbit camera | Scroll: zoom</li>
+        <li><b>Spacebar:</b> toggle simulation speed (1x / 60x)</li>
+      </ul>
+    </div>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
